@@ -3,7 +3,7 @@
 
 #include "CUFLU.h"
 
-#if ( MODEL == HYDRO )
+#if ( MODEL == HYDRO  &&  defined VISCOSITY )
 
 // external functions
 #ifdef __CUDACC__
@@ -13,24 +13,41 @@
 #endif // #ifdef __CUDACC__ ... else ...
 
 GPU_DEVICE
-void Hydro_ComputeViscosity( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
-                             real g_FC_Flux[][NCOMP_TOTAL][ CUBE(N_FC_FLUX) ],
-                             const real Gamma, const real dt, const real dh, const double Time )
+void Hydro_ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
+                             const real Flu_Array[NCOMP_FLUID][ CUBE(PS1) ],
+                             const real Gamma, const real MinPres )
 {
+    const bool CheckMinPres_Yes = true;
+    const real Gamma_m1         = Gamma - (real)1.0;
 
-   real _Rho;
-   
-   if () {
-       // Constant viscosity
+    CGPU_LOOP( t, CUBE(PS1) )
+    {
+        real fluid[NCOMP_FLUID], _Rho;
 
-   } {} { 
-       // Spitzer viscosity
+        for (int v=0; v<NCOMP_FLUID; v++)   fluid[v] = g_Flu_Array[v][t];
 
-   }
+        _Rho  = (real)1.0 / fluid[DENS];
 
-#  ifdef __CUDACC__
-   __syncthreads();
-#  endif
+        if ( ViscosityType == CONSTANT_VISCOSITY ) {
+            // Constant viscosity
+            if ( ViscosityCoeffType == VISC_KINETIC_COEFF ) {
+                nu[t] = ViscosityCoeff;
+            } else if ( ViscosityCoeffType == VISC_DYNAMIC_COEFF ) {
+                nu[t] = ViscosityCoeff*_Rho;
+            }
+        } else if ( ViscosityType == SPITZER_VISCOSITY ) { 
+            // Spitzer viscosity
+            real Pres, freq_ii;
+            real fluid[NCOMP_FLUID], _Rho, Vx, Vy, Vz, Pres, Cs, MaxV;
+
+            Pres = Hydro_GetPressure( fluid[DENS], fluid[MOMX], fluid[MOMY], fluid[MOMZ], fluid[ENGY],
+                                      Gamma_m1, CheckMinPres_Yes, MinPres );
+            nu[t] = SpitzerFrac*0.96*Pres/freq_ii;
+        }
+
+        nu[t] = FMIN( FMAX( nu[t], ViscCoeffMin ), ViscCoeffMax );
+
+    } // CGPU_LOOP( t, CUBE(PS1) )
 
 } // FUNCTION : Hydro_ComputeViscosity
 
@@ -41,16 +58,9 @@ void Hydro_ComputeViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_
 {
 
 
-   if ( ViscosityType == CONSTANT_VISCOSITY ) {
-       // Constant viscosity
-
-   } else if ( ViscosityType == SPITZER_VISCOSITY ) { 
-       // Spitzer viscosity
-       
-   }
    
 #  ifdef __CUDACC__
-   __syncthreads();
+    __syncthreads();
 #  endif
 
 } // FUNCTION : Hydro_ComputeViscousFluxes
@@ -147,7 +157,7 @@ void CPU_dtSolver_ViscCFL  ( real g_dt_Array[], const real g_Flu_Array[][NCOMP_F
 } // FUNCTION : CPU/CUFLU_dtSolver_ViscCFL
 
 
-#endif // #if ( MODEL == HYDRO )
+#endif // #if ( MODEL == HYDRO  &&  defined VISCOSITY )
 
 #endif // #ifndef __CUFLU_VISCOSITY__
 
