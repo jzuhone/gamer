@@ -427,6 +427,16 @@
 # define CGPU_LOOP( var, niter )    for (int (var)=0;           (var)<(niter); (var)++          )
 #endif
 
+#ifdef VISCOSITY
+# define CONSTANT_VISCOSITY 1
+# define SPITZER_VISCOSITY 2
+# define VISC_KINETIC_COEFF 1
+# define VISC_DYNAMIC_COEFF 2
+# define ISOTROPIC_VISCOSITY 1
+# define ANISOTROPIC_VISCOSITY 2
 
+static real FreqPrefactor; 
+
+#endif // #ifdef VISCOSITY
 
 #endif // #ifndef __CUFLU_H__

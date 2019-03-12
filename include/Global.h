@@ -217,7 +217,14 @@ extern double                SF_CREATE_STAR_MIN_STAR_MASS;
 extern double                SF_CREATE_STAR_MAX_STAR_MFRAC;
 #endif
 
-
+// (2-8) viscosity
+// ============================================================================================================
+#ifdef VISCOSITY
+extern int                   VISCOSITY_TYPE;
+extern int                   VISCOSITY_DIRECTION;
+extern int                   VISCOSITY_COEFF_TYPE;
+extern double                VISCOSITY_COEFF;
+#endif
 
 // 3. CPU (host) arrays for transferring data between CPU and GPU
 // ============================================================================================================
