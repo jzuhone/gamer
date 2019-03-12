@@ -13,12 +13,31 @@
 #endif // #ifdef __CUDACC__ ... else ...
 
 GPU_DEVICE
+void Hydro_ViscosityInit ( )
+{
+    if ( VISCOSITY_TYPE == SPITZER_VISCOSITY ) {
+        real lnLambda = 30; // Coulomb logarithm for Spitzer viscosity
+        // This prefactor is in CGS and we must convert it to code units
+        // To avoid precision errors, we do this one step at a time
+        FreqPrefactor = 2.68273501e34; // in cm**6/(g*s**4)
+        FreqPrefactor *= UNIT_D;
+        FreqPrefactor *= UNIT_D;
+        FreqPrefactor /= UNIT_M;
+        FreqPrefactor *= UNIT_T;
+        FreqPrefactor *= UNIT_T;
+        FreqPrefactor *= UNIT_T;
+        FreqPrefactor *= UNIT_T;
+        FreqPrefactor *= lnLambda;
+    }
+
+} // FUNCTION : Hydro_ViscosityInit
+
+GPU_DEVICE
 void Hydro_ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
                              const real Flu_Array[NCOMP_FLUID][ CUBE(PS1) ],
-                             const real Gamma, const real MinPres )
+                             const real Gamma_m1, const real MinPres )
 {
     const bool CheckMinPres_Yes = true;
-    const real Gamma_m1         = Gamma - (real)1.0;
 
     CGPU_LOOP( t, CUBE(PS1) )
     {
@@ -28,33 +47,45 @@ void Hydro_ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
 
         _Rho  = (real)1.0 / fluid[DENS];
 
-        if ( ViscosityType == CONSTANT_VISCOSITY ) {
-            // Constant viscosity
-            if ( ViscosityCoeffType == VISC_KINETIC_COEFF ) {
-                nu[t] = ViscosityCoeff;
-            } else if ( ViscosityCoeffType == VISC_DYNAMIC_COEFF ) {
-                nu[t] = ViscosityCoeff*_Rho;
-            }
-        } else if ( ViscosityType == SPITZER_VISCOSITY ) { 
-            // Spitzer viscosity
-            real Pres, freq_ii;
-            real fluid[NCOMP_FLUID], _Rho, Vx, Vy, Vz, Pres, Cs, MaxV;
+        if ( VISCOSITY_TYPE == CONSTANT_VISCOSITY ) {
 
-            Pres = Hydro_GetPressure( fluid[DENS], fluid[MOMX], fluid[MOMY], fluid[MOMZ], fluid[ENGY],
-                                      Gamma_m1, CheckMinPres_Yes, MinPres );
-            nu[t] = SpitzerFrac*0.96*Pres/freq_ii;
+            // Constant viscosity
+            if ( VISCOSITY_COEFF_TYPE == VISCOSITY_KINETIC_COEFF ) {
+
+                nu[t] = (real)VISCOSITY_COEFF;
+
+            } else if ( VISCOSITY_COEFF_TYPE == VISCOSITY_DYNAMIC_COEFF ) {
+
+                nu[t] = (real)VISCOSITY_COEFF*_Rho;
+
+            }
+
+        } else if ( VISCOSITY_TYPE == SPITZER_VISCOSITY ) { 
+
+            // Spitzer viscosity
+            real Pres, Temp, Freq_ii;
+
+            Pres = Hydro_GetPressure( fluid[DENS], fluid[MOMX], fluid[MOMY], fluid[MOMZ], 
+                                      fluid[ENGY], Gamma_m1, CheckMinPres_Yes, MinPres );
+            
+            Temp = Pres*_Rho;
+
+            Freq_ii = FreqPrefactor*fluid[DENS]*POW( Temp, (real)-1.5 );
+
+            nu[t] = VISCOSITY_SPITZER_FRACTION*0.96*Pres/Freq_ii;
+
         }
 
-        nu[t] = FMIN( FMAX( nu[t], ViscCoeffMin ), ViscCoeffMax );
+        nu[t] = FMIN( FMAX( nu[t], VISCOSITY_COEFF_MIN ), VISCOSITY_COEFF_MAX );
 
     } // CGPU_LOOP( t, CUBE(PS1) )
 
 } // FUNCTION : Hydro_ComputeViscosity
 
 GPU_DEVICE
-void Hydro_ComputeViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
-                                 real g_FC_Flux[][NCOMP_TOTAL][ CUBE(N_FC_FLUX) ],
-                                 const real dt, const real dh, const double Time )
+void Hydro_ComputeIsoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
+                                    real g_FC_Flux[][NCOMP_TOTAL][ CUBE(N_FC_FLUX) ],
+                                    const real dt, const real dh, const double Time )
 {
 
 
@@ -63,7 +94,25 @@ void Hydro_ComputeViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_
     __syncthreads();
 #  endif
 
-} // FUNCTION : Hydro_ComputeViscousFluxes
+} // FUNCTION : Hydro_ComputeIsoViscousFluxes
+
+#if ( MODEL == MHD )
+
+GPU_DEVICE
+void Hydro_ComputeAnisoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
+                                      real g_FC_Flux[][NCOMP_TOTAL][ CUBE(N_FC_FLUX) ],
+                                      const real dt, const real dh, const double Time )
+{
+
+
+   
+#  ifdef __CUDACC__
+    __syncthreads();
+#  endif
+
+} // FUNCTION : Hydro_ComputeAnisoViscousFluxes
+
+#endif // #if ( MODEL == MHD )
 
 //-----------------------------------------------------------------------------------------
 // Function    :  CPU/CUFLU_dtSolver_HydroCFL
@@ -99,9 +148,8 @@ void CPU_dtSolver_ViscCFL  ( real g_dt_Array[], const real g_Flu_Array[][NCOMP_F
 #endif
 {
 
-   const bool CheckMinPres_Yes = true;
    const real Gamma_m1         = Gamma - (real)1.0;
-   const real dhSafety         = Safety*dh;
+   const real dh2Safety         = Safety*0.5*dh*dh;
 
 // loop over all patches
 // --> CPU/GPU solver: use different (OpenMP threads) / (CUDA thread blocks)
@@ -115,29 +163,13 @@ void CPU_dtSolver_ViscCFL  ( real g_dt_Array[], const real g_Flu_Array[][NCOMP_F
    {
       real MaxCFL=(real)0.0;
 
+      Hydro_ComputeViscosity( nu, g_Flu_Array[p], Gamma_m1, MinPres ); 
+
       CGPU_LOOP( t, CUBE(PS1) )
       {
-         real fluid[NCOMP_FLUID], _Rho, Vx, Vy, Vz, Pres, Cs, MaxV;
 
-         for (int v=0; v<NCOMP_FLUID; v++)   fluid[v] = g_Flu_Array[p][v][t];
+         MaxCFL = FMAX( nu[t], MaxCFL );
 
-        _Rho  = (real)1.0 / fluid[DENS];
-         Vx   = FABS( fluid[MOMX] )*_Rho;
-         Vy   = FABS( fluid[MOMY] )*_Rho;
-         Vz   = FABS( fluid[MOMZ] )*_Rho;
-         Pres = Hydro_GetPressure( fluid[DENS], fluid[MOMX], fluid[MOMY], fluid[MOMZ], fluid[ENGY],
-                                   Gamma_m1, CheckMinPres_Yes, MinPres );
-         Cs   = SQRT( Gamma*Pres*_Rho );
-
-#        if   ( FLU_SCHEME == RTVD  ||  FLU_SCHEME == CTU )
-         MaxV   = FMAX( Vx, Vy );
-         MaxV   = FMAX( Vz, MaxV );
-         MaxCFL = FMAX( MaxV+Cs, MaxCFL );
-
-#        elif ( FLU_SCHEME == MHM  ||  FLU_SCHEME == MHM_RP )
-         MaxV   = Vx + Vy + Vz;
-         MaxCFL = FMAX( MaxV+(real)3.0*Cs, MaxCFL );
-#        endif
       } // CGPU_LOOP( t, CUBE(PS1) )
 
 //    perform parallel reduction to get the maximum CFL speed in each thread block
@@ -150,14 +182,14 @@ void CPU_dtSolver_ViscCFL  ( real g_dt_Array[], const real g_Flu_Array[][NCOMP_F
 #     endif
       if ( threadIdx.x == 0 )
 #     endif // #ifdef __CUDACC__
-      g_dt_Array[p] = dhSafety/MaxCFL;
+      g_dt_Array[p] = dh2Safety/MaxCFL;
 
    } // for (int p=0; p<8*NPG; p++)
 
 } // FUNCTION : CPU/CUFLU_dtSolver_ViscCFL
 
 
-#endif // #if ( MODEL == HYDRO  &&  defined VISCOSITY )
+#endif // #if ( ( MODEL == HYDRO || MODEL == MHD )  &&  defined VISCOSITY )
 
 #endif // #ifndef __CUFLU_VISCOSITY__
 
