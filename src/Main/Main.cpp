@@ -199,6 +199,8 @@ int                   VISCOSITY_TYPE;
 int                   VISCOSITY_DIRECTION;
 int                   VISCOSITY_COEFF_TYPE;
 double                VISCOSITY_COEFF;
+double                VISCOSITY_COEFF_MIN;
+double                VISCOSITY_COEFF_MAX;
 #endif
 
 // 3. CPU (host) arrays for transferring data between CPU and GPU

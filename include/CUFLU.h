@@ -435,7 +435,7 @@
 # define ISOTROPIC_VISCOSITY 1
 # define ANISOTROPIC_VISCOSITY 2
 
-static real FreqPrefactor; 
+real FreqPrefactor; 
 
 #endif // #ifdef VISCOSITY
 

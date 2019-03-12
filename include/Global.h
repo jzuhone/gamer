@@ -224,6 +224,8 @@ extern int                   VISCOSITY_TYPE;
 extern int                   VISCOSITY_DIRECTION;
 extern int                   VISCOSITY_COEFF_TYPE;
 extern double                VISCOSITY_COEFF;
+extern double                VISCOSITY_COEFF_MIN;
+extern double                VISCOSITY_COEFF_MAX;
 #endif
 
 // 3. CPU (host) arrays for transferring data between CPU and GPU
