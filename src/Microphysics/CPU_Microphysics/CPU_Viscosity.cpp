@@ -13,26 +13,6 @@
 #endif // #ifdef __CUDACC__ ... else ...
 
 GPU_DEVICE
-void Hydro_ViscosityInit ( )
-{
-    if ( VISCOSITY_TYPE == SPITZER_VISCOSITY ) {
-        real lnLambda = 30; // Coulomb logarithm for Spitzer viscosity
-        // This prefactor is in CGS and we must convert it to code units
-        // To avoid precision errors, we do this one step at a time
-        FreqPrefactor = 2.68273501e34; // in cm**6/(g*s**4)
-        FreqPrefactor *= UNIT_D;
-        FreqPrefactor *= UNIT_D;
-        FreqPrefactor /= UNIT_M;
-        FreqPrefactor *= UNIT_T;
-        FreqPrefactor *= UNIT_T;
-        FreqPrefactor *= UNIT_T;
-        FreqPrefactor *= UNIT_T;
-        FreqPrefactor *= lnLambda;
-    }
-
-} // FUNCTION : Hydro_ViscosityInit
-
-GPU_DEVICE
 void Hydro_ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
                              const real Flu_Array[NCOMP_FLUID][ CUBE(PS1) ],
                              const real Gamma_m1, const real MinPres )
