@@ -3,7 +3,7 @@
 
 #include "CUFLU.h"
 
-#if ( MODEL == HYDRO  &&  defined VISCOSITY )
+#if ( ( MODEL == HYDRO  || MODEL == MHD ) &&  defined VISCOSITY )
 
 // external functions
 #ifdef __CUDACC__
