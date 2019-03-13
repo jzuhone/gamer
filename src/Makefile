@@ -137,6 +137,10 @@ SIMU_OPTION += -DSTORE_PAR_ACC
 SIMU_OPTION += -DPAR_NATT_USER=0
 endif # PARTICLE
 
+# (b-6) microphysics options
+# ------------------------------------------------------------------------------------
+# viscosity
+#SIMU_OPTION += -DVISCOSITY
 
 # (c) miscellaneous options (AMR, GPU, parallelization, optimizations, ...)
 # ------------------------------------------------------------------------------------
@@ -626,6 +630,21 @@ CC_FILE     += SF_CreateStar.cpp  SF_CreateStar_AGORA.cpp
 
 vpath %.cpp    StarFormation
 endif # STAR_FORMATION
+
+
+# viscosity source files (included only if "VISCOSITY" is turned on)
+# ------------------------------------------------------------------------------------
+ifeq "$(filter -DVISCOSITY, $(SIMU_OPTION))" "-DVISCOSITY"
+
+CUDA_FILE   +=
+
+CC_FILE     += Viscosity_Init.cpp CPU_ComputeViscosity.cpp CPU_ComputeViscousFluxes.cpp \
+               CPU_dtSolver_ViscousCFL.cpp
+
+vpath %.cu     Microphysics/Viscosity/GPU
+vpath %.cpp    Microphysics/Viscosity/CPU Microphysics/Viscosity
+
+endif # VISCOSITY
 
 
 # test problem source files
