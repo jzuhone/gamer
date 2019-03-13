@@ -66,6 +66,11 @@ void Init_GAMER( int *argc, char ***argv )
    if ( GRACKLE_ACTIVATE )    Grackle_Init();
 #  endif
 
+// initialize viscosity
+#  ifdef VISCOSITY
+   Viscosity_Init();
+#  endif
+
 
 // initialize parameters for the parallelization (rectangular domain decomposition)
    Init_Parallelization();
