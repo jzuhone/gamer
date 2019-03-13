@@ -1,7 +1,7 @@
 #ifndef __CUFLU_VISCOSITY__
 #define __CUFLU_VISCOSITY__
 
-#include "CUFLU.h"
+#include "Microphysics.h"
 
 #if ( ( MODEL == HYDRO  || MODEL == MHD ) &&  defined VISCOSITY )
 
@@ -61,38 +61,6 @@ void Hydro_ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
     } // CGPU_LOOP( t, CUBE(PS1) )
 
 } // FUNCTION : Hydro_ComputeViscosity
-
-GPU_DEVICE
-void Hydro_ComputeIsoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
-                                    real g_FC_Flux[][NCOMP_TOTAL][ CUBE(N_FC_FLUX) ],
-                                    const real dt, const real dh, const double Time )
-{
-
-
-   
-#  ifdef __CUDACC__
-    __syncthreads();
-#  endif
-
-} // FUNCTION : Hydro_ComputeIsoViscousFluxes
-
-#if ( MODEL == MHD )
-
-GPU_DEVICE
-void Hydro_ComputeAnisoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
-                                      real g_FC_Flux[][NCOMP_TOTAL][ CUBE(N_FC_FLUX) ],
-                                      const real dt, const real dh, const double Time )
-{
-
-
-   
-#  ifdef __CUDACC__
-    __syncthreads();
-#  endif
-
-} // FUNCTION : Hydro_ComputeAnisoViscousFluxes
-
-#endif // #if ( MODEL == MHD )
 
 #endif // #if ( ( MODEL == HYDRO || MODEL == MHD )  &&  defined VISCOSITY )
 
