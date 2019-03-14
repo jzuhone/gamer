@@ -1,21 +1,14 @@
-#ifndef __CUFLU_VISCOSITY__
-#define __CUFLU_VISCOSITY__
+#ifndef __COMPUTE_VISCOSITY__
+#define __COMPUTE_VISCOSITY__
 
 #include "Microphysics.h"
 
 #if ( ( MODEL == HYDRO  || MODEL == MHD ) &&  defined VISCOSITY )
 
-// external functions
-#ifdef __CUDACC__
-# include "CUFLU_Viscosity.cu"
-#else // #ifdef __CUDACC__
-
-#endif // #ifdef __CUDACC__ ... else ...
-
 GPU_DEVICE
-void Hydro_ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
-                             const real Flu_Array[NCOMP_FLUID][ CUBE(PS1) ],
-                             const real Gamma_m1, const real MinPres )
+void ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
+                       const real Flu_Array[NCOMP_FLUID][ CUBE(PS1) ],
+                       const real Gamma_m1, const real MinPres )
 {
     const bool CheckMinPres_Yes = true;
 
@@ -60,9 +53,9 @@ void Hydro_ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
 
     } // CGPU_LOOP( t, CUBE(PS1) )
 
-} // FUNCTION : Hydro_ComputeViscosity
+} // FUNCTION : ComputeViscosity
 
 #endif // #if ( ( MODEL == HYDRO || MODEL == MHD )  &&  defined VISCOSITY )
 
-#endif // #ifndef __CUFLU_VISCOSITY__
+#endif // #ifndef __COMPUTE_VISCOSITY__
 
