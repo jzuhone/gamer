@@ -3,7 +3,7 @@
 
 #include "Microphysics.h"
 
-#if ( ( MODEL == HYDRO  || MODEL == MHD ) &&  defined VISCOSITY )
+#if ( ( MODEL == HYDRO ) && defined VISCOSITY )
 
 // external functions
 #ifdef __CUDACC__
@@ -26,7 +26,7 @@ void Hydro_ComputeIsoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_
 
 } // FUNCTION : Hydro_ComputeIsoViscousFluxes
 
-#if ( MODEL == MHD )
+#ifdef MHD
 
 GPU_DEVICE
 void Hydro_ComputeAnisoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
@@ -42,8 +42,8 @@ void Hydro_ComputeAnisoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(
 
 } // FUNCTION : Hydro_ComputeAnisoViscousFluxes
 
-#endif // #if ( MODEL == MHD )
+#endif // #ifdef MHD
 
-#endif // #if ( ( MODEL == HYDRO || MODEL == MHD )  &&  defined VISCOSITY )
+#endif // #if ( ( MODEL == HYDRO ) && defined VISCOSITY )
 
 #endif // #ifndef __CPU_VISCOUS_FLUXES__

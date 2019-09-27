@@ -3,7 +3,7 @@
 
 #include "CUFLU.h"
 
-#if ( ( MODEL == HYDRO  || MODEL == MHD ) &&  defined VISCOSITY )
+#if ( ( MODEL == HYDRO ) && defined VISCOSITY )
 
 // external functions
 #ifdef __CUDACC__
@@ -41,14 +41,16 @@ __global__
 void CUFLU_dtSolver_ViscCFL( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLUID][ CUBE(PS1) ],
                               const real dh, const real Safety, const real Gamma, const real MinPres )
 #else
-void CPU_dtSolver_ViscCFL  ( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLUID][ CUBE(PS1) ], const int NPG,
-                              const real dh, const real Safety, const real Gamma, const real MinPres )
+void CPU_dtSolver_ViscCFL( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLUID][ CUBE(PS1) ], const int NPG,
+                           const real dh, const real Safety, const real Gamma, const real MinPres )
 #endif
 {
 
    const real Gamma_m1         = Gamma - (real)1.0;
-   const real dh2Safety         = Safety*0.5*dh*dh;
+   const real dh2Safety        = Safety*0.5*dh*dh;
 
+   real *nu = new real [ CUBE(PS1) ]
+   
 // loop over all patches
 // --> CPU/GPU solver: use different (OpenMP threads) / (CUDA thread blocks)
 //                     to work on different patches
@@ -83,6 +85,8 @@ void CPU_dtSolver_ViscCFL  ( real g_dt_Array[], const real g_Flu_Array[][NCOMP_F
       g_dt_Array[p] = dh2Safety/MaxCFL;
 
    } // for (int p=0; p<8*NPG; p++)
+
+   delete [] nu;
 
 } // FUNCTION : CPU/CUFLU_dtSolver_ViscCFL
 

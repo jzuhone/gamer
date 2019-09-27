@@ -3,10 +3,10 @@
 
 #include "Microphysics.h"
 
-#if ( ( MODEL == HYDRO  || MODEL == MHD ) &&  defined VISCOSITY )
+#if ( ( MODEL == HYDRO ) && defined VISCOSITY )
 
 GPU_DEVICE
-void ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
+void ComputeViscosity( real nu[ CUBE(PS1) ],
                        const real Flu_Array[NCOMP_FLUID][ CUBE(PS1) ],
                        const real Gamma_m1, const real MinPres )
 {
@@ -55,7 +55,7 @@ void ComputeViscosity( real nu[ CUBE(N_FC_VAR) ],
 
 } // FUNCTION : ComputeViscosity
 
-#endif // #if ( ( MODEL == HYDRO || MODEL == MHD )  &&  defined VISCOSITY )
+#endif // #if ( ( MODEL == HYDRO ) && defined VISCOSITY )
 
 #endif // #ifndef __COMPUTE_VISCOSITY__
 
