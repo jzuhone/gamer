@@ -6,9 +6,9 @@
 #if ( ( MODEL == HYDRO ) && defined VISCOSITY )
 
 GPU_DEVICE
-void ComputeViscosity( real nu[ CUBE(PS1) ],
-                       const real Flu_Array[NCOMP_FLUID][ CUBE(PS1) ],
-                       const real Gamma_m1, const real MinPres )
+void Hydro_ComputeViscosity( real nu[ CUBE(PS1) ],
+                             const real Flu_Array[NCOMP_FLUID][ CUBE(PS1) ],
+                             const real Gamma_m1, const real MinPres )
 {
     const bool CheckMinPres_Yes = true;
 
@@ -53,7 +53,7 @@ void ComputeViscosity( real nu[ CUBE(PS1) ],
 
     } // CGPU_LOOP( t, CUBE(PS1) )
 
-} // FUNCTION : ComputeViscosity
+} // FUNCTION : Hydro_ComputeViscosity
 
 #endif // #if ( ( MODEL == HYDRO ) && defined VISCOSITY )
 

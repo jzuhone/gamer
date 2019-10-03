@@ -39,7 +39,7 @@
 #ifdef __CUDACC__
 __global__
 void CUFLU_dtSolver_ViscCFL( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLUID][ CUBE(PS1) ],
-                              const real dh, const real Safety, const real Gamma, const real MinPres )
+                             const real dh, const real Safety, const real Gamma, const real MinPres )
 #else
 void CPU_dtSolver_ViscCFL( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLUID][ CUBE(PS1) ], const int NPG,
                            const real dh, const real Safety, const real Gamma, const real MinPres )
@@ -50,7 +50,7 @@ void CPU_dtSolver_ViscCFL( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLU
    const real dh2Safety        = Safety*0.5*dh*dh;
 
    real *nu = new real [ CUBE(PS1) ]
-   
+
 // loop over all patches
 // --> CPU/GPU solver: use different (OpenMP threads) / (CUDA thread blocks)
 //                     to work on different patches
@@ -61,6 +61,7 @@ void CPU_dtSolver_ViscCFL( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLU
    for (int p=0; p<8*NPG; p++)
 #  endif
    {
+
       real MaxCFL=(real)0.0;
 
       Hydro_ComputeViscosity( nu, g_Flu_Array[p], Gamma_m1, MinPres ); 
