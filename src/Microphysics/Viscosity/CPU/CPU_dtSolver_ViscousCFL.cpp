@@ -49,7 +49,7 @@ void CPU_dtSolver_ViscCFL( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLU
    const real Gamma_m1         = Gamma - (real)1.0;
    const real dh2Safety        = Safety*0.5*dh*dh;
 
-   real *nu = new real [ CUBE(PS1) ]
+   real nu;
 
 // loop over all patches
 // --> CPU/GPU solver: use different (OpenMP threads) / (CUDA thread blocks)
@@ -64,12 +64,16 @@ void CPU_dtSolver_ViscCFL( real g_dt_Array[], const real g_Flu_Array[][NCOMP_FLU
 
       real MaxCFL=(real)0.0;
 
-      Hydro_ComputeViscosity( nu, g_Flu_Array[p], Gamma_m1, MinPres ); 
-
       CGPU_LOOP( t, CUBE(PS1) )
       {
 
-         MaxCFL = FMAX( nu[t], MaxCFL );
+         real fluid[NCOMP_FLUID];
+         
+         for (int v=0; v<NCOMP_FLUID; v++) fluid[v] = g_Flu_Array[p][v][t];
+
+         Hydro_ComputeViscosity( nu, fluid, Gamma_m1, MinPres ); 
+
+         MaxCFL = FMAX( nu, MaxCFL );
 
       } // CGPU_LOOP( t, CUBE(PS1) )
 

@@ -13,36 +13,40 @@
 #endif // #ifdef __CUDACC__ ... else ...
 
 GPU_DEVICE
-void Hydro_ComputeIsoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
-                                    real g_FC_Flux[][NCOMP_TOTAL][ CUBE(N_FC_FLUX) ],
-                                    const real dt, const real dh, const double Time )
+void Hydro_ComputeViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL_PLUS_MAG][ CUBE(N_FC_VAR) ],
+                                 const real Flux_1Face[NCOMP_TOTAL_PLUS_MAG],
+                                 const int i_flux, const int j_flux, const int k_flux,
+                                 const int i_fc, const int j_fc, const int k_fc, 
+                                 const int d, const real dt, const real dh, const double Time )
 {
 
+    real vx, vy, vz;
 
-   
-#  ifdef __CUDACC__
-    __syncthreads();
-#  endif
-
-} // FUNCTION : Hydro_ComputeIsoViscousFluxes
+    mu = Hydro_ComputeViscosity( fluid, Gamma_m1, MinPres );
 
 #ifdef MHD
 
-GPU_DEVICE
-void Hydro_ComputeAnisoViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL][ CUBE(N_FC_VAR) ],
-                                      real g_FC_Flux[][NCOMP_TOTAL][ CUBE(N_FC_FLUX) ],
-                                      const real dt, const real dh, const double Time )
-{
+#else 
 
+//  Isotropic viscosity
 
+    switch ( d ) {
+        case 0:
+            break;
+        case 1:
+            break;
+        case 2:
+            break; 
+    }
+
+#endif // #ifdef MHD
    
 #  ifdef __CUDACC__
     __syncthreads();
 #  endif
 
-} // FUNCTION : Hydro_ComputeAnisoViscousFluxes
 
-#endif // #ifdef MHD
+} // FUNCTION : Hydro_ComputeViscousFluxes
 
 #endif // #if ( ( MODEL == HYDRO ) && defined VISCOSITY )
 

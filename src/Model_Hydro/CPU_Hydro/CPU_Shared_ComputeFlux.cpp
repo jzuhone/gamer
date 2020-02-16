@@ -299,13 +299,19 @@ void Hydro_ComputeFlux( const real g_FC_Var [][NCOMP_TOTAL_PLUS_MAG][ CUBE(N_FC_
 #        error : ERROR : unsupported Riemann solver (EXACT/ROE/HLLE/HLLC/HLLD) !!
 #        endif
 
+//       3. Optionally, compute conductive and viscous fluxes
 
-//       3. store the fluxes of all cells in g_FC_Flux[]
+         const bool NormPassive_No  = false; // do NOT convert any passive variable to mass fraction for the Riemann solvers
+         const bool JeansMinPres_No = false;
+         Hydro_Con2Pri( ConVar_L, PriVar_L, Gamma_m1, MinPres, NormPassive_No, NULL_INT, NULL, JeansMinPres_No, NULL_REAL );
+         Hydro_ComputeViscousFluxes(d, Flux_1Face, Gamma_m1, MinPres);
+
+//       4. store the fluxes of all cells in g_FC_Flux[]
 //       --> including the magnetic components since they are required for CT
          for (int v=0; v<NCOMP_TOTAL_PLUS_MAG; v++)   g_FC_Flux[d][v][idx_flux] = Flux_1Face[v];
 
 
-//       4. store the inter-patch fluxes in g_IntFlux[]
+//       5. store the inter-patch fluxes in g_IntFlux[]
 //       --> no need to store the magnetic components since this array is only for the flux fix-up operation
          if ( DumpIntFlux )
          {
