@@ -20,27 +20,52 @@ void Hydro_ComputeViscousFluxes( const real g_FC_Var [][NCOMP_TOTAL_PLUS_MAG][ C
                                  const int d, const real dt, const real dh, const double Time )
 {
 
-    real vx, vy, vz;
+    real vx, vy, vz, StressMomX, StressMomY, StressMomZ;
+    const real one_third = 1./3.;
 
     mu = Hydro_ComputeViscosity( fluid, Gamma_m1, MinPres );
 
+    if ( VISCOUS_FLUX_TYPE == ANISOTROPIC ) {
+
 #ifdef MHD
 
-#else 
+//      Anisotropic/Braginskii viscosity
 
-//  Isotropic viscosity
-
-    switch ( d ) {
-        case 0:
-            break;
-        case 1:
-            break;
-        case 2:
-            break; 
-    }
+        switch ( d ) {
+            case 0:
+                break;
+            case 1:
+                break;
+            case 2:
+                break; 
+        }
 
 #endif // #ifdef MHD
+
+    } else if ( VISCOUS_FLUX_TYPE == ISOTROPIC ) {
+
+//      Isotropic viscosity
+
+        switch ( d ) {
+            case 0:
+                break;
+            case 1:
+                break;
+            case 2:
+                break; 
+        }
+
+    } else {
+
+        Aux_Error();
+
+    }
    
+    Flux_1Face[1] += StressMomX;
+    Flux_1Face[2] += StressMomY;
+    Flux_1Face[3] += StressMomZ;
+    Flux_1Face[4] += vx*StressMomX + vy*StressMomY + vz*StressMomZ;
+
 #  ifdef __CUDACC__
     __syncthreads();
 #  endif

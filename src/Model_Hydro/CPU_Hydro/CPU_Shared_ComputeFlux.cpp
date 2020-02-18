@@ -30,7 +30,7 @@
 
 #else // #ifdef __CUDACC__
 
-#if   ( RSOLVER == EXACT )
+#if   ( RSOLVER == EXACT ) || ( #defined VISCOSITY )
 void Hydro_Con2Pri( const real In[], real Out[], const real Gamma_m1, const real MinPres,
                     const bool NormPassive, const int NNorm, const int NormIdx[],
                     const bool JeansMinPres, const real JeansMinPres_Coeff );

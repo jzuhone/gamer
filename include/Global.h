@@ -217,12 +217,13 @@ extern double                SF_CREATE_STAR_MIN_STAR_MASS;
 extern double                SF_CREATE_STAR_MAX_STAR_MFRAC;
 #endif
 
-// (2-8) viscosity
+// (2-9) viscosity
 // ============================================================================================================
 #ifdef VISCOSITY
 extern int                   VISCOSITY_TYPE;
 extern int                   VISCOSITY_DIRECTION;
 extern int                   VISCOSITY_COEFF_TYPE;
+extern int                   VISCOSITY_FLUX_TYPE;
 extern double                VISCOSITY_COEFF;
 extern double                VISCOSITY_COEFF_MIN;
 extern double                VISCOSITY_COEFF_MAX;
