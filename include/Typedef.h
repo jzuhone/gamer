@@ -51,6 +51,7 @@ const TestProbID_t
    TESTPROB_HYDRO_MHD_LINEAR_WAVE              =   15,
    TESTPROB_HYDRO_JEANS_INSTABILITY            =   16,
    TESTPROB_HYDRO_JETS                         =   17,
+   TESTPROB_HYDRO_JET_ICM_WALL                 =   18,
 #  ifdef COSMIC_RAY
    TESTPROB_HYDRO_COSMIC_RAY_SOUNDWAVE         =   20,
    TESTPROB_HYDRO_COSMIC_RAY_SHOCKTUBE         =   21,
