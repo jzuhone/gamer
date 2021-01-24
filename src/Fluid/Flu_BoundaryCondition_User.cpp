@@ -143,9 +143,13 @@ void Flu_BoundaryCondition_User( real *Array, const int NVar_Flu, const int Ghos
    const bool   PrepLrtz         = ( TVar   & _LORENTZ_FACTOR ) ? true : false; // Lorentz factor
 #  endif
    const bool   CheckMinPres_Yes = true;
+#  ifdef SRHD
+   const bool   PrepLrtz         = ( TVar   & _LORENTZ_FACTOR ) ? true : false; // Lorentz factor
+#  else
    const bool   PrepVx           = ( TVar & _VELX ) ? true : false;
    const bool   PrepVy           = ( TVar & _VELY ) ? true : false;
    const bool   PrepVz           = ( TVar & _VELZ ) ? true : false;
+#  endif
    const bool   PrepPres         = ( TVar & _PRES ) ? true : false;
    const bool   PrepTemp         = ( TVar & _TEMP ) ? true : false;
 
