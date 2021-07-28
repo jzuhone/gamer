@@ -18,7 +18,7 @@ void SetArray();
 // =======================================================================================
 
 // options
-static int      Jet_Ambient;             // [0/1/9]: uniform/Milky-Way/load-from-file
+       int      Jet_Ambient;             // [0/1/9]: uniform/Milky-Way/load-from-file
 static bool     Jet_Precession;          // flag: precessing jet source
 static bool     Jet_TimeDependentSrc;    // flag: time-dependent fluid variables in source
 static int      Jet_Fire;                // [0/1/2/3]: no jet/jet1/jet2/bipolar jet
@@ -64,7 +64,7 @@ static real *Z;
 static real ambientTemperature;
 static real gasDiskTemperature;
 static real gasDiskPeakDens;
-static real interfaceHeight;
+       real interfaceHeight;
 static double gasDisk_highResRadius;
 static double jetSrc_highResRadius;
 static int  gasDisk_lowRes_LEVEL;
@@ -350,7 +350,7 @@ void SetParameter()
      Amb_UniformVel[1]      *= Const_c     / UNIT_V;
      Amb_UniformVel[2]      *= Const_c     / UNIT_V;
    }
-   else if ( Jet_Ambient == 2 )
+   else if ( Jet_Ambient == 2 || Jet_Ambient == 3 )
    {
      IsothermalSlab_VelocityDispersion  = Header[15];
      IsothermalSlab_PeakDens            = Header[16];
@@ -757,17 +757,19 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
       Pri[3] = (real)Amb_UniformVel[2];
       Pri[4] = (real)Amb_UniformTemp * Amb_UniformDens;
    }
-   else if ( Jet_Ambient == 2 )
+   else if ( Jet_Ambient == 2 ) // cold disk in stratified ambient
    {
 #    ifdef GRAVITY
-     if (fabs(zc) < interfaceHeight){
+     if (fabs(zc) < interfaceHeight)
+     {
        Interpolation_UM_IC( xc, yc, zc, Pri);
 
        if ( SRHD_CheckUnphysical( NULL, Pri,
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                   EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
      }
-     else{
+     else
+     {
 
        real Dens_gDisk_ambient, PotAtZ0, ambientDens;
 
@@ -803,7 +805,52 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
      }
 #  endif
    }
+   else if ( Jet_Ambient == 3 ) // cold disk in uniform ambient
+   {
+#    ifdef GRAVITY
+     if (fabs(zc) < interfaceHeight)
+     {
+       Interpolation_UM_IC( xc, yc, zc, Pri);
 
+       if ( SRHD_CheckUnphysical( NULL, Pri,
+                                  EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
+                                  EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
+     }
+     else
+     {
+       real Dens_gDisk_ambient, PotAtZ0, ambientDens;
+
+       PotAtZ0 = IsothermalSlab_Pot(interfaceHeight);
+
+       Dens_gDisk_ambient  = ambientTemperature / gasDiskTemperature;
+       Dens_gDisk_ambient *= exp( PotAtZ0*(ambientTemperature-gasDiskTemperature)/(ambientTemperature*gasDiskTemperature) );
+
+       if (Dens_gDisk_ambient > HUGE_NUMBER || Dens_gDisk_ambient < -HUGE_NUMBER)
+       {
+         printf("Dens_gDisk_ambient=%e! %s: %d\n", Dens_gDisk_ambient, __FUNCTION__, __LINE__);
+         exit(0);
+       }
+
+       real ambientPeakDens  = gasDiskPeakDens / Dens_gDisk_ambient;
+
+       ambientDens  = -IsothermalSlab_Pot(interfaceHeight)/ambientTemperature;
+
+       ambientDens  = exp(ambientDens);
+       ambientDens *= ambientPeakDens;
+
+       Pri[0] = ambientDens;
+       Pri[1] = 0.0;
+       Pri[2] = 0.0;
+       Pri[3] = 0.0;
+       Pri[4] = ambientDens*ambientTemperature;
+     } // if (fabs(zc) < interfaceHeight)
+
+     if ( SRHD_CheckUnphysical( NULL, Pri,
+                                EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
+                                EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
+#    endif
+
+   } // else if ( Jet_Ambient == 3 )
 
    Hydro_Pri2Con( Pri, fluid, NULL_BOOL, NULL_INT, NULL, EoS_DensPres2Eint_CPUPtr,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,

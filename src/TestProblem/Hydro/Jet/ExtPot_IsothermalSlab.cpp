@@ -18,7 +18,9 @@ extern double IsothermalSlab_Center[3];
 extern real IsothermalSlab_VelocityDispersion;
 extern real IsothermalSlab_PeakDens;
 extern real IsothermalSlab_Truncation;
+extern real interfaceHeight;
 
+extern  int Jet_Ambient;
 extern real distance_h;
 extern real v_halo;
 
@@ -47,6 +49,9 @@ void SetExtPotAuxArray_IsothermalSlab( double AuxArray_Flt[], int AuxArray_Int[]
    AuxArray_Flt[ 7] = IsothermalSlab_Truncation;
    AuxArray_Flt[ 8] = distance_h;
    AuxArray_Flt[ 9] = v_halo;
+   AuxArray_Flt[10] = interfaceHeight;
+
+   AuxArray_Int[ 0] = Jet_Ambient;
 
 } // FUNCTION : SetExtPotAuxArray_IsothermalSlab
 #endif // #ifndef __CUDACC__
@@ -92,6 +97,8 @@ static real ExtPot_IsothermalSlab( const double x, const double y, const double 
    const real   IsothermalSlab_Truncation         = (real)UserArray_Flt[ 7];   // 
    const real   distance_h                        = (real)UserArray_Flt[ 8];
    const real   v_halo                            = (real)UserArray_Flt[ 9];
+   const real   interfaceHeight                   = (real)UserArray_Flt[10];
+   const  int   Jet_Ambient                       =       UserArray_Int[ 0];
 
    const double IsothermalSlab_VelocityDispersion_Sqr = SQR(IsothermalSlab_VelocityDispersion);
 
@@ -103,13 +110,27 @@ static real ExtPot_IsothermalSlab( const double x, const double y, const double 
 
    real LogPot;
 
-   if ( fabs(dz) > IsothermalSlab_Truncation ){
-     stellarDiskPot = 2.0*IsothermalSlab_VelocityDispersion_Sqr*log(cosh(IsothermalSlab_Truncation*stellarDiskPot));
-     LogPot = SQR(v_halo) * log(SQR(IsothermalSlab_Truncation) + SQR(distance_h));
+   if ( Jet_Ambient == 2 )
+   {
+     if ( fabs(dz) > IsothermalSlab_Truncation ){
+       stellarDiskPot = 2.0*IsothermalSlab_VelocityDispersion_Sqr*log(cosh(IsothermalSlab_Truncation*stellarDiskPot));
+       LogPot = SQR(v_halo) * log(SQR(IsothermalSlab_Truncation) + SQR(distance_h));
+     }
+     else{
+       stellarDiskPot = 2.0*IsothermalSlab_VelocityDispersion_Sqr*log(cosh(dz*stellarDiskPot));
+       LogPot = SQR(v_halo) * log(dz*dz + SQR(distance_h));
+     }
    }
-   else{
-     stellarDiskPot = 2.0*IsothermalSlab_VelocityDispersion_Sqr*log(cosh(dz*stellarDiskPot));
-     LogPot = SQR(v_halo) * log(dz*dz + SQR(distance_h));
+   else if ( Jet_Ambient == 3 )
+   {
+     if ( fabs(dz) > interfaceHeight ){
+       stellarDiskPot = 0.0; 
+       LogPot         = 0.0;
+     }
+     else{
+       stellarDiskPot = 2.0*IsothermalSlab_VelocityDispersion_Sqr*log(cosh(dz*stellarDiskPot));
+       LogPot = SQR(v_halo) * log(dz*dz + SQR(distance_h));
+     }
    }
 
    real TotPot = stellarDiskPot + LogPot;
