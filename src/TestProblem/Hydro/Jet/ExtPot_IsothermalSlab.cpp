@@ -124,8 +124,8 @@ static real ExtPot_IsothermalSlab( const double x, const double y, const double 
    else if ( Jet_Ambient == 3 )
    {
      if ( fabs(dz) > interfaceHeight ){
-       stellarDiskPot = 0.0; 
-       LogPot         = 0.0;
+       stellarDiskPot = 2.0*IsothermalSlab_VelocityDispersion_Sqr*log(cosh(interfaceHeight*stellarDiskPot));
+       LogPot = SQR(v_halo) * log(SQR(interfaceHeight) + SQR(distance_h));
      }
      else{
        stellarDiskPot = 2.0*IsothermalSlab_VelocityDispersion_Sqr*log(cosh(dz*stellarDiskPot));
