@@ -736,18 +736,21 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 // 5. output the simulation grid data (density, momentum, ... etc)
    const int FieldSizeOnePatch = sizeof(real)*CUBE(PS1);
    int  NFieldOut;
-   char (*FieldName)[MAX_STRING]     = NULL;
-   real (*FieldData)[PS1][PS1][PS1]  = NULL;
+   char (*FieldName)[MAX_STRING]           = NULL;
+   real (*FieldData)[PS1][PS1][PS1]        = NULL;
 #  ifdef SRHD
-   real (*Dens) [PS1][PS1][PS1]      = NULL;
-   real (*MomX) [PS1][PS1][PS1]      = NULL;
-   real (*MomY) [PS1][PS1][PS1]      = NULL;
-   real (*MomZ) [PS1][PS1][PS1]      = NULL;
-   real (*Engy) [PS1][PS1][PS1]      = NULL;
-   real (*Temp) [PS1][PS1][PS1]      = NULL;
-   real (*Pres) [PS1][PS1][PS1]      = NULL;
-   real Cons[NCOMP_FLUID];
-   real Prim[NCOMP_FLUID];
+   real (*Dens) [PS1][PS1][PS1]            = NULL;
+   real (*MomX) [PS1][PS1][PS1]            = NULL;
+   real (*MomY) [PS1][PS1][PS1]            = NULL;
+   real (*MomZ) [PS1][PS1][PS1]            = NULL;
+   real (*Engy) [PS1][PS1][PS1]            = NULL;
+   real (*PassiveDis) [PS1][PS1][PS1]      = NULL;
+   real (*PassiveJet) [PS1][PS1][PS1]      = NULL;
+   real (*PassiveAmb) [PS1][PS1][PS1]      = NULL;
+   real (*Temp) [PS1][PS1][PS1]            = NULL;
+   real (*Pres) [PS1][PS1][PS1]            = NULL;
+   real Cons[NCOMP_TOTAL];
+   real Prim[NCOMP_TOTAL];
 #  endif
 
 
@@ -954,15 +957,18 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 
 
 //          output one field at one level in one rank at a time
-            FieldData = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-#           ifdef SRHD
-            Dens      = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            MomX      = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            MomY      = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            MomZ      = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            Engy      = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            Temp      = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            Pres      = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            FieldData   = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+#           ifdef SRHD  
+            Dens        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            MomX        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            MomY        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            MomZ        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            Engy        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            PassiveDis  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            PassiveJet  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            PassiveAmb  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            Temp        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+            Pres        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
 #           endif
 
             for (int v=0; v<NFieldOut; v++)
@@ -1065,7 +1071,7 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 	              Cons[4] = Engy[PID][i][j][k];
 
 
-                 Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,                               
+                 Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, true, PassiveNorm_NVar, PassiveNorm_VarIdx, NULL_BOOL,                               
                                  (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
                                  EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                  EoS_AuxArray_Int, h_EoS_Table, NULL, NULL );
@@ -1101,14 +1107,26 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 	                    break;
 	                  case 5:
 	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], Temp[PID], FieldSizeOnePatch );
+	                           memcpy( FieldData[PID], PassiveDis[PID], FieldSizeOnePatch );
 	                    break;
 	                  case 6:
+	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                           memcpy( FieldData[PID], PassiveJet[PID], FieldSizeOnePatch );
+	                    break;
+	                  case 7:
+	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                           memcpy( FieldData[PID], PassiveAmb[PID], FieldSizeOnePatch );
+	                    break;
+	                  case 8:
+	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                           memcpy( FieldData[PID], Temp[PID], FieldSizeOnePatch );
+	                    break;
+	                  case 9:
 	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
 	                           memcpy( FieldData[PID], Pres[PID], FieldSizeOnePatch );
 	                    break;
 #                     ifdef GRAVITY
-                      case 7:
+                      case 10:
                          for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
                             memcpy( FieldData[PID], amr->patch[ amr->PotSg[lv] ][lv][PID]->pot, FieldSizeOnePatch );
                         break;
@@ -1137,6 +1155,9 @@ void Output_DumpData_Total_HDF5( const char *FileName )
             delete [] MomY;
             delete [] MomZ;
             delete [] Engy;
+            delete [] PassiveDis; 
+            delete [] PassiveJet;
+            delete [] PassiveAmb;
             delete [] Temp;
             delete [] Pres;
 #           endif

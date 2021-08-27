@@ -75,7 +75,7 @@ static real EoS_GuessHTilde_TaubMathews( const real Con[], real* const Constant,
   real GuessHTilde, Discrimination;
   real Con_Sort[NCOMP_FLUID];
 
-  for (int v=0;v<NCOMP_TOTAL;v++) Con_Sort[v] = Con[v];
+  for (int v=0;v<NCOMP_FLUID;v++) Con_Sort[v] = Con[v];
 
   // sorting momentum
   if (Con_Sort[1]>Con_Sort[3]) Swap(&Con_Sort[1], &Con_Sort[3]);

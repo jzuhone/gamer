@@ -3,8 +3,13 @@
 // declare as static so that other functions cannot invoke it directly and must use the function pointer
 static void Init_Field_User_Template();
 
+void AddNewField_Jet();
 // this function pointer must be set by a test problem initializer
+#if ( NCOMP_PASSIVE > 0 )
+void (*Init_Field_User_Ptr)() = AddNewField_Jet;
+#else
 void (*Init_Field_User_Ptr)() = NULL;
+#endif
 
 
 static int NDefinedField;  // total number of defined fields --> for debug only

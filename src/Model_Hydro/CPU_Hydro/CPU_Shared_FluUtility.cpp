@@ -205,6 +205,9 @@ void Hydro_Con2Pri( const real In[], real Out[], const real MinPres,
 
 #  ifndef SRHD
    const bool CheckMinPres_Yes = true;
+#  endif
+
+#  if ( (defined HYDRO && !defined SRHD) || ( defined SRHD && NCOMP_PASSIVE > 0 ) )
    const real _Rho             = (real)1.0/In[0];
 #  endif
 
@@ -276,7 +279,8 @@ void Hydro_Con2Pri( const real In[], real Out[], const real MinPres,
 // passive scalars
 #  if ( NCOMP_PASSIVE > 0 )
 // copy all passive scalars
-   for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
+   if ( NormPassive )
+      for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
 
 // convert the mass density of target passive scalars to mass fraction
    if ( NormPassive )
@@ -341,6 +345,7 @@ void Hydro_Pri2Con( const real In[], real Out[], const bool NormPassive, const i
 
 
 // passive scalars
+# ifndef SRHD
 // --> do it before invoking EoS_DensPres2Eint() since the latter requires the mass density
 //     instead of mass fraction of passive scalars
 #  if ( NCOMP_PASSIVE > 0 )
@@ -351,7 +356,7 @@ void Hydro_Pri2Con( const real In[], real Out[], const bool NormPassive, const i
    if ( NormPassive )
       for (int v=0; v<NNorm; v++)   Out[ NCOMP_FLUID + NormIdx[v] ] *= In[0];
 #  endif
-
+#  endif
 
 // primitive --> conserved
 #  ifdef SRHD
@@ -371,6 +376,17 @@ void Hydro_Pri2Con( const real In[], real Out[], const bool NormPassive, const i
    Out[4]  = MSqr_DSqr + HTildeFunction;
    Out[4] /= (real)1.0 + SQRT( (real)1.0 + MSqr_DSqr + HTildeFunction );
    Out[4] *= Out[0];
+
+// passive scalars
+#  if ( NCOMP_PASSIVE > 0 )
+// copy all passive scalars
+   if ( NormPassive )
+      for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
+
+// convert the mass fraction of target passive scalars back to mass density
+   if ( NormPassive )
+      for (int v=0; v<NNorm; v++)   Out[ NCOMP_FLUID + NormIdx[v] ] *= Out[0];
+#  endif
 #  else
    Out[0] = In[0];
    Out[1] = In[0]*In[1];

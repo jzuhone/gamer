@@ -336,7 +336,7 @@ void WriteFile( void (*AnalFunc_Flu)( real fluid[], const double x, const double
 #  endif
 
 #  ifdef SRHD
-   real PriNume[NCOMP_FLUID];
+   real PriNume[NCOMP_TOTAL];
    Hydro_Con2Pri( Nume, PriNume, (real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                   (real)NULL_REAL, NULL, NULL, EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                   EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL, NULL );
@@ -364,7 +364,7 @@ void WriteFile( void (*AnalFunc_Flu)( real fluid[], const double x, const double
 
 #  if ( MODEL == HYDRO )
 #  ifdef SRHD    // convert conservative variables to primitive variables (SRHD)
-   real AnalPri[NCOMP_FLUID];
+   real AnalPri[NCOMP_TOTAL];
    Hydro_Con2Pri( Anal, AnalPri, (real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                   (real)NULL_REAL, NULL, NULL, EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                   EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL, NULL );

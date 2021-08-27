@@ -249,7 +249,7 @@ void WriteFile( FILE *File, const int lv, const int PID, const int i, const int 
 
 // primitive variables in SRHD
 #  ifdef SRHD
-   real Pri[NCOMP_FLUID], LorentzFactor;
+   real Pri[NCOMP_TOTAL], LorentzFactor;
 
    Hydro_Con2Pri( u, Pri, (real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                   (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,

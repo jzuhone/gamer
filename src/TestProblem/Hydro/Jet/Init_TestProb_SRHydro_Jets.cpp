@@ -117,6 +117,11 @@ static bool     Flag_BurstTemp;          // flag: burst temperature
 
 static double   Amb_FluSphereRadius;     //
 
+#if (NCOMP_PASSIVE > 0)
+static FieldIdx_t PassiveIdx_dis = 5;
+static FieldIdx_t PassiveIdx_jet = 6;
+static FieldIdx_t PassiveIdx_amb = 7;
+#endif
 // =======================================================================================
 
 
@@ -744,7 +749,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
                 const int lv, double AuxArray[] )
 {
 // variables for jet
-   real Pri[NCOMP_FLUID];
+   real Pri[NCOMP_TOTAL];
    real xc = x - IsothermalSlab_Center[0];
    real yc = y - IsothermalSlab_Center[1];
    real zc = z - IsothermalSlab_Center[2];
@@ -763,6 +768,12 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
      if (fabs(zc) < interfaceHeight)
      {
        Interpolation_UM_IC( xc, yc, zc, Pri);
+
+#      if (NCOMP_PASSIVE > 0)
+       Pri[PassiveIdx_dis] = Pri[0];
+       Pri[PassiveIdx_jet] = 0.0;
+       Pri[PassiveIdx_amb] = 0.0;
+#      endif
 
        if ( SRHD_CheckUnphysical( NULL, Pri,
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
@@ -799,6 +810,12 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
        Pri[3] = 0.0;
        Pri[4] = ambientDens*ambientTemperature;
 
+#      if (NCOMP_PASSIVE > 0)
+       Pri[PassiveIdx_dis] = 0.0;
+       Pri[PassiveIdx_jet] = 0.0;
+       Pri[PassiveIdx_amb] = Pri[0];
+#      endif
+
        if ( SRHD_CheckUnphysical( NULL, Pri,
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                   EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
@@ -811,6 +828,12 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
      if (fabs(zc) < interfaceHeight)
      {
        Interpolation_UM_IC( xc, yc, zc, Pri);
+
+#      if (NCOMP_PASSIVE > 0)
+       Pri[PassiveIdx_dis] = Pri[0];
+       Pri[PassiveIdx_jet] = 0.0;
+       Pri[PassiveIdx_amb] = 0.0;
+#      endif
 
        if ( SRHD_CheckUnphysical( NULL, Pri,
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
@@ -843,6 +866,13 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
        Pri[2] = 0.0;
        Pri[3] = 0.0;
        Pri[4] = ambientDens*ambientTemperature;
+
+#      if (NCOMP_PASSIVE > 0)
+       Pri[PassiveIdx_dis] = 0.0;
+       Pri[PassiveIdx_jet] = 0.0;
+       Pri[PassiveIdx_amb] = Pri[0];
+#      endif
+
      } // if (fabs(zc) < interfaceHeight)
 
      if ( SRHD_CheckUnphysical( NULL, Pri,
@@ -852,7 +882,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    } // else if ( Jet_Ambient == 3 )
 
-   Hydro_Pri2Con( Pri, fluid, NULL_BOOL, NULL_INT, NULL, EoS_DensPres2Eint_CPUPtr,
+   Hydro_Pri2Con( Pri, fluid, true, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                   EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
@@ -1026,6 +1056,12 @@ bool Flu_ResetByUser_Jets( real fluid[], const double x, const double y, const d
                    EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                    EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
+#   if (NCOMP_PASSIVE > 0)
+    fluid[PassiveIdx_dis] = 0.0;
+    fluid[PassiveIdx_jet] = fluid[DENS];
+    fluid[PassiveIdx_amb] = 0.0;
+#   endif
+
 	return true;
   }
 
@@ -1161,6 +1197,16 @@ double Mis_GetTimeStep_User( const int lv, const double dTime_dt )
 } // FUNCTION : Mis_GetTimeStep_User_Template
 
 
+
+#if (NCOMP_PASSIVE > 0)
+void AddNewField_Jet()
+{
+   if ( PassiveIdx_dis == 5 ) PassiveIdx_dis = AddField( "Passive_dis", NORMALIZE_YES );
+   if ( PassiveIdx_jet == 6 ) PassiveIdx_jet = AddField( "Passive_jet", NORMALIZE_YES );
+   if ( PassiveIdx_amb == 7 ) PassiveIdx_amb = AddField( "Passive_amb", NORMALIZE_YES );
+}
+#endif
+
 //-------------------------------------------------------------------------------------------------------
 // Function    :  Init_TestProb_Hydro_Jets
 // Description :  Test problem initializer
@@ -1210,6 +1256,9 @@ void Init_TestProb_Hydro_Jets()
    Init_ExtPot_Ptr          = Init_ExtPot_IsothermalSlab;
 #  endif
 
+#  if (NCOMP_PASSIVE > 0)
+//   Init_Field_User_Ptr = AddNewField_Jet;
+#  endif
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "%s ... done\n", __FUNCTION__ );
 

@@ -602,10 +602,6 @@ void Aux_Check_Parameter()
 #     error : ERROR : SRHD does not support PARTICLE !!
 #  endif
 
-#  if ( NCOMP_PASSIVE != 0 )
-#     error : SRHD does NOT support passive scalars !!
-#  endif
-
 #  if ( defined DUAL_ENERGY )
 #     error : ERROR : SRHD does not support DUAL_ENERGY !!
 #  endif
