@@ -1026,8 +1026,8 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 
 //             d. fluid variables
                {
-                  for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
-                     memcpy( FieldData[PID], amr->patch[ amr->FluSg[lv] ][lv][PID]->fluid[v], FieldSizeOnePatch );
+                 // for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+                 //    memcpy( FieldData[PID], amr->patch[ amr->FluSg[lv] ][lv][PID]->fluid[v], FieldSizeOnePatch );
 #                 ifdef SRHD
                   switch (v)
                   {

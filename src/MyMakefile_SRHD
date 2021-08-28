@@ -238,11 +238,11 @@ SIMU_OPTION += -DRANDOM_NUMBER=RNG_GNU_EXT
 
 # intel
 # -------------------------------------------------------------------------------
-# CXX         = icpc                                      # serial compiler
+# CXX         = icpc                                     # serial compiler
  CXX         = $(MPI_PATH)/bin/mpicxx                    # MPI compiler
 #CXX         = CC                                        # cray wrapper script
-# CXXFLAG     = -g -O3                                    # general flags
- CXXFLAG     = -Wall -Wextra -g -O3 -std=c++11 #-gxx-name=YOUR_G++
+# CXXFLAG     = -g -O3                                   # general flags
+ CXXFLAG     = -Wall -Wextra -g -O3 -std=c++11           #-gxx-name=YOUR_G++
 #CXXFLAG     = -g -fast
  CXXFLAG    += -w1                                       # warning flags
  OPENMPFLAG  = -fopenmp                                  # openmp flag
@@ -816,7 +816,7 @@ endif
 NVCCFLAG_COM += $(NVCCFLAG_ARCH)
 
 ifeq "$(filter -DGAMER_DEBUG, $(SIMU_OPTION))" "-DGAMER_DEBUG"
-   NVCCFLAG_COM += -g -Xptxas -v   # "-G" may cause the GPU Poisson solver to fail
+   NVCCFLAG_COM += -g -G -Xptxas -v   # "-G" may cause the GPU Poisson solver to fail
 endif
 
 #NVCCFLAG_COM += -use_fast_math
