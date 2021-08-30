@@ -56,13 +56,13 @@ void Aux_Check_Conservation( const char *comment )
    const int    NVar_NoPassive    = 9;    // 9: mass, momentum (x/y/z), kinetic/internal/potential/magnetic/total energies
                                           // --> note that **total energy** is put in the last element
 #  elif ( defined SRHD )
-   const int    NVar_NoPassive    = 9;    // 8: mass, momentum (x/y/z), kinetic/internal/reduced/total energies
+   const int    NVar_NoPassive    = 5;    // 8: mass, momentum (x/y/z), reduced energy
 
 #  else                                   // --> note that **total energy** is put in the last element
    const int    NVar_NoPassive    = 8;    // 8: mass, momentum (x/y/z), kinetic/internal/potential/total energies
                                           // --> note that **total energy** is put in the last element
-#  endif
    const int    idx_etot          = NVar_NoPassive - 1;
+#  endif
    const bool   CheckMinEint_No   = false;
 
 #  elif ( MODEL == ELBDM )
@@ -145,7 +145,14 @@ void Aux_Check_Conservation( const char *comment )
                for (int j=0; j<PATCH_SIZE; j++)
                for (int i=0; i<PATCH_SIZE; i++)
                {
-                  double Dens, MomX, MomY, MomZ, Etot, Ekin, Eint, Ered;
+#                 ifdef SRHD
+                  double Ered;
+#                 else
+                  double Etot, Ekin, Eint;
+#                 endif
+
+                  double Dens, MomX, MomY, MomZ;
+
 #                 ifdef GRAVITY
                   double Epot;
 #                 endif
@@ -181,31 +188,24 @@ void Aux_Check_Conservation( const char *comment )
                   Fluid_lv[6] += Epot;
 #                 endif
 
-#                 ifdef SRHD
-                  printf("%s: %d need EoS table !! \n", __FUNCTION__, __LINE__);
-                  Eint         = Hydro_Con2Eint( Dens, MomX, MomY, MomZ, Ered, EoS_GuessHTilde_CPUPtr,
-                                                 EoS_HTilde2Temp_CPUPtr, CheckMinEint_No, NULL_REAL, Emag );
-                  exit(0);
-#                 else
+#                 ifndef SRHD
                   Eint         = Hydro_Con2Eint( Dens, MomX, MomY, MomZ, Etot, EoS_GuessHTilde_CPUPtr,
                                                  EoS_HTilde2Temp_CPUPtr, CheckMinEint_No, NULL_REAL, Emag );
-#                 endif
-
                   Fluid_lv[5] += Eint;
+#                 endif
 
 #                 ifdef SRHD
-                  real Cons[NCOMP_FLUID] = { Dens, MomX, MomY, MomZ, Ered };
-                  Ekin         = SRHD_Con2KineticEngy( Cons, EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
-                                                       EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table );
-                  Fluid_lv[7] += Ered;
-#                 else
+                  Fluid_lv[4] += Ered;
+#                 endif
+
+#                 ifndef SRHD
                   //###NOTE: assuming Etot = Eint + Ekin + Emag
                   Ekin         = Etot - Eint;
-#                 endif
 #                 ifdef MHD
                   Ekin        -= Emag;
 #                 endif
                   Fluid_lv[4] += Ekin;
+#                 endif
                } // i,j,k
 
 
@@ -282,9 +282,7 @@ void Aux_Check_Conservation( const char *comment )
 #     if   ( MODEL == HYDRO )
 #     ifdef MHD
       Fluid_lv[idx_etot] = Fluid_lv[4] + Fluid_lv[5] + Fluid_lv[6] + Fluid_lv[7];
-#     elif ( defined SRHD )
-      Fluid_lv[idx_etot] = Fluid_lv[4] + Fluid_lv[5] + Fluid_lv[6] + Fluid_lv[7];
-#     else
+#     elif ( !defined SRHD )
       Fluid_lv[idx_etot] = Fluid_lv[4] + Fluid_lv[5] + Fluid_lv[6];
 #     endif //#     ifdef MHD
 
@@ -412,9 +410,11 @@ void Aux_Check_Conservation( const char *comment )
          Aux_Message( File, "  %14s  %14s  %14s", "MomX_Gas", "MomX_Gas_AErr", "MomX_Gas_RErr" );
          Aux_Message( File, "  %14s  %14s  %14s", "MomY_Gas", "MomY_Gas_AErr", "MomY_Gas_RErr" );
          Aux_Message( File, "  %14s  %14s  %14s", "MomZ_Gas", "MomZ_Gas_AErr", "MomZ_Gas_RErr" );
+#        ifndef SRHD
          Aux_Message( File, "  %14s  %14s  %14s", "Ekin_Gas", "Ekin_Gas_AErr", "Ekin_Gas_RErr" );
          Aux_Message( File, "  %14s  %14s  %14s", "Eint_Gas", "Eint_Gas_AErr", "Eint_Gas_RErr" );
          Aux_Message( File, "  %14s  %14s  %14s", "Epot_Gas", "Epot_Gas_AErr", "Epot_Gas_RErr" );
+#        endif
 #        ifdef MHD
          Aux_Message( File, "  %14s  %14s  %14s", "Emag_Gas", "Emag_Gas_AErr", "Emag_Gas_RErr" );
 #        endif

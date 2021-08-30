@@ -49,7 +49,10 @@ static double    Riemann_MagR_T2;      // right-state transverse B field 2
 #endif
 // =======================================================================================
 
-
+#if ( NCOMP_PASSIVE > 0 )
+static int PassiveIdx_Leftt = 5;
+static int PassiveIdx_Right = 6;
+#endif
 
 
 //-------------------------------------------------------------------------------------------------------
@@ -375,6 +378,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    const double dPre = 0.5*( Riemann_PreR    - Riemann_PreL    );
    const double aPre = 0.5*( Riemann_PreR    + Riemann_PreL    );
 
+
 #  ifdef SRHD
    Prim[0] = (real)aRho + dRho*Tanh;
    Prim[1] = (real)aVel + dVel*Tanh; 
@@ -382,9 +386,24 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    Prim[3] = (real)aVT2 + dVT2*Tanh;
    Prim[4] = (real)aPre + dPre*Tanh;
 
+
    Hydro_Pri2Con( Prim, fluid, NULL_BOOL, NULL_INT, NULL, NULL,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                   EoS_AuxArray_Int, h_EoS_Table, NULL );
+
+#  if ( NCOMP_PASSIVE > 0 )
+   if ( r > Riemann_Pos )
+   {
+     fluid[PassiveIdx_Leftt] = 0.0;
+     fluid[PassiveIdx_Right] = fluid[DENS];
+   }
+   else
+   {
+     fluid[PassiveIdx_Leftt] = fluid[DENS];
+     fluid[PassiveIdx_Right] = 0.0;
+   }
+#  endif
+
 #  else
    fluid[ DENS      ] =   aRho + dRho*Tanh;
    fluid[ MomIdx[0] ] = ( aVel + dVel*Tanh )*fluid[DENS];
@@ -472,6 +491,14 @@ void SetBFieldIC( real magnetic[], const double x, const double y, const double 
 #endif // #if ( MODEL == HYDRO )
 
 
+#if ( NCOMP_PASSIVE > 0 )
+void AddNewField_Riemann()
+{
+   if ( PassiveIdx_Leftt == 5 )   PassiveIdx_Leftt = AddField( "PassiveLeftt", NORMALIZE_YES );
+   if ( PassiveIdx_Right == 6 )   PassiveIdx_Right = AddField( "PassiveRight", NORMALIZE_YES );
+}
+#endif
+
 
 //-------------------------------------------------------------------------------------------------------
 // Function    :  Init_TestProb_Hydro_Riemann
@@ -505,6 +532,9 @@ void Init_TestProb_Hydro_Riemann()
 #  endif
 #  endif // #if ( MODEL == HYDRO )
 
+#  if ( NCOMP_PASSIVE > 0 )
+   Init_Field_User_Ptr           = AddNewField_Riemann;
+#  endif
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "%s ... done\n", __FUNCTION__ );
 

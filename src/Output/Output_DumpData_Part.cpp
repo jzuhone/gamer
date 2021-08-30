@@ -135,6 +135,7 @@ void Output_DumpData_Part( const OptOutputPart_t Part, const bool BaseOnly, cons
             fprintf( File, "%14s", "Uy" );
             fprintf( File, "%14s", "Uz" );
             fprintf( File, "%14s", "Pressure"      );
+            fprintf( File, "%14s", "Cs"      );
             fprintf( File, "%14s", "LorentzFactor" );
             fprintf( File, "%14s", "Vx" );
             fprintf( File, "%14s", "Vy" );
@@ -256,7 +257,7 @@ void WriteFile( FILE *File, const int lv, const int PID, const int i, const int 
                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                   EoS_AuxArray_Int, h_EoS_Table, NULL, &LorentzFactor );
 
-   for (int v=0; v<NCOMP_TOTAL; v++)   fprintf( File, " %13.6e", Pri[v] );
+   for (int v=0; v<NCOMP_FLUID; v++)   fprintf( File, " %13.6e", Pri[v] );
 #  endif
 
 // magnetic field
@@ -287,12 +288,13 @@ void WriteFile( FILE *File, const int lv, const int PID, const int i, const int 
                                     EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 #  ifdef SRHD
    const real Cs   = SQRT( EoS_Temper2CSqr_CPUPtr( Pri[0], Pres, NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table ) );
+   fprintf( File, " %13.6e", Cs );
 #  else
    const real Cs   = SQRT(  EoS_DensPres2CSqr_CPUPtr( u[DENS], Pres, u+NCOMP_FLUID, EoS_AuxArray_Flt, EoS_AuxArray_Int,
                                                       h_EoS_Table )  );
+   fprintf( File, " %13.6e %13.6e", Pres, Cs );
 #  endif
 
-   fprintf( File, " %13.6e %13.6e", Pres, Cs );
 #  if   ( defined SRHD )
 // output Lorentz factor
    fprintf( File, " %13.6e", LorentzFactor );
