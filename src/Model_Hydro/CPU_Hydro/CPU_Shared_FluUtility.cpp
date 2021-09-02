@@ -279,8 +279,7 @@ void Hydro_Con2Pri( const real In[], real Out[], const real MinPres,
 // passive scalars
 #  if ( NCOMP_PASSIVE > 0 )
 // copy all passive scalars
-   if ( NormPassive )
-      for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
+   for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
 
 // convert the mass density of target passive scalars to mass fraction
    if ( NormPassive )
@@ -380,8 +379,7 @@ void Hydro_Pri2Con( const real In[], real Out[], const bool NormPassive, const i
 // passive scalars
 #  if ( NCOMP_PASSIVE > 0 )
 // copy all passive scalars
-   if ( NormPassive )
-      for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
+   for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
 
 // convert the mass fraction of target passive scalars back to mass density
    if ( NormPassive )
