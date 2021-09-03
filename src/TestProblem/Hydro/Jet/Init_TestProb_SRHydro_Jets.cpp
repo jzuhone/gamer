@@ -148,7 +148,7 @@ void Validate()
 #  endif
 
 #  ifndef GRAVITY
-   if ( Jet_Ambient == 1 )
+   if ( Jet_Ambient == 1 || Jet_Ambient == 2 )
         Aux_Error( ERROR_INFO, "GRAVITY must be enabled !!\n" );
 #  endif
 
@@ -882,7 +882,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    } // else if ( Jet_Ambient == 3 )
 
-   Hydro_Pri2Con( Pri, fluid, true, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
+   Hydro_Pri2Con( Pri, fluid, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                   EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
@@ -1257,7 +1257,7 @@ void Init_TestProb_Hydro_Jets()
 #  endif
 
 #  if (NCOMP_PASSIVE > 0)
-//   Init_Field_User_Ptr = AddNewField_Jet;
+   Init_Field_User_Ptr      = AddNewField_Jet;
 #  endif
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "%s ... done\n", __FUNCTION__ );

@@ -351,16 +351,20 @@ void Aux_Check_Conservation( const char *comment )
 #        if   ( MODEL == HYDRO )
          Aux_Message( File, "# Mass_Gas     : total HYDRO mass\n" );
          Aux_Message( File, "# MomX/Y/Z_Gas : total HYDRO momentum\n" );
+#        ifndef SRHD
          Aux_Message( File, "# Ekin_Gas     : total HYDRO kinetic energy\n" );
          Aux_Message( File, "# Eint_Gas     : total HYDRO internal energy\n" );
          Aux_Message( File, "# Epot_Gas     : total HYDRO potential energy\n" );
+#        endif
 #        ifdef MHD
          Aux_Message( File, "# Emag_Gas     : total HYDRO magnetic energy\n" );
 #        endif
 #        ifdef SRHD
          Aux_Message( File, "# Ered_Gas     : reduced HYDRO energy (rest mass energy subtracted from total energy)\n" );
 #        endif
+#        ifndef SRHD
          Aux_Message( File, "# Etot_Gas     : total HYDRO energy\n" );
+#        endif
 
 #        elif ( MODEL == ELBDM )
          Aux_Message( File, "# Mass_Psi     : total ELBDM mass\n" );
@@ -420,8 +424,10 @@ void Aux_Check_Conservation( const char *comment )
 #        endif
 #        ifdef SRHD
          Aux_Message( File, "  %14s  %14s  %14s", "Ered_Gas", "Ered_Gas_AErr", "Ered_Gas_RErr" );
-#        endif
+#        else
          Aux_Message( File, "  %14s  %14s  %14s", "Etot_Gas", "Etot_Gas_AErr", "Etot_Gas_RErr" );
+#        endif
+
 
 #        elif ( MODEL == ELBDM )
          Aux_Message( File, "  %14s  %14s  %14s", "Mass_Psi", "Mass_Psi_AErr", "Mass_Psi_RErr" );
