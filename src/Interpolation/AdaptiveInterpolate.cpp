@@ -36,7 +36,7 @@ void AdaptiveInterpolate( real CData [], const int CSize[3], const int CStart[3]
                  {
                    for (int v = 0 ; v < NCOMP_FLUID ;v++) Cons[v] = CData[CSize3D*v+i];
 
-                   Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+                   Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                                   (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                   EoS_AuxArray_Int, h_EoS_Table, NULL, NULL );
@@ -105,7 +105,7 @@ void AdaptiveInterpolate( real CData [], const int CSize[3], const int CStart[3]
          {
             for (int v = 0 ; v < NCOMP_FLUID ;v++) Prim[v] = FData[FSize3D*v+i];
 
-            Hydro_Pri2Con( Prim, Cons, NULL_BOOL, NULL_INT, NULL, EoS_DensPres2Eint_CPUPtr,
+            Hydro_Pri2Con( Prim, Cons, false, NULL_BOOL, NULL_INT, NULL, EoS_DensPres2Eint_CPUPtr,
                            EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                            EoS_AuxArray_Int, h_EoS_Table, NULL );
 

@@ -432,7 +432,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    } // if ( Plummer_Collision ) ... else ...
 
 #  ifdef SRHD
-   Hydro_Pri2Con( Prim, fluid, NULL_BOOL, NULL_INT, NULL, NULL,
+   Hydro_Pri2Con( Prim, fluid, false, NULL_BOOL, NULL_INT, NULL, NULL,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                   EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 #  else

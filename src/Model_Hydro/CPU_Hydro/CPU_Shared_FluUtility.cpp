@@ -194,7 +194,7 @@ void Hydro_Rotate3D( real InOut[], const int XYZ, const bool Forward, const int 
 // Return      :  Out[], EintOut (optional)
 //-------------------------------------------------------------------------------------------------------
 GPU_DEVICE
-void Hydro_Con2Pri( const real In[], real Out[], const real MinPres,
+void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool Passive,
                     const bool NormPassive, const int NNorm, const int NormIdx[],
                     const bool JeansMinPres, const real JeansMinPres_Coeff,
                     const EoS_DE2P_t EoS_DensEint2Pres, const EoS_DP2E_t EoS_DensPres2Eint,
@@ -279,7 +279,7 @@ void Hydro_Con2Pri( const real In[], real Out[], const real MinPres,
 // passive scalars
 #  if ( NCOMP_PASSIVE > 0 )
 // copy all passive scalars
-   if ( NELEMS(In) == NCOMP_TOTAL )
+   if ( Passive )
       for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
 
 // convert the mass density of target passive scalars to mass fraction
@@ -330,7 +330,7 @@ void Hydro_Con2Pri( const real In[], real Out[], const real MinPres,
 // Return      :  Out[]
 //-------------------------------------------------------------------------------------------------------
 GPU_DEVICE
-void Hydro_Pri2Con( const real In[], real Out[], const bool NormPassive, const int NNorm, const int NormIdx[],
+void Hydro_Pri2Con( const real In[], real Out[], const bool Passive, const bool NormPassive, const int NNorm, const int NormIdx[],
                     const EoS_DP2E_t EoS_DensPres2Eint, const EoS_TEM2H_t EoS_Temp2HTilde,
                     const EoS_H2TEM_t EoS_HTilde2Temp, const double EoS_AuxArray_Flt[], const int EoS_AuxArray_Int[],
                     const real *const EoS_Table[EOS_NTABLE_MAX], const real* const EintIn )
@@ -380,8 +380,8 @@ void Hydro_Pri2Con( const real In[], real Out[], const bool NormPassive, const i
 // passive scalars
 #  if ( NCOMP_PASSIVE > 0 )
 // copy all passive scalars
-   if ( NELEMS(In) == NCOMP_TOTAL )
-      for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
+   if ( Passive )
+      for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)   Out[v] = In[v];
 
 // convert the mass fraction of target passive scalars back to mass density
    if ( NormPassive )
@@ -613,7 +613,7 @@ real SRHD_Con2KineticEngy( real Con[], const EoS_GUESS_t EoS_GuessHTilde, const 
 
   H = (real)1.0 + SRHD_Con2HTilde( Con, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table );
 
-  Hydro_Con2Pri( Con, Pri, NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL, NULL_REAL, NULL, NULL,
+  Hydro_Con2Pri( Con, Pri, NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL, NULL_REAL, NULL, NULL,
                  EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, &LorentzFactor );
 
   Usqr = VectorDotProduct( Pri[1], Pri[2], Pri[3]  );
@@ -1008,7 +1008,7 @@ real Hydro_Con2Pres( const real Dens, const real MomX, const real MomY, const re
 #  ifdef SRHD
    real Cons[NCOMP_FLUID] = { Dens, MomX, MomY, MomZ, Engy };
    real Prim[NCOMP_FLUID];
-   Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL, (real)NULL_REAL,
+   Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL, (real)NULL_REAL,
                   NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, NULL );
    Pres = Prim[4];
 #  else
@@ -1064,7 +1064,7 @@ real Hydro_Con2Eint( const real Dens, const real MomX, const real MomY, const re
    printf( "%s: Hydro_Con2Pri need EoS table !!\n", __FUNCTION__);
    exit(0);
 
-   Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+   Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                   (real)NULL_REAL, NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
                   NULL, NULL, NULL, NULL, NULL );
 
@@ -1130,7 +1130,7 @@ real Hydro_Con2Temp( const real Dens, const real MomX, const real MomY, const re
 #  ifdef SRHD
    real Cons[NCOMP_FLUID] =  {Dens, MomX, MomY, MomZ, Engy};
    real Prim[NCOMP_FLUID];
-   Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+   Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                   (real)NULL_REAL, NULL, NULL, EoS_GuessHTilde,
                   EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, NULL );
    Temp = Prim[4]/Prim[0];

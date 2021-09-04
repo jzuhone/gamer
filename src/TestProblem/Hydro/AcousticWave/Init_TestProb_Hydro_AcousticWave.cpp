@@ -240,7 +240,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    Prim[3] = LorentzFactor * Acoustic_Cs / SQRT3;
    Prim[4] = Acoustic_Temp_Bg * Acoustic_Rho_Bg;
 
-   Hydro_Pri2Con( Prim, Cons, NULL_BOOL, NULL_INT, NULL, NULL,
+   Hydro_Pri2Con( Prim, Cons, false, NULL_BOOL, NULL_INT, NULL, NULL,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 #  else
 // assuming EOS_GAMMA

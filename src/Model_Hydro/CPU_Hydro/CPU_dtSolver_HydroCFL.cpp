@@ -129,7 +129,7 @@ void CPU_dtSolver_HydroCFL  ( real g_dt_Array[], const real g_Flu_Array[][FLU_NI
 #        endif
 
 #        ifdef SRHD
-         Hydro_Con2Pri( fluid, Pri,(real)NULL_REAL, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+         Hydro_Con2Pri( fluid, Pri,(real)NULL_REAL, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                         (real)NULL_REAL, NULL, NULL,
                         EoS_GuessHTilde_Func, EoS_HTilde2Temp_Func,
                         c_EoS_AuxArray_Flt, c_EoS_AuxArray_Int, c_EoS_Table, NULL, &LorentzFactor );

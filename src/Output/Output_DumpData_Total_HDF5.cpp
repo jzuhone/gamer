@@ -1071,7 +1071,7 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 	              Cons[4] = Engy[PID][i][j][k];
 
 
-                 Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, OPT__NORMALIZE_PASSIVE, PassiveNorm_NVar, PassiveNorm_VarIdx, NULL_BOOL,
+                 Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, true, OPT__NORMALIZE_PASSIVE, PassiveNorm_NVar, PassiveNorm_VarIdx, NULL_BOOL,
                                  (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
                                  EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                  EoS_AuxArray_Int, h_EoS_Table, NULL, NULL );
