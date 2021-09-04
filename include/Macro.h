@@ -873,6 +873,8 @@
 #define SQR(  a )       ( (a)*(a)     )
 #define CUBE( a )       ( (a)*(a)*(a) )
 
+// get the size of static 1D array
+#define NELEMS(x)  ( sizeof(x) / sizeof( (x)[0] ) )
 
 // 3D to 1D array indices transformation
 #define IDX321( i, j, k, Ni, Nj )   (  ( (k)*(Nj) + (j) )*(Ni) + (i)  )
