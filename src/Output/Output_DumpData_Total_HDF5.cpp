@@ -14,7 +14,15 @@ static void GetCompound_Makefile ( hid_t &H5_TypeID );
 static void GetCompound_SymConst ( hid_t &H5_TypeID );
 static void GetCompound_InputPara( hid_t &H5_TypeID );
 
-
+#ifdef COSMIC_RAY
+#define __TEMP__  9
+#define __PRES__  10
+#define __POT__   11
+#else
+#define __TEMP__  8
+#define __PRES__  9
+#define __POT__   10
+#endif
 
 /*======================================================================================================
 Data structure:
@@ -749,6 +757,9 @@ void Output_DumpData_Total_HDF5( const char *FileName )
    real (*PassiveAmb) [PS1][PS1][PS1]      = NULL;
    real (*Temp) [PS1][PS1][PS1]            = NULL;
    real (*Pres) [PS1][PS1][PS1]            = NULL;
+#  ifdef COSMIC_RAY
+   real (*CRay) [PS1][PS1][PS1]            = NULL;
+#  endif
    real Cons[NCOMP_TOTAL];
    real Prim[NCOMP_TOTAL];
 #  endif
@@ -958,7 +969,7 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 
 //          output one field at one level in one rank at a time
             FieldData   = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-#           ifdef SRHD  
+#           ifdef SRHD
             Dens        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
             MomX        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
             MomY        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
@@ -967,6 +978,9 @@ void Output_DumpData_Total_HDF5( const char *FileName )
             PassiveDis  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
             PassiveJet  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
             PassiveAmb  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+#           ifdef COSMIC_RAY
+            CRay        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
+#           endif
             Temp        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
             Pres        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
 #           endif
@@ -1105,28 +1119,39 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
 	                           memcpy( FieldData[PID], Engy[PID], FieldSizeOnePatch );
 	                    break;
-	                  case 5:
+#                     if ( NCOMP_PASSIVE != 3 && !defined COSMIC_RAY )
+#                     error: NCOMP_PASSIVE must be 3!!
+#                     elif ( NCOMP_PASSIVE != 4 && defined COSMIC_RAY )
+#                     error: NCOMP_PASSIVE must be 4!!
+#                     endif
+	                  case 5: //PassiveIdx_dis
 	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
 	                           memcpy( FieldData[PID], PassiveDis[PID], FieldSizeOnePatch );
 	                    break;
-	                  case 6:
+	                  case 6: // PassiveIdx_jet
 	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
 	                           memcpy( FieldData[PID], PassiveJet[PID], FieldSizeOnePatch );
 	                    break;
-	                  case 7:
+	                  case 7: // PassiveIdx_amb
 	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
 	                           memcpy( FieldData[PID], PassiveAmb[PID], FieldSizeOnePatch );
 	                    break;
-	                  case 8:
+#                     ifdef COSMIC_RAY
+	                  case CRAY: // COSMIC_RAY
+	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                           memcpy( FieldData[PID], CRay[PID], FieldSizeOnePatch );
+	                    break;
+#                     endif
+	                  case __TEMP__: // Temp
 	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
 	                           memcpy( FieldData[PID], Temp[PID], FieldSizeOnePatch );
 	                    break;
-	                  case 9:
+	                  case __PRES__: // Pres
 	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
 	                           memcpy( FieldData[PID], Pres[PID], FieldSizeOnePatch );
 	                    break;
 #                     ifdef GRAVITY
-                      case 10:
+                      case __POT__:
                          for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
                             memcpy( FieldData[PID], amr->patch[ amr->PotSg[lv] ][lv][PID]->pot, FieldSizeOnePatch );
                         break;
@@ -1155,11 +1180,14 @@ void Output_DumpData_Total_HDF5( const char *FileName )
             delete [] MomY;
             delete [] MomZ;
             delete [] Engy;
-            delete [] PassiveDis; 
+            delete [] PassiveDis;
             delete [] PassiveJet;
             delete [] PassiveAmb;
             delete [] Temp;
             delete [] Pres;
+#           ifdef COSMIC_RAY
+            delete [] CRay;
+#           endif
 #           endif
 
             H5_Status = H5Sclose( H5_MemID_Field );
@@ -3228,7 +3256,7 @@ void GetCompound_InputPara( hid_t &H5_TypeID )
 
 #  if   ( MODEL == HYDRO )
    H5Tinsert( H5_TypeID, "FlagTable_PresGradient", HOFFSET(InputPara_t,FlagTable_PresGradient  ), H5_TypeID_Arr_NLvM1Double   );
-   H5Tinsert( H5_TypeID, "FlagTable_EngyGradient", HOFFSET(InputPara_t,FlagTable_EngyGradient  ), H5_TypeID_Arr_NLvM1Double   );         
+   H5Tinsert( H5_TypeID, "FlagTable_EngyGradient", HOFFSET(InputPara_t,FlagTable_EngyGradient  ), H5_TypeID_Arr_NLvM1Double   );
    H5Tinsert( H5_TypeID, "FlagTable_Vorticity",    HOFFSET(InputPara_t,FlagTable_Vorticity     ), H5_TypeID_Arr_NLvM1Double   );
    H5Tinsert( H5_TypeID, "FlagTable_Jeans",        HOFFSET(InputPara_t,FlagTable_Jeans         ), H5_TypeID_Arr_NLvM1Double   );
 #  ifdef MHD
