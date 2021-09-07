@@ -14,15 +14,6 @@ static void GetCompound_Makefile ( hid_t &H5_TypeID );
 static void GetCompound_SymConst ( hid_t &H5_TypeID );
 static void GetCompound_InputPara( hid_t &H5_TypeID );
 
-#ifdef COSMIC_RAY
-#define __TEMP__  9
-#define __PRES__  10
-#define __POT__   11
-#else
-#define __TEMP__  8
-#define __PRES__  9
-#define __POT__   10
-#endif
 
 /*======================================================================================================
 Data structure:
@@ -752,14 +743,8 @@ void Output_DumpData_Total_HDF5( const char *FileName )
    real (*MomY) [PS1][PS1][PS1]            = NULL;
    real (*MomZ) [PS1][PS1][PS1]            = NULL;
    real (*Engy) [PS1][PS1][PS1]            = NULL;
-   real (*PassiveDis) [PS1][PS1][PS1]      = NULL;
-   real (*PassiveJet) [PS1][PS1][PS1]      = NULL;
-   real (*PassiveAmb) [PS1][PS1][PS1]      = NULL;
    real (*Temp) [PS1][PS1][PS1]            = NULL;
    real (*Pres) [PS1][PS1][PS1]            = NULL;
-#  ifdef COSMIC_RAY
-   real (*CRay) [PS1][PS1][PS1]            = NULL;
-#  endif
    real Cons[NCOMP_TOTAL];
    real Prim[NCOMP_TOTAL];
 #  endif
@@ -975,29 +960,12 @@ void Output_DumpData_Total_HDF5( const char *FileName )
             MomY        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
             MomZ        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
             Engy        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            PassiveDis  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            PassiveJet  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-            PassiveAmb  = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-#           ifdef COSMIC_RAY
-            CRay        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
-#           endif
             Temp        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
             Pres        = new real [ amr->NPatchComma[lv][1] ][PS1][PS1][PS1];
 #           endif
 
-            for (int v=0; v<NFieldOut; v++)
+            for (int v=0; v<NCOMP_FLUID; v++)
             {
-//             5-3-1-3. collect the target field from all patches at the current target level
-//             a. gravitational potential
-#              ifdef GRAVITY
-               if ( v == PotDumpIdx )
-               {
-                  for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
-                     memcpy( FieldData[PID], amr->patch[ amr->PotSg[lv] ][lv][PID]->pot, FieldSizeOnePatch );
-               }
-               else
-#              endif
-
 //             b. particle density on grids
 #              ifdef PARTICLE
                if ( v == ParDensDumpIdx )
@@ -1040,8 +1008,6 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 
 //             d. fluid variables
                {
-                 // for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
-                 //    memcpy( FieldData[PID], amr->patch[ amr->FluSg[lv] ][lv][PID]->fluid[v], FieldSizeOnePatch );
 #                 ifdef SRHD
                   switch (v)
                   {
@@ -1069,98 +1035,61 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 #                 endif
                }
 
-#              ifdef SRHD
-               } // for (int v=0; v<NFieldOut; v++)
+#           ifdef SRHD
+            } // for (int v=0; v<NCOMP_FLUID; v++)
 
-//             convert conserved quantities to temperature
-               for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	           for ( int i=0;i<PS1;i++  )
-	           for ( int j=0;j<PS1;j++  )
-	           for ( int k=0;k<PS1;k++  )
-               {
-	              Cons[0] = Dens[PID][i][j][k];
-	              Cons[1] = MomX[PID][i][j][k];
-	              Cons[2] = MomY[PID][i][j][k];
-	              Cons[3] = MomZ[PID][i][j][k];
-	              Cons[4] = Engy[PID][i][j][k];
+//          convert conserved quantities to temperature
+            for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	        for ( int i=0;i<PS1;i++  )
+	        for ( int j=0;j<PS1;j++  )
+	        for ( int k=0;k<PS1;k++  )
+            {
+	           Cons[0] = Dens[PID][i][j][k];
+	           Cons[1] = MomX[PID][i][j][k];
+	           Cons[2] = MomY[PID][i][j][k];
+	           Cons[3] = MomZ[PID][i][j][k];
+	           Cons[4] = Engy[PID][i][j][k];
 
 
-                 Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, true, OPT__NORMALIZE_PASSIVE, PassiveNorm_NVar, PassiveNorm_VarIdx, NULL_BOOL,
-                                 (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
-                                 EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
-                                 EoS_AuxArray_Int, h_EoS_Table, NULL, NULL );
+              Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, true, OPT__NORMALIZE_PASSIVE, PassiveNorm_NVar, PassiveNorm_VarIdx, NULL_BOOL,
+                              (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
+                              EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
+                              EoS_AuxArray_Int, h_EoS_Table, NULL, NULL );
 
-                 Temp[PID][i][j][k] = Prim[4]/Prim[0];
-                 Pres[PID][i][j][k] = Prim[4];
-               }
+              Temp[PID][i][j][k] = Prim[4]/Prim[0];
+              Pres[PID][i][j][k] = Prim[4];
+            }
 
-//             copy conserved data and temperature into FieldData
-               for (int v=0; v<NFieldOut; v++)
+//          copy conserved data and temperature into FieldData
+            for (int v=0; v<NCOMP_FLUID; v++)
+	        {
+	           switch (v)
 	           {
-	              switch (v)
-	               {
-	                  case DENS:
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], Dens[PID], FieldSizeOnePatch );
-	                    break;
-	                  case MOMX:
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], MomX[PID], FieldSizeOnePatch );
-	                    break;
-	                  case MOMY:
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], MomY[PID], FieldSizeOnePatch );
-	                    break;
-	                  case MOMZ:
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], MomZ[PID], FieldSizeOnePatch );
-	                    break;
-	                  case ENGY:
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], Engy[PID], FieldSizeOnePatch );
-	                    break;
-#                     if ( NCOMP_PASSIVE != 3 && !defined COSMIC_RAY )
-#                     error: NCOMP_PASSIVE must be 3!!
-#                     elif ( NCOMP_PASSIVE != 4 && defined COSMIC_RAY )
-#                     error: NCOMP_PASSIVE must be 4!!
-#                     endif
-	                  case 5: //PassiveIdx_dis
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], PassiveDis[PID], FieldSizeOnePatch );
-	                    break;
-	                  case 6: // PassiveIdx_jet
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], PassiveJet[PID], FieldSizeOnePatch );
-	                    break;
-	                  case 7: // PassiveIdx_amb
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], PassiveAmb[PID], FieldSizeOnePatch );
-	                    break;
-#                     ifdef COSMIC_RAY
-	                  case CRAY: // COSMIC_RAY
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], CRay[PID], FieldSizeOnePatch );
-	                    break;
-#                     endif
-	                  case __TEMP__: // Temp
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], Temp[PID], FieldSizeOnePatch );
-	                    break;
-	                  case __PRES__: // Pres
-	                     for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
-	                           memcpy( FieldData[PID], Pres[PID], FieldSizeOnePatch );
-	                    break;
-#                     ifdef GRAVITY
-                      case __POT__:
-                         for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
-                            memcpy( FieldData[PID], amr->patch[ amr->PotSg[lv] ][lv][PID]->pot, FieldSizeOnePatch );
-                        break;
-#                     endif
-	                  default:
-                      Aux_Error(ERROR_INFO, "Out of the range! NFieldOut=%d, v=%d\n", NFieldOut, v);
-	                    break;
-                   }
-#              endif
+	               case DENS:
+	                  for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                        memcpy( FieldData[PID], Dens[PID], FieldSizeOnePatch );
+	                 break;
+	               case MOMX:
+	                  for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                        memcpy( FieldData[PID], MomX[PID], FieldSizeOnePatch );
+	                 break;
+	               case MOMY:
+	                  for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                        memcpy( FieldData[PID], MomY[PID], FieldSizeOnePatch );
+	                 break;
+	               case MOMZ:
+	                  for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                        memcpy( FieldData[PID], MomZ[PID], FieldSizeOnePatch );
+	                 break;
+	               case ENGY:
+	                  for ( int PID=0;PID < amr->NPatchComma[lv][1];PID++)
+	                        memcpy( FieldData[PID], Engy[PID], FieldSizeOnePatch );
+	                 break;
+	               default:
+                   Aux_Error(ERROR_INFO, "Out of the range! NFieldOut=%d, v=%d\n", NFieldOut, v);
+	                 break;
+               }
+#           endif
 
 //             5-3-1-4. write data to disk
                H5_SetID_Field = H5Dopen( H5_GroupID_GridData, FieldName[v], H5P_DEFAULT );
@@ -1169,8 +1098,34 @@ void Output_DumpData_Total_HDF5( const char *FileName )
                if ( H5_Status < 0 )   Aux_Error( ERROR_INFO, "failed to write a field (lv %d, v %d) !!\n", lv, v );
 
                H5_Status = H5Dclose( H5_SetID_Field );
-            } // for (int v=0; v<NFieldOut; v++)
+            } // for (int v=0; v<NCOMP_FLUID; v++)
 
+
+            for (int v=NCOMP_FLUID-1; v<NFieldOut; v++)
+            {
+//             5-3-1-3. collect the target field from all patches at the current target level
+//             a. gravitational potential
+#              ifdef GRAVITY
+               if ( v == PotDumpIdx )
+               {
+                  for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+                     memcpy( FieldData[PID], amr->patch[ amr->PotSg[lv] ][lv][PID]->pot, FieldSizeOnePatch );
+               }
+               else
+#              endif
+               {
+                  for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+                     memcpy( FieldData[PID], amr->patch[ amr->FluSg[lv] ][lv][PID]->fluid[v], FieldSizeOnePatch );
+               }
+
+//             5-3-1-4. write data to disk
+               H5_SetID_Field = H5Dopen( H5_GroupID_GridData, FieldName[v], H5P_DEFAULT );
+
+               H5_Status = H5Dwrite( H5_SetID_Field, H5T_GAMER_REAL, H5_MemID_Field, H5_SpaceID_Field, H5P_DEFAULT, FieldData );
+               if ( H5_Status < 0 )   Aux_Error( ERROR_INFO, "failed to write a field (lv %d, v %d) !!\n", lv, v );
+
+               H5_Status = H5Dclose( H5_SetID_Field );
+            }
 
 //          5-3-1-5.free resource before dumping magnetic field to save memory
             delete [] FieldData;
@@ -1180,14 +1135,8 @@ void Output_DumpData_Total_HDF5( const char *FileName )
             delete [] MomY;
             delete [] MomZ;
             delete [] Engy;
-            delete [] PassiveDis;
-            delete [] PassiveJet;
-            delete [] PassiveAmb;
             delete [] Temp;
             delete [] Pres;
-#           ifdef COSMIC_RAY
-            delete [] CRay;
-#           endif
 #           endif
 
             H5_Status = H5Sclose( H5_MemID_Field );

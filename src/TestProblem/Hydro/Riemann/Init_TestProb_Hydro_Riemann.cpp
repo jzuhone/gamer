@@ -47,6 +47,11 @@ static double    Riemann_MagL_T2;      // left-state transverse B field 2
 static double    Riemann_MagR_T1;      // right-state transverse B field 1
 static double    Riemann_MagR_T2;      // right-state transverse B field 2
 #endif
+
+#ifdef COSMIC_RAY
+static double    Riemann_CRPreR;       // right-state cosmic ray pressure
+static double    Riemann_CRPreL;       // left-state cosmic ray pressure
+#endif
 // =======================================================================================
 
 #if ( NCOMP_PASSIVE > 0 )
@@ -142,6 +147,11 @@ void SetParameter()
    ReadPara->Add( "Riemann_Pos",       &Riemann_Pos,            NoDef_double, NoMin_double,     NoMax_double      );
    ReadPara->Add( "Riemann_Width",     &Riemann_Width,          NoDef_double, Eps_double,       NoMax_double      );
    ReadPara->Add( "Riemann_EndT",      &Riemann_EndT,           __DBL_MAX__, -__DBL_MIN__,      __DBL_MAX__       );
+#  ifdef COSMIC_RAY
+   ReadPara->Add( "Riemann_CRPreR",    &Riemann_CRPreR,         __DBL_MAX__,  __DBL_MIN__,      __DBL_MAX__       );
+   ReadPara->Add( "Riemann_CRPreL",    &Riemann_CRPreL,         __DBL_MAX__,  __DBL_MIN__,      __DBL_MAX__       );
+#  endif
+
 
    ReadPara->Read( FileName );
 
@@ -153,6 +163,7 @@ void SetParameter()
 
    switch ( Riemann_Prob )
    {
+#     ifndef COSMIC_RAY
       case SOD_SHOCK_TUBE : Riemann_RhoL = 1.0;    Riemann_VelL = 0.0;  Riemann_PreL = 1.0;  Riemann_VelL_T1 = 0.0;  Riemann_VelL_T2 = 0.0;
                             Riemann_RhoR = 0.125;  Riemann_VelR = 0.0;  Riemann_PreR = 0.1;  Riemann_VelR_T1 = 0.0;  Riemann_VelR_T2 = 0.0;
                             Riemann_EndT = 0.1; ;  Riemann_Pos = 0.5;
@@ -246,6 +257,7 @@ void SetParameter()
 #                           endif
                             sprintf( Riemann_Name, "Noh's strong shock" );
                             break;
+#     endif
 
       case USER_DEFINED   : sprintf( Riemann_Name, "user defined" );
                             break;
@@ -315,6 +327,10 @@ void SetParameter()
       Aux_Message( stdout, "  right-state transverse B field 1  = %14.7e\n", Riemann_MagR_T1 );
       Aux_Message( stdout, "  right-state transverse B field 2  = %14.7e\n", Riemann_MagR_T2 );
 #     endif
+#     ifdef COSMIC_RAY
+      Aux_Message( stdout, "  right-state cosmic-ray pressure   = %14.7e\n", Riemann_CRPreR    );
+      Aux_Message( stdout, "  left-state cosmic-ray pressure    = %14.7e\n", Riemann_CRPreL    );
+#     endif
       Aux_Message( stdout, "  propagation direction             = %s%s\n",   ( Riemann_LR > 0 ) ? "+" : "-",
                                                                              ( Riemann_XYZ == 0 ) ? "x" :
                                                                              ( Riemann_XYZ == 1 ) ? "y" : "z" );
@@ -365,23 +381,27 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
       default : Aux_Error( ERROR_INFO, "incorrect parameter %s = %d !!\n", "Riemann_XYZ", Riemann_XYZ );
    }
 
-   const double ds   = ( r - Riemann_Pos ) / Riemann_Width;
-   const double Tanh = tanh( ds )*SIGN( Riemann_LR );
-   const double dRho = 0.5*( Riemann_RhoR    - Riemann_RhoL    );
-   const double aRho = 0.5*( Riemann_RhoR    + Riemann_RhoL    );
-   const double dVel = 0.5*( Riemann_VelR    - Riemann_VelL    );
-   const double aVel = 0.5*( Riemann_VelR    + Riemann_VelL    );
-   const double dVT1 = 0.5*( Riemann_VelR_T1 - Riemann_VelL_T1 );
-   const double aVT1 = 0.5*( Riemann_VelR_T1 + Riemann_VelL_T1 );
-   const double dVT2 = 0.5*( Riemann_VelR_T2 - Riemann_VelL_T2 );
-   const double aVT2 = 0.5*( Riemann_VelR_T2 + Riemann_VelL_T2 );
-   const double dPre = 0.5*( Riemann_PreR    - Riemann_PreL    );
-   const double aPre = 0.5*( Riemann_PreR    + Riemann_PreL    );
+   const double ds     = ( r - Riemann_Pos ) / Riemann_Width;
+   const double Tanh   = tanh( ds )*SIGN( Riemann_LR );
+   const double dRho   = 0.5*( Riemann_RhoR    - Riemann_RhoL    );
+   const double aRho   = 0.5*( Riemann_RhoR    + Riemann_RhoL    );
+   const double dVel   = 0.5*( Riemann_VelR    - Riemann_VelL    );
+   const double aVel   = 0.5*( Riemann_VelR    + Riemann_VelL    );
+   const double dVT1   = 0.5*( Riemann_VelR_T1 - Riemann_VelL_T1 );
+   const double aVT1   = 0.5*( Riemann_VelR_T1 + Riemann_VelL_T1 );
+   const double dVT2   = 0.5*( Riemann_VelR_T2 - Riemann_VelL_T2 );
+   const double aVT2   = 0.5*( Riemann_VelR_T2 + Riemann_VelL_T2 );
+   const double dPre   = 0.5*( Riemann_PreR    - Riemann_PreL    );
+   const double aPre   = 0.5*( Riemann_PreR    + Riemann_PreL    );
+#  ifdef COSMIC_RAY
+   const double aCRPre = 0.5*( Riemann_CRPreR  + Riemann_CRPreL  );
+   const double dCRPre = 0.5*( Riemann_CRPreR  - Riemann_CRPreL  );
+#  endif
 
 
 #  ifdef SRHD
    Prim[0] = (real)aRho + dRho*Tanh;
-   Prim[1] = (real)aVel + dVel*Tanh; 
+   Prim[1] = (real)aVel + dVel*Tanh;
    Prim[2] = (real)aVT1 + dVT1*Tanh;
    Prim[3] = (real)aVT2 + dVT2*Tanh;
    Prim[4] = (real)aPre + dPre*Tanh;
@@ -410,6 +430,11 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    fluid[ MomIdx[1] ] = ( aVT1 + dVT1*Tanh )*fluid[DENS];
    fluid[ MomIdx[2] ] = ( aVT2 + dVT2*Tanh )*fluid[DENS];
    Pres               =   aPre + dPre*Tanh;
+#  endif
+
+#  ifdef COSMIC_RAY
+   fluid[CRAY]  = (real)aCRPre + dCRPre*Tanh;
+   fluid[CRAY] *= (real)3.0;
 #  endif
 
    if ( Riemann_LR < 0 )
