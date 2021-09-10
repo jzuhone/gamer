@@ -13,6 +13,9 @@ static double Blast_Center[3];     // explosion center
 #ifdef MHD
 static double Blast_BField;        // magnetic field strength along the diagonal direction
 #endif
+#ifdef COSMIC_RAY
+static double Blast_CRPres_Exp;    // explosion cosmic-ray pressure
+#endif
 // =======================================================================================
 
 
@@ -102,6 +105,9 @@ void SetParameter()
 #  ifdef MHD
    ReadPara->Add( "Blast_BField",      &Blast_BField,           5.0e-2,       NoMin_double,     NoMax_double      );
 #  endif
+#  ifdef COSMIC_RAY
+   ReadPara->Add( "Blast_CRPres_Exp",  &Blast_CRPres_Exp,      -1.0,          Eps_double,       NoMax_double      );
+#  endif
 
    ReadPara->Read( FileName );
 
@@ -137,21 +143,27 @@ void SetParameter()
 //    assuming EOS_GAMMA (must not invoke any EoS routine here since it has not been initialized)
       const double ExpVol  = 4.0*M_PI/3.0*CUBE(Blast_Radius);
       const double ExpEngy = Blast_Pres_Exp/(GAMMA-1.0)*ExpVol;
+#     ifdef COSMIC_RAY
+      const double ExpCREngy = Blast_CRPres_Exp*ExpVol*3.0;
+#     endif
 #     if ( EOS != EOS_GAMMA )
       Aux_Message( stderr, "WARNING : the total explosion energy below assumes EOS_GAMMA !!\n" );
 #     endif
 
       Aux_Message( stdout, "=============================================================================\n" );
-      Aux_Message( stdout, "  test problem ID           = %d\n",     TESTPROB_ID );
-      Aux_Message( stdout, "  background mass density   = %13.7e\n", Blast_Dens_Bg );
-      Aux_Message( stdout, "  background pressure       = %13.7e\n", Blast_Pres_Bg );
-      Aux_Message( stdout, "  explosion pressure        = %13.7e\n", Blast_Pres_Exp );
-      Aux_Message( stdout, "  total explosion energy    = %13.7e (assuming constant-gamma EoS)\n", ExpEngy );
-      Aux_Message( stdout, "  explosion radius          = %13.7e\n", Blast_Radius );
-      Aux_Message( stdout, "  explosion center          = (%13.7e, %13.7e, %13.7e)\n", Blast_Center[0], Blast_Center[1],
-                                                                                       Blast_Center[2] );
+      Aux_Message( stdout, "  test problem ID            = %d\n",     TESTPROB_ID );
+      Aux_Message( stdout, "  background mass density    = %13.7e\n", Blast_Dens_Bg );
+      Aux_Message( stdout, "  background pressure        = %13.7e\n", Blast_Pres_Bg );
+      Aux_Message( stdout, "  explosion pressure         = %13.7e\n", Blast_Pres_Exp );
+      Aux_Message( stdout, "  total explosion gas energy = %13.7e (assuming constant-gamma EoS)\n", ExpEngy );
+#     ifdef COSMIC_ARY
+      Aux_Message( stdout, "  total explosion cr energy  = %13.7e (assuming constant-gamma EoS)\n", ExpCREngy );
+#     endif
+      Aux_Message( stdout, "  explosion radius           = %13.7e\n", Blast_Radius );
+      Aux_Message( stdout, "  explosion center           = (%13.7e, %13.7e, %13.7e)\n", Blast_Center[0], Blast_Center[1],
+                                                                                        Blast_Center[2] );
 #     ifdef MHD
-      Aux_Message( stdout, "  magnetic field strength   = %13.7e\n", Blast_BField );
+      Aux_Message( stdout, "  magnetic field strength    = %13.7e\n", Blast_BField );
 #     endif
       Aux_Message( stdout, "=============================================================================\n" );
    }
@@ -192,11 +204,14 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    real Prim[NCOMP_FLUID];
    Prim[0] = Blast_Dens_Bg;
    Prim[1] = 0.0;
-   Prim[2] = 0.0; 
-   Prim[3] = 0.0; 
+   Prim[2] = 0.0;
+   Prim[3] = 0.0;
    Prim[4] = ( r <= Blast_Radius ) ? Blast_Pres_Exp : Blast_Pres_Bg;
    Hydro_Pri2Con( Prim, fluid, false, NULL_BOOL, NULL_INT, NULL, NULL,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
+#  ifdef COSMIC_RAY
+   fluid[CRAY] = ( r <= Blast_Radius ) ? Blast_CRPres_Exp*0.33333333333333 : 0.0;
+#  endif
 #  else
    double Pres, Eint;
 

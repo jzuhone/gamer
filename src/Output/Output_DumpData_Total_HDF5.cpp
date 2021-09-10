@@ -1113,6 +1113,17 @@ void Output_DumpData_Total_HDF5( const char *FileName )
                }
                else
 #              endif
+               if ( v == TempDumpIdx )
+               {
+                  for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+                     memcpy( FieldData[PID], Temp[PID], FieldSizeOnePatch );
+               }
+               else if ( v == PresDumpIdx )
+               {
+                  for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+                     memcpy( FieldData[PID], Pres[PID], FieldSizeOnePatch );
+               }
+               else
                {
                   for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
                      memcpy( FieldData[PID], amr->patch[ amr->FluSg[lv] ][lv][PID]->fluid[v], FieldSizeOnePatch );
