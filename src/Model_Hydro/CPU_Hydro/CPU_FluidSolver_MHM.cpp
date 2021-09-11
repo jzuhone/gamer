@@ -792,9 +792,9 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
 
 //    for MHD, one additional flux is evaluated along each transverse direction for computing the CT electric field
 #     ifdef MHD
-      const int i_flux   = i_out + 1;
-      const int j_flux   = j_out + 1;
-      const int k_flux   = k_out + 1;
+      const int i_flux   = i_out;// + 1;
+      const int j_flux   = j_out;// + 1;
+      const int k_flux   = k_out;// + 1;
 #     else
       const int i_flux   = i_out;
       const int j_flux   = j_out;
@@ -866,7 +866,7 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
       // ==============================
       // 3. Update the cosmic ray
       // ==============================
-      out_con[CRAY] = out_con[CRAY] - pCR_old * dt_dh2 * ( div_V[0] + div_V[1] + div_V[2] );
+      out_con[CRAY] = out_con[CRAY] - pCR_old * dt_dh2;// * ( div_V[0] + div_V[1] + div_V[2] );
 
 #     endif // # ifdef COSMIC_RAY
 
@@ -959,9 +959,9 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
       const int k_out    = idx_out / size_ij;
 
       // for MHD, one additional flux is evaluated along each transverse direction for computing the CT electric field
-      const int i_flux   = i_out + 1;
-      const int j_flux   = j_out + 1;
-      const int k_flux   = k_out + 1;
+      const int i_flux   = i_out;// + 1;
+      const int j_flux   = j_out;// + 1;
+      const int k_flux   = k_out;// + 1;
       const int idx_flux = IDX321( i_flux, j_flux, k_flux, N_FL_FLUX, N_FL_FLUX );
 
       // index of the half step variable
@@ -1008,7 +1008,7 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
       // ==============================
       // 3. Update the cosmic ray
       // ==============================
-      Output_1Cell[CRAY] = Output_1Cell[CRAY] - pCR_half * dt_dh * ( div_V[0] + div_V[1] + div_V[2] );
+      Output_1Cell[CRAY] = Output_1Cell[CRAY] - pCR_half * dt_dh; // * ( div_V[0] + div_V[1] + div_V[2] );
       g_Output[CRAY][idx_out] = Output_1Cell[CRAY];
 
    } // CGPU_LOOP( idx_out, CUBE(PS2) )

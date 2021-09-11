@@ -15,6 +15,7 @@ static double Blast_BField;        // magnetic field strength along the diagonal
 #endif
 #ifdef COSMIC_RAY
 static double Blast_CRPres_Exp;    // explosion cosmic-ray pressure
+static double Blast_CRPres_Bg;    // explosion cosmic-ray pressure
 #endif
 // =======================================================================================
 
@@ -107,6 +108,7 @@ void SetParameter()
 #  endif
 #  ifdef COSMIC_RAY
    ReadPara->Add( "Blast_CRPres_Exp",  &Blast_CRPres_Exp,      -1.0,          Eps_double,       NoMax_double      );
+   ReadPara->Add( "Blast_CRPres_Bg",   &Blast_CRPres_Bg,       -1.0,          Eps_double,       NoMax_double      );
 #  endif
 
    ReadPara->Read( FileName );
@@ -210,7 +212,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    Hydro_Pri2Con( Prim, fluid, false, NULL_BOOL, NULL_INT, NULL, NULL,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 #  ifdef COSMIC_RAY
-   fluid[CRAY] = ( r <= Blast_Radius ) ? Blast_CRPres_Exp*0.33333333333333 : 0.0;
+   fluid[CRAY] = ( r <= Blast_Radius ) ? Blast_CRPres_Exp*0.33333333333333 : Blast_CRPres_Bg*0.33333333333333;
 #  endif
 #  else
    double Pres, Eint;
