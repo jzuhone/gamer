@@ -792,9 +792,9 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
 
 //    for MHD, one additional flux is evaluated along each transverse direction for computing the CT electric field
 #     ifdef MHD
-      const int i_flux   = i_out;// + 1;
-      const int j_flux   = j_out;// + 1;
-      const int k_flux   = k_out;// + 1;
+      const int i_flux   = i_out + 1;
+      const int j_flux   = j_out + 1;
+      const int k_flux   = k_out + 1;
 #     else
       const int i_flux   = i_out;
       const int j_flux   = j_out;
@@ -814,7 +814,7 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
 #     else
       real* const EintPtr = NULL;
 #     endif
-
+      //printf("%d %d %d %d %d\n", PS2, FLU_GHOST_SIZE, FLU_NXT, N_HF_FLUX, N_HF_VAR);
 //    calculate the flux differences of the fluid variables
       for (int d=0; d<3; d++)
       for (int v=0; v<NCOMP_TOTAL; v++)
@@ -852,13 +852,29 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
       // Reference: "Simple Method to Track Pressure Accurately", S. Li, Astronum Proceeding, 2007
       for (int d=0; d<3; d++)
       {
-         div_V[d]  = ( g_Flux_Half[d][DENS][ idx_flux                ] > 0 ) ?
-                     ( g_Flux_Half[d][DENS][ idx_flux                ] / g_ConVar_In[DENS][ idx_fc              ] ) :
-                     ( g_Flux_Half[d][DENS][ idx_flux                ] / g_ConVar_In[DENS][ idx_fc + didx_fc[d] ] );
+         div_V[d]  = ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] > 0 ) ?
+                     ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc              ] ) :
+                     ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc + didx_fc[d] ] );
 
-         div_V[d] -= ( g_Flux_Half[d][DENS][ idx_flux - didx_flux[d] ] > 0 ) ?
-                     ( g_Flux_Half[d][DENS][ idx_flux - didx_flux[d] ] / g_ConVar_In[DENS][ idx_fc - didx_fc[d] ] ) :
-                     ( g_Flux_Half[d][DENS][ idx_flux - didx_flux[d] ] / g_ConVar_In[DENS][ idx_fc              ] );
+         div_V[d] -= ( g_Flux_Half[d][DENS][ idx_flux ] > 0 ) ?
+                     ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc - didx_fc[d] ] ) :
+                     ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc              ] );
+
+         //if ( d == 0 && div_V[d] != 1e-10   ) printf("div_V[%d]=%e\n", d, div_V[d]);
+         //if ( d == 1 && div_V[d] != 0.0     ) printf("div_V[%d]=%e\n", d, div_V[d]);
+         //if ( d == 2 && div_V[d] != 0.0     ) printf("div_V[%d]=%e\n", d, div_V[d]);
+
+         //if ( d == 0 && div_V[d] == 1e-10 ) printf("1e-10: %d %d %e %e %e %e %e %e %d\n", 
+         //                                                                  idx_flux, idx_fc,
+         //                                                                  g_Flux_Half[d][DENS][ idx_flux ], 
+         //                                                                  g_Flux_Half[d][DENS][ idx_flux - didx_flux[d] ],
+         //                                                                  g_Flux_Half[d][DENS][ idx_flux + didx_flux[d] ],
+         //                                                                  g_ConVar_In[DENS][ idx_fc ],
+         //                                                                  g_ConVar_In[DENS][ idx_fc + didx_fc[d] ],
+         //                                                                  g_ConVar_In[DENS][ idx_fc - didx_fc[d] ],
+         //                                                                  N_HF_FLUX
+         //                                          );
+ 
 
       } // for (int d=0; d<3; d++)
 
@@ -866,7 +882,7 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
       // ==============================
       // 3. Update the cosmic ray
       // ==============================
-      out_con[CRAY] = out_con[CRAY] - pCR_old * dt_dh2;// * ( div_V[0] + div_V[1] + div_V[2] );
+      out_con[CRAY] = out_con[CRAY] - pCR_old * dt_dh2 * ( div_V[0] + div_V[1] + div_V[2] );
 
 #     endif // # ifdef COSMIC_RAY
 
@@ -959,9 +975,15 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
       const int k_out    = idx_out / size_ij;
 
       // for MHD, one additional flux is evaluated along each transverse direction for computing the CT electric field
-      const int i_flux   = i_out;// + 1;
-      const int j_flux   = j_out;// + 1;
-      const int k_flux   = k_out;// + 1;
+#     ifdef MHD
+      const int i_flux   = i_out + 1;
+      const int j_flux   = j_out + 1;
+      const int k_flux   = k_out + 1;
+#     else
+      const int i_flux   = i_out;
+      const int j_flux   = j_out;
+      const int k_flux   = k_out;
+#     endif
       const int idx_flux = IDX321( i_flux, j_flux, k_flux, N_FL_FLUX, N_FL_FLUX );
 
       // index of the half step variable
@@ -994,13 +1016,13 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
          const int faceL = 2*d;
          const int faceR = faceL+1;
 
-         div_V[d]  = ( g_Flux[d][DENS][ idx_flux                ] > 0 ) ?
-                     ( g_Flux[d][DENS][ idx_flux                ] / g_FC_Var[faceR][DENS][ idx_fc              ] ) :
-                     ( g_Flux[d][DENS][ idx_flux                ] / g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ] );
+         div_V[d]  = ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] > 0 ) ?
+                     ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceR][DENS][ idx_fc              ] ) :
+                     ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ] );
 
-         div_V[d] -= ( g_Flux[d][DENS][ idx_flux - didx_flux[d] ] > 0 ) ?
-                     ( g_Flux[d][DENS][ idx_flux - didx_flux[d] ] / g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ] ) :
-                     ( g_Flux[d][DENS][ idx_flux - didx_flux[d] ] / g_FC_Var[faceL][DENS][ idx_fc              ] );
+         div_V[d] -= ( g_Flux[d][DENS][ idx_flux ] > 0 ) ?
+                     ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ] ) :
+                     ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceL][DENS][ idx_fc              ] );
 
       } // for (int d=0; d<3; d++)
 
@@ -1008,7 +1030,7 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
       // ==============================
       // 3. Update the cosmic ray
       // ==============================
-      Output_1Cell[CRAY] = Output_1Cell[CRAY] - pCR_half * dt_dh; // * ( div_V[0] + div_V[1] + div_V[2] );
+      Output_1Cell[CRAY] = Output_1Cell[CRAY] - pCR_half * dt_dh * ( div_V[0] + div_V[1] + div_V[2] );
       g_Output[CRAY][idx_out] = Output_1Cell[CRAY];
 
    } // CGPU_LOOP( idx_out, CUBE(PS2) )

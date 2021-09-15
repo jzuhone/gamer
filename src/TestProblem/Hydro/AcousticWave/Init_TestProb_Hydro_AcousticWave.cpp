@@ -1,27 +1,48 @@
 #include "GAMER.h"
 #include "TestProb.h"
 
-
+//#define METHOD_1
+//#define METHOD_2
 
 static void OutputError();
 
 
 // problem-specific global variables
 // =======================================================================================
-static double Acoustic_RhoAmp;      // amplitude of the density perturbation (assuming background density = 1.0)
-#ifdef SRHD
+
+//# if   (  defined SRHD  &&  defined COSMIC_RAY ) // 2
+static double CR_Acoustic_Delta;        // amplitude of the velocity perturbation #2
+static double CR_Acoustic_Rho0;         // background density
+static double CR_Acoustic_Pres0;        // background pressure
+static double CR_Acoustic_Pres_CR0;     // background pressure of cosmic rays
+static double CR_Acoustic_V0;           // background velocity
+static double CR_Acoustic_Sign;         // (+1/-1) --> (right/left-moving wave)
+static double CR_Acoustic_Phase;        // initial phase shift
+static double GAMMA_CR = 4.0/3.0;
+static double GAMMA    = 5.0/3.0;
+static int CR_Acoustic_Direction;
+//# endif
+
+//# if (  defined SRHD  && !defined COSMIC_RAY ) // 1
 static double Acoustic_Temp_Bg;     // ambient temperature
 static double Acoustic_Rho_Bg;      // ambient proper mass density
-static double Acoustic_Cs2;         // sound speed squared
-#else
+//# endif
+
+//# if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
 static double Acoustic_v0;          // background velocity
-#endif
-static double Acoustic_Cs;          // sound speed
+//# endif
+
+//# if (  defined HYDRO && !defined COSMIC_RAY ) // 6
+static double Acoustic_RhoAmp;      // amplitude of the density perturbation (assuming background density = 1.0) #6
+static double Acoustic_Cs2;         // sound speed squared
 static double Acoustic_Sign;        // (+1/-1) --> (right/left-moving wave)
 static double Acoustic_Phase0;      // initial phase shift
+//# endif
 
 
 static double Acoustic_WaveLength;  // wavelength
+static double Acoustic_Cs;          // sound speed
+
 // =======================================================================================
 
 
@@ -123,39 +144,71 @@ void SetParameter()
 // ********************************************************************************************************************************
 // ReadPara->Add( "KEY_IN_THE_FILE",   &VARIABLE,              DEFAULT,       MIN,              MAX               );
 // ********************************************************************************************************************************
-   ReadPara->Add( "Acoustic_RhoAmp",   &Acoustic_RhoAmp,       -1.0,          Eps_double,       NoMax_double      );
-#  ifdef SRHD
+//#  if   (  defined SRHD  &&  defined COSMIC_RAY ) // 2
+   ReadPara->Add( "CR_Acoustic_Delta",    &CR_Acoustic_Delta,    -1.0,      NoMin_double,       NoMax_double      );
+   ReadPara->Add( "CR_Acoustic_Rho0",     &CR_Acoustic_Rho0,     -1.0,      NoMin_double,       NoMax_double      );
+   ReadPara->Add( "CR_Acoustic_Pres0",    &CR_Acoustic_Pres0,    -1.0,      NoMin_double,       NoMax_double      );
+   ReadPara->Add( "CR_Acoustic_Pres_CR0", &CR_Acoustic_Pres_CR0, -1.0,      NoMin_double,       NoMax_double      );
+   ReadPara->Add( "CR_Acoustic_V0",       &CR_Acoustic_V0,       -1.0,      NoMin_double,       NoMax_double      );
+   ReadPara->Add( "CR_Acoustic_Sign",     &CR_Acoustic_Sign,     -1.0,      NoMin_double,       NoMax_double      );
+   ReadPara->Add( "CR_Acoustic_Phase",    &CR_Acoustic_Phase,    -1.0,      NoMin_double,       NoMax_double      );
+   ReadPara->Add( "CR_Acoustic_Direction",&CR_Acoustic_Direction, 0,           NoMin_int,          NoMax_int      );
+//#  endif
+
+//#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
    ReadPara->Add( "Acoustic_Temp_Bg",  &Acoustic_Temp_Bg,       1.0,          Eps_double,       NoMax_double      );
    ReadPara->Add( "Acoustic_Rho_Bg",   &Acoustic_Rho_Bg,        1.0,          Eps_double,       NoMax_double      );
-#  else
-   ReadPara->Add( "Acoustic_Cs",       &Acoustic_Cs,           -1.0,          Eps_double,       NoMax_double      );
+//#  endif
+
+//#  if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
    ReadPara->Add( "Acoustic_v0",       &Acoustic_v0,            0.0,          NoMin_double,     NoMax_double      );
-#  endif
+   ReadPara->Add( "Acoustic_Cs",       &Acoustic_Cs,           -1.0,          NoMin_double,       NoMax_double      );
+//#  endif
+
+//#  if (  defined HYDRO && !defined COSMIC_RAY ) // 6
+   ReadPara->Add( "Acoustic_RhoAmp",   &Acoustic_RhoAmp,       -1.0,          NoMin_double,       NoMax_double      );
    ReadPara->Add( "Acoustic_Sign",     &Acoustic_Sign,          1.0,          NoMin_double,     NoMax_double      );
    ReadPara->Add( "Acoustic_Phase0",   &Acoustic_Phase0,        0.0,          NoMin_double,     NoMax_double      );
+//#  endif
 
    ReadPara->Read( FileName );
 
    delete ReadPara;
 
 // force Acoustic_Sign to be +1.0/-1.0
+//#  if (  defined HYDRO && !defined COSMIC_RAY ) // 6
    if ( Acoustic_Sign >= 0.0 )   Acoustic_Sign = +1.0;
    else                          Acoustic_Sign = -1.0;
+//#  endif
 
 
 // (2) set the problem-specific derived parameters
    Acoustic_WaveLength = amr->BoxSize[0] / sqrt(3.0);
 
-#  ifdef SRHD
-   Acoustic_Cs2 = EoS_Temper2CSqr_CPUPtr(Acoustic_Rho_Bg, Acoustic_Rho_Bg*Acoustic_Temp_Bg, 
-                                         NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table );
+//#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
+   Acoustic_Cs2 = EoS_Temper2CSqr_CPUPtr(Acoustic_Rho_Bg, Acoustic_Rho_Bg*Acoustic_Temp_Bg,
+                                          NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table );
    Acoustic_Cs  = sqrt(Acoustic_Cs2);
-#  endif
+//#  endif
+
+
+//#  if (  defined SRHD  && defined COSMIC_RAY ) // 1
+   Acoustic_Cs = SQRT( ( GAMMA * CR_Acoustic_Pres0 + GAMMA_CR * CR_Acoustic_Pres_CR0 ) / CR_Acoustic_Rho0 );
+//#  endif
+
+
 
 
 // (3) reset other general-purpose parameters
 //     --> a helper macro PRINT_WARNING is defined in TestProb.h
+//#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
    const double End_T_Default    = Acoustic_WaveLength / Acoustic_Cs;
+//#  endif
+
+//#  if (  defined SRHD  && defined COSMIC_RAY ) // 1
+//   const double End_T_Default    = Acoustic_WaveLength / Acoustic_Cs;
+//#  endif
+
    const long   End_Step_Default = __INT_MAX__;
 
    if ( END_STEP < 0 ) {
@@ -174,16 +227,22 @@ void SetParameter()
    {
       Aux_Message( stdout, "=============================================================================\n" );
       Aux_Message( stdout, "  test problem ID     = %d\n",      TESTPROB_ID );
-      Aux_Message( stdout, "  density amplitude   = % 14.7e\n", Acoustic_RhoAmp );
-#     ifdef SRHD
+//#     if (  defined SRHD  && !defined COSMIC_RAY ) // 1
       Aux_Message( stdout, "  ambient density     = % 14.7e\n", Acoustic_Rho_Bg   );
       Aux_Message( stdout, "  ambient temperature = % 14.7e\n", Acoustic_Temp_Bg   );
-#     else
-      Aux_Message( stdout, "  sound speed         = % 14.7e\n", Acoustic_Cs );
-      Aux_Message( stdout, "  background velocity = % 14.7e\n", Acoustic_v0 );
-#     endif
+//#     endif
+
+//#     if (  defined HYDRO && !defined COSMIC_RAY ) // 6
+      Aux_Message( stdout, "  density amplitude   = % 14.7e\n", Acoustic_RhoAmp );
       Aux_Message( stdout, "  sign (R/L)          = % 14.7e\n", Acoustic_Sign );
       Aux_Message( stdout, "  initial phase shift = % 14.7e\n", Acoustic_Phase0 );
+//#     endif
+
+//#     if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
+      Aux_Message( stdout, "  background velocity = % 14.7e\n", Acoustic_v0 );
+//#     endif
+
+      Aux_Message( stdout, "  sound speed         = % 14.7e\n", Acoustic_Cs );
       Aux_Message( stdout, "  wavelength          = % 14.7e\n", Acoustic_WaveLength );
       Aux_Message( stdout, "=============================================================================\n" );
    }
@@ -221,19 +280,108 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    real Cons[NCOMP_FLUID];
    double Phase, WaveK;
 
-#  ifdef SRHD
+#  if ( defined SRHD && defined COSMIC_RAY )
+   // Only correct in non-relativistic limit (i.e. v/c << 1 and kT/mc**2 << 1)
+   double Pres, Eint;
+   double P_cr, CRay;
+   double delta_cs = CR_Acoustic_Delta / Acoustic_Cs;
+   double wavelength, r, wave, WaveW;
+
+
+
+   if ( CR_Acoustic_Direction == 'd' )
+   {
+     double DiagonalLegth = SQRT( SQR(amr->BoxSize[0]) + SQR(amr->BoxSize[1]) + SQR(amr->BoxSize[2]) );
+     wavelength = DiagonalLegth / 3.0;
+     WaveK = 2.0*M_PI/wavelength;
+     WaveW = WaveK * Acoustic_Cs;
+     r = (x + y + z) / DiagonalLegth - CR_Acoustic_V0 * Time;
+     wave = sin( WaveK * r - CR_Acoustic_Sign * WaveW * Time + CR_Acoustic_Phase );
+
+     fluid[DENS] = ( 1.0 + delta_cs * wave ) * CR_Acoustic_Rho0;
+     fluid[MOMX] = fluid[DENS] * ( CR_Acoustic_Sign * CR_Acoustic_Delta * wave + CR_Acoustic_V0 ) / DiagonalLegth;
+     fluid[MOMY] = fluid[MOMX];
+     fluid[MOMZ] = fluid[MOMX];
+   }
+   else if ( CR_Acoustic_Direction == 'x' )
+   {
+     wavelength = amr->BoxSize[0] / 3.0;
+     WaveK = 2.0*M_PI/wavelength;
+     WaveW = WaveK * Acoustic_Cs;
+     r = x - CR_Acoustic_V0 * Time;
+     wave = sin( WaveK * r - CR_Acoustic_Sign * WaveW * Time + CR_Acoustic_Phase );
+
+     fluid[DENS] = ( 1.0 + delta_cs * wave ) * CR_Acoustic_Rho0;
+     fluid[MOMX] = fluid[DENS] * ( CR_Acoustic_Sign * CR_Acoustic_Delta * wave + CR_Acoustic_V0 );
+     fluid[MOMY] = 0.0;
+     fluid[MOMZ] = 0.0;
+   }
+   else if ( CR_Acoustic_Direction == 'y' )
+   {
+     wavelength = amr->BoxSize[1] / 3.0;
+     WaveK = 2.0*M_PI/wavelength;
+     WaveW = WaveK * Acoustic_Cs;
+     r = y - CR_Acoustic_V0 * Time;
+     wave = sin( WaveK * r - CR_Acoustic_Sign * WaveW * Time + CR_Acoustic_Phase );
+
+     fluid[DENS] = ( 1.0 + delta_cs * wave ) * CR_Acoustic_Rho0;
+     fluid[MOMX] = 0.0;
+     fluid[MOMY] = fluid[DENS] * ( CR_Acoustic_Sign * CR_Acoustic_Delta * wave + CR_Acoustic_V0 );
+     fluid[MOMZ] = 0.0;
+   }
+   else if ( CR_Acoustic_Direction == 'z' )
+   {
+     wavelength = amr->BoxSize[2] / 3.0;
+     WaveK = 2.0*M_PI/wavelength;
+     WaveW = WaveK * Acoustic_Cs;
+     r = z - CR_Acoustic_V0 * Time;
+     wave = sin( WaveK * r - CR_Acoustic_Sign * WaveW * Time + CR_Acoustic_Phase );
+
+     fluid[DENS] = ( 1.0 + delta_cs * wave ) * CR_Acoustic_Rho0;
+     fluid[MOMX] = 0.0;
+     fluid[MOMY] = 0.0;
+     fluid[MOMZ] = fluid[DENS] * ( CR_Acoustic_Sign * CR_Acoustic_Delta * wave + CR_Acoustic_V0 );
+   }
+
+   Pres = CR_Acoustic_Pres0    * ( 1.0 + delta_cs * wave * GAMMA    );
+   P_cr = CR_Acoustic_Pres_CR0 * ( 1.0 + delta_cs * wave * GAMMA_CR );
+   Pres = Pres + P_cr;
+   double v = sqrt(   SQR(fluid[MOMX]) + SQR(fluid[MOMY]) + SQR(fluid[MOMZ])  ) / fluid[DENS];
+   Eint = Pres;
+   Eint /= 5.0/3.0 - 1.0;
+   fluid[ENGY] = 0.5*v*v + Eint;
+   fluid[CRAY] = 3.0 * P_cr;
+
+   if ( CR_Acoustic_Direction == 'a' )
+   {
+     fluid[DENS] = CR_Acoustic_Rho0;
+     fluid[MOMX] = CR_Acoustic_V0;
+     fluid[MOMY] = 0.0; 
+     fluid[MOMZ] = 0.0; 
+     Pres        = CR_Acoustic_Pres0;
+     double v    = sqrt(   SQR(fluid[MOMX]) + SQR(fluid[MOMY]) + SQR(fluid[MOMZ])  ) / fluid[DENS];
+     Eint        = Pres;
+     Eint       /= 5.0/3.0 - 1.0;
+     fluid[ENGY] = 0.5*v*v + Eint;
+     P_cr = CR_Acoustic_Pres_CR0;
+     fluid[CRAY] = 3.0 * P_cr;
+   }
+#  endif
+
+#  if ( defined SRHD && !defined COSMIC_RAY )
+#  ifdef METHOD_1
    real Prim[NCOMP_FLUID];
 
    double LorentzFactor;
-  
+
    LorentzFactor = 1.0 / sqrt( 1.0 - Acoustic_Cs2 );
-  
+
    WaveK = (double)2.0 * (double)M_PI  / Acoustic_WaveLength;
-  
+
    double SQRT3 = sqrt(3.0);
 
    Phase = WaveK * ( x + y + z ) / SQRT3 - WaveK * Acoustic_Cs * Time;
-  
+
    Prim[0] = Acoustic_Rho_Bg * (double)1.0 + Acoustic_RhoAmp * sin( Phase + Acoustic_Phase0 );
    Prim[1] = LorentzFactor * Acoustic_Cs / SQRT3;
    Prim[2] = LorentzFactor * Acoustic_Cs / SQRT3;
@@ -242,7 +390,41 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    Hydro_Pri2Con( Prim, Cons, false, NULL_BOOL, NULL_INT, NULL, NULL,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
-#  else
+
+// set the output array
+   fluid[DENS] = Cons[DENS];
+   fluid[MOMX] = Cons[MOMX];
+   fluid[MOMY] = Cons[MOMY];
+   fluid[MOMZ] = Cons[MOMZ];
+   fluid[ENGY] = Cons[ENGY];
+#  endif
+
+#  ifdef METHOD_2
+   // Only correct in non-relativistic limit (i.e. v/c << 1 and kT/mc**2 << 1)
+   double Pres, Eint;
+   double P_cr, CRay;
+   double delta_cs = CR_Acoustic_Delta / Acoustic_Cs;
+   double wavelength = SQRT(3.0) / 3.0;
+          WaveK = 2.0*M_PI/wavelength;
+   double WaveW = WaveK * Acoustic_Cs;
+   double r = (x + y + z) / SQRT(3.) - CR_Acoustic_V0 * Time;
+   double wave = sin( WaveK * r - CR_Acoustic_Sign * WaveW * Time + CR_Acoustic_Phase );
+
+   fluid[DENS] = ( 1.0 + delta_cs * wave ) * CR_Acoustic_Rho0;
+   fluid[MOMX] = fluid[DENS] * ( CR_Acoustic_Sign * CR_Acoustic_Delta * wave + CR_Acoustic_V0) / SQRT(3.0);
+   fluid[MOMY] = fluid[MOMX];
+   fluid[MOMZ] = fluid[MOMX];
+   Pres = CR_Acoustic_Pres0    * ( 1.0 + delta_cs * wave * GAMMA    );
+   P_cr = CR_Acoustic_Pres_CR0 * ( 1.0 + delta_cs * wave * GAMMA_CR );
+   Pres = Pres + P_cr;
+   double v = sqrt(   SQR(fluid[MOMX]) + SQR(fluid[MOMY]) + SQR(fluid[MOMZ])  ) / fluid[DENS];
+   Eint = Pres;
+   Eint /= 5.0/3.0 - 1.0;
+   fluid[ENGY] = 0.5*v*v + Eint;
+#  endif
+#  endif
+
+#  if ( !defined SRHD && !defined COSMIC_RAY )
 // assuming EOS_GAMMA
    const double r         = 1.0/sqrt(3.0)*( x + y + z ) - Acoustic_v0*Time;
    const double _Gamma_m1 = 1.0/(GAMMA-1.0);
@@ -266,14 +448,15 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    Eint       = EoS_DensPres2Eint_CPUPtr( Cons[DENS], Pres, NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table );  // assuming EoS requires no passive scalars
    Cons[ENGY] = Hydro_ConEint2Etot( Cons[DENS], Cons[MOMX], Cons[MOMY],
                                     Cons[MOMZ], Eint, 0.0 );     // do NOT include magnetic energy here
-#  endif
-
 // set the output array
    fluid[DENS] = Cons[DENS];
    fluid[MOMX] = Cons[MOMX];
    fluid[MOMY] = Cons[MOMY];
    fluid[MOMZ] = Cons[MOMZ];
    fluid[ENGY] = Cons[ENGY];
+#  endif
+
+
 
 } // FUNCTION : SetGridIC
 
@@ -294,9 +477,33 @@ void OutputError()
 {
 
    const char Prefix[100]     = "AcousticWave";
-   const OptOutputPart_t Part = OUTPUT_DIAG;
 
-   Output_L1Error( SetGridIC, NULL, Prefix, Part, NULL_REAL, NULL_REAL, NULL_REAL );
+   OptOutputPart_t Part_Temp = OUTPUT_DIAG;
+ 
+   if      ( CR_Acoustic_Direction == 'd' )
+   { 
+     Part_Temp = OUTPUT_DIAG;
+   }
+   else if ( CR_Acoustic_Direction == 'x' ||  CR_Acoustic_Direction == 'a' )
+   { 
+     Part_Temp = OUTPUT_X;
+   }
+   else if ( CR_Acoustic_Direction == 'y' )
+   { 
+     Part_Temp = OUTPUT_Y;
+   } 
+   else if ( CR_Acoustic_Direction == 'z' )
+   {
+     Part_Temp = OUTPUT_Z;
+   } 
+
+   const OptOutputPart_t Part = Part_Temp;
+
+   const real x = 0.5;
+   const real y = 0.5;
+   const real z = 0.5;
+
+   Output_L1Error( SetGridIC, NULL, Prefix, Part, x, y, z );
 
 } // FUNCTION : OutputError
 #endif // #if ( MODEL == HYDRO )
@@ -330,6 +537,7 @@ void Init_TestProb_Hydro_AcousticWave()
 
 // set the function pointers of various problem-specific routines
    Init_Function_User_Ptr = SetGridIC;
+
    Output_User_Ptr        = OutputError;
 #  endif // #if ( MODEL == HYDRO )
 
