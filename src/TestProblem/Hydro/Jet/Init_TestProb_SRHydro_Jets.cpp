@@ -1201,9 +1201,9 @@ double Mis_GetTimeStep_User( const int lv, const double dTime_dt )
 #if (NCOMP_PASSIVE > 0)
 void AddNewField_Jet()
 {
-   if ( PassiveIdx_dis == 5 ) PassiveIdx_dis = AddField( "Passive_dis", NORMALIZE_YES );
-   if ( PassiveIdx_jet == 6 ) PassiveIdx_jet = AddField( "Passive_jet", NORMALIZE_YES );
-   if ( PassiveIdx_amb == 7 ) PassiveIdx_amb = AddField( "Passive_amb", NORMALIZE_YES );
+   if ( PassiveIdx_dis == 5 ) PassiveIdx_dis = AddField( "Passive_dis", NORMALIZE_NO );
+   if ( PassiveIdx_jet == 6 ) PassiveIdx_jet = AddField( "Passive_jet", NORMALIZE_NO );
+   if ( PassiveIdx_amb == 7 ) PassiveIdx_amb = AddField( "Passive_amb", NORMALIZE_NO );
 }
 #endif
 

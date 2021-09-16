@@ -20,6 +20,10 @@ static double Blast_CRPres_Bg;    // explosion cosmic-ray pressure
 // =======================================================================================
 
 
+#if ( NCOMP_PASSIVE > 0 )
+static int Passive_0000 = 5;
+static int Passive_0001 = 6;
+#endif
 
 
 //-------------------------------------------------------------------------------------------------------
@@ -214,6 +218,20 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 #  ifdef COSMIC_RAY
    fluid[CRAY] = ( r <= Blast_Radius ) ? Blast_CRPres_Exp*0.33333333333333 : Blast_CRPres_Bg*0.33333333333333;
 #  endif
+
+#  if ( NCOMP_PASSIVE > 0 )
+   if ( r <= Blast_Radius  )
+   {
+     fluid[Passive_0000] = Prim[0]; 
+     fluid[Passive_0001] = 0.0;
+   }
+   else
+   {
+     fluid[Passive_0000] = 0.0; 
+     fluid[Passive_0001] = Prim[0];
+   }
+#  endif
+
 #  else
    double Pres, Eint;
 
@@ -263,6 +281,13 @@ void SetBFieldIC( real magnetic[], const double x, const double y, const double 
 #endif // #if ( MODEL == HYDRO )
 
 
+#if ( NCOMP_PASSIVE > 0 )
+void AddNewField_BlastWave()
+{
+   if ( Passive_0000 == 5 )   Passive_0000 = AddField( "Passive_0000", NORMALIZE_NO );
+   if ( Passive_0001 == 6 )   Passive_0001 = AddField( "Passive_0001", NORMALIZE_NO );
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------------
 // Function    :  Init_TestProb_Hydro_BlastWave

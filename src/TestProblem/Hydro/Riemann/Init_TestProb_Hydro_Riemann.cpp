@@ -519,8 +519,8 @@ void SetBFieldIC( real magnetic[], const double x, const double y, const double 
 #if ( NCOMP_PASSIVE > 0 )
 void AddNewField_Riemann()
 {
-   if ( PassiveIdx_Leftt == 5 )   PassiveIdx_Leftt = AddField( "PassiveLeftt", NORMALIZE_YES );
-   if ( PassiveIdx_Right == 6 )   PassiveIdx_Right = AddField( "PassiveRight", NORMALIZE_YES );
+   if ( PassiveIdx_Leftt == 5 )   PassiveIdx_Leftt = AddField( "PassiveLeftt", NORMALIZE_NO );
+   if ( PassiveIdx_Right == 6 )   PassiveIdx_Right = AddField( "PassiveRight", NORMALIZE_NO );
 }
 #endif
 

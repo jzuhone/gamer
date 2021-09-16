@@ -860,21 +860,6 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
                      ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc - didx_fc[d] ] ) :
                      ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc              ] );
 
-         //if ( d == 0 && div_V[d] != 1e-10   ) printf("div_V[%d]=%e\n", d, div_V[d]);
-         //if ( d == 1 && div_V[d] != 0.0     ) printf("div_V[%d]=%e\n", d, div_V[d]);
-         //if ( d == 2 && div_V[d] != 0.0     ) printf("div_V[%d]=%e\n", d, div_V[d]);
-
-         //if ( d == 0 && div_V[d] == 1e-10 ) printf("1e-10: %d %d %e %e %e %e %e %e %d\n", 
-         //                                                                  idx_flux, idx_fc,
-         //                                                                  g_Flux_Half[d][DENS][ idx_flux ], 
-         //                                                                  g_Flux_Half[d][DENS][ idx_flux - didx_flux[d] ],
-         //                                                                  g_Flux_Half[d][DENS][ idx_flux + didx_flux[d] ],
-         //                                                                  g_ConVar_In[DENS][ idx_fc ],
-         //                                                                  g_ConVar_In[DENS][ idx_fc + didx_fc[d] ],
-         //                                                                  g_ConVar_In[DENS][ idx_fc - didx_fc[d] ],
-         //                                                                  N_HF_FLUX
-         //                                          );
- 
 
       } // for (int d=0; d<3; d++)
 
