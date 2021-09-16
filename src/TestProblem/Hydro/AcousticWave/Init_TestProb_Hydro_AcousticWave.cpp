@@ -1,8 +1,6 @@
 #include "GAMER.h"
 #include "TestProb.h"
 
-//#define METHOD_1
-//#define METHOD_2
 
 static void OutputError();
 
@@ -369,7 +367,6 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 #  endif
 
 #  if ( defined SRHD && !defined COSMIC_RAY )
-#  ifdef METHOD_1
    real Prim[NCOMP_FLUID];
 
    double LorentzFactor;
@@ -388,7 +385,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    Prim[3] = LorentzFactor * Acoustic_Cs / SQRT3;
    Prim[4] = Acoustic_Temp_Bg * Acoustic_Rho_Bg;
 
-   Hydro_Pri2Con( Prim, Cons, false, NULL_BOOL, NULL_INT, NULL, NULL,
+   Hydro_Pri2Con( Prim, Cons, false, false, NULL_BOOL, NULL_INT, NULL, NULL,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
 // set the output array
@@ -397,31 +394,6 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    fluid[MOMY] = Cons[MOMY];
    fluid[MOMZ] = Cons[MOMZ];
    fluid[ENGY] = Cons[ENGY];
-#  endif
-
-#  ifdef METHOD_2
-   // Only correct in non-relativistic limit (i.e. v/c << 1 and kT/mc**2 << 1)
-   double Pres, Eint;
-   double P_cr, CRay;
-   double delta_cs = CR_Acoustic_Delta / Acoustic_Cs;
-   double wavelength = SQRT(3.0) / 3.0;
-          WaveK = 2.0*M_PI/wavelength;
-   double WaveW = WaveK * Acoustic_Cs;
-   double r = (x + y + z) / SQRT(3.) - CR_Acoustic_V0 * Time;
-   double wave = sin( WaveK * r - CR_Acoustic_Sign * WaveW * Time + CR_Acoustic_Phase );
-
-   fluid[DENS] = ( 1.0 + delta_cs * wave ) * CR_Acoustic_Rho0;
-   fluid[MOMX] = fluid[DENS] * ( CR_Acoustic_Sign * CR_Acoustic_Delta * wave + CR_Acoustic_V0) / SQRT(3.0);
-   fluid[MOMY] = fluid[MOMX];
-   fluid[MOMZ] = fluid[MOMX];
-   Pres = CR_Acoustic_Pres0    * ( 1.0 + delta_cs * wave * GAMMA    );
-   P_cr = CR_Acoustic_Pres_CR0 * ( 1.0 + delta_cs * wave * GAMMA_CR );
-   Pres = Pres + P_cr;
-   double v = sqrt(   SQR(fluid[MOMX]) + SQR(fluid[MOMY]) + SQR(fluid[MOMZ])  ) / fluid[DENS];
-   Eint = Pres;
-   Eint /= 5.0/3.0 - 1.0;
-   fluid[ENGY] = 0.5*v*v + Eint;
-#  endif
 #  endif
 
 #  if ( !defined SRHD && !defined COSMIC_RAY )

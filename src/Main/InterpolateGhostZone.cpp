@@ -332,7 +332,7 @@ void InterpolateGhostZone( const int lv, const int PID, real IntData_CC[], real 
 
          real Prim[NFluForEoS], LorentzFactor;
 
-         Hydro_Con2Pri( FluidForEoS, Prim, (real)NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+         Hydro_Con2Pri( FluidForEoS, Prim, (real)NULL_REAL, false, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                         (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
                         EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                         EoS_AuxArray_Int, h_EoS_Table, NULL, &LorentzFactor );
@@ -666,7 +666,7 @@ void InterpolateGhostZone( const int lv, const int PID, real IntData_CC[], real 
 
                real Prim[NFluForEoS], LorentzFactor;
 
-               Hydro_Con2Pri( FluidForEoS, Prim, (real)NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+               Hydro_Con2Pri( FluidForEoS, Prim, (real)NULL_REAL, false, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                               (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
                               EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                               EoS_AuxArray_Int, h_EoS_Table, NULL, &LorentzFactor );
@@ -677,7 +677,7 @@ void InterpolateGhostZone( const int lv, const int PID, real IntData_CC[], real 
                {
                   for (int v=0; v<NFluForEoS; v++)    FluidForEoS[v] = amr->patch[FluSg_IntT][lv][SibPID]->fluid[v][k2][j2][i2];
 
-                  Hydro_Con2Pri( FluidForEoS, Prim, (real)NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+                  Hydro_Con2Pri( FluidForEoS, Prim, (real)NULL_REAL, false, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                                  (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
                                  EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                  EoS_AuxArray_Int, h_EoS_Table, NULL, &LorentzFactor );

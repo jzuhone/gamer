@@ -100,7 +100,7 @@ void Hydro_RiemannSolver_HLLD( const int XYZ, real Flux_Out[], const real L_In[]
                                const int EoS_AuxArray_Int[], const real* const EoS_Table[EOS_NTABLE_MAX] );
 #endif
 #if ( FLU_SCHEME == MHM_RP )
-void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool Passive,
+void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool Passive, const bool CR,
                     const bool NormPassive, const int NNorm, const int NormIdx[],
                     const bool JeansMinPres, const real JeansMinPres_Coeff,
                     const EoS_DE2P_t EoS_DensEint2Pres, const EoS_DP2E_t EoS_DensPres2Eint,
@@ -912,7 +912,7 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
 #     endif
 
 //    conserved --> primitive variables
-      Hydro_Con2Pri( out_con, out_pri, MinPres, true, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
+      Hydro_Con2Pri( out_con, out_pri, MinPres, true, true, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
                      EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
                      EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, NULL );
 

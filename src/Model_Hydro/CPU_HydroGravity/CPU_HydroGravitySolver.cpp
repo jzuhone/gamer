@@ -317,7 +317,7 @@ void CPU_HydroGravitySolver(
          Cons_old2[MOMZ] = g_Flu_Array_New[P][MOMZ][idx_g0];
          Cons_old2[ENGY] = g_Flu_Array_New[P][ENGY][idx_g0];
 
-         Hydro_Con2Pri( Cons_new, Prim_new, NULL_REAL, false, NULL_BOOL, NULL_INT, NULL,
+         Hydro_Con2Pri( Cons_new, Prim_new, NULL_REAL, false, false, NULL_BOOL, NULL_INT, NULL,
                         NULL_BOOL, NULL_REAL, NULL, NULL, EoS_GuessHTilde_Func,
                         EoS_HTilde2Temp_Func, c_EoS_AuxArray_Flt, c_EoS_AuxArray_Int,
                         c_EoS_Table, NULL, &LorentzFactor_new );
@@ -353,7 +353,7 @@ void CPU_HydroGravitySolver(
          Cons_old[MOMZ] = g_Flu_Array_USG[P][MOMZ][idx_g0];
          Cons_old[ENGY] = g_Flu_Array_USG[P][ENGY][idx_g0];
 
-         Hydro_Con2Pri( Cons_old, Prim_old, NULL_REAL, false, NULL_BOOL, NULL_INT, NULL,
+         Hydro_Con2Pri( Cons_old, Prim_old, NULL_REAL, false, false, NULL_BOOL, NULL_INT, NULL,
                         NULL_BOOL, NULL_REAL, NULL, NULL, EoS_GuessHTilde_Func,
                         EoS_HTilde2Temp_Func, c_EoS_AuxArray_Flt, c_EoS_AuxArray_Int,
                         c_EoS_Table, NULL, &LorentzFactor_old );

@@ -87,14 +87,14 @@ void CPU_FluidSolver( real h_Flu_Array_In[][FLU_NIN][ CUBE(FLU_NXT) ],
                       const real MinDens, const real MinPres, const real MinEint, const real DualEnergySwitch,
                       const bool NormPassive, const int NNorm, const int NormIdx[],
                       const bool JeansMinPres, const real JeansMinPres_Coeff );
-void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool Passive,
+void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool Passive, const bool CR,
                     const bool NormPassive, const int NNorm, const int NormIdx[],
                     const bool JeansMinPres, const real JeansMinPres_Coeff,
                     const EoS_DE2P_t EoS_DensEint2Pres, const EoS_DP2E_t EoS_DensPres2Eint,
                     const EoS_GUESS_t EoS_GuessHTilde, const EoS_H2TEM_t EoS_HTilde2Temp,
                     const double EoS_AuxArray_Flt[], const int EoS_AuxArray_Int[],
                     const real *const EoS_Table[EOS_NTABLE_MAX], real* const EintOut, real* LorentzFactor_Ptr );
-void Hydro_Pri2Con( const real In[], real Out[], const bool Passive, const bool NormPassive, const int NNorm, const int NormIdx[],
+void Hydro_Pri2Con( const real In[], real Out[], const bool Passive, const bool CR, const bool NormPassive, const int NNorm, const int NormIdx[],
                     const EoS_DP2E_t EoS_DensPres2Eint, const EoS_TEM2H_t EoS_Temp2HTilde,
                     const EoS_H2TEM_t EoS_HTilde2Temp, const double EoS_AuxArray_Flt[], const int EoS_AuxArray_Int[],
                     const real *const EoS_Table[EOS_NTABLE_MAX], const real* const EintIn );

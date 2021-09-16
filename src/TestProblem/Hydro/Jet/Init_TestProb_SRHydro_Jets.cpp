@@ -882,7 +882,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    } // else if ( Jet_Ambient == 3 )
 
-   Hydro_Pri2Con( Pri, fluid, true, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
+   Hydro_Pri2Con( Pri, fluid, true, true, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                   EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
@@ -1052,7 +1052,7 @@ bool Flu_ResetByUser_Jets( real fluid[], const double x, const double y, const d
     PriReal[3] = (real)Prim[3];
     PriReal[4] = (real)Prim[4];
 
-    Hydro_Pri2Con( PriReal, fluid, true, NULL_BOOL, NULL_INT, NULL, EoS_DensPres2Eint_CPUPtr,
+    Hydro_Pri2Con( PriReal, fluid, true, true, NULL_BOOL, NULL_INT, NULL, EoS_DensPres2Eint_CPUPtr,
                    EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                    EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 

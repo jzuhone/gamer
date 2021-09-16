@@ -17,7 +17,7 @@
 #else
 
 void Hydro_Rotate3D( real InOut[], const int XYZ, const bool Forward, const int Mag_Offset );
-void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool Passive,
+void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool Passive, const bool CR,
                     const bool NormPassive, const int NNorm, const int NormIdx[],
                     const bool JeansMinPres, const real JeansMinPres_Coeff,
                     const EoS_DE2P_t EoS_DensEint2Pres, const EoS_DP2E_t EoS_DensPres2Eint,
@@ -25,7 +25,7 @@ void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool 
                     const double EoS_AuxArray_Flt[], const int EoS_AuxArray_Int[],
                     const real *const EoS_Table[EOS_NTABLE_MAX],
                     real* const EintOut, real* LorentzFactor );
-void Hydro_Pri2Con( const real In[], real Out[], const bool Passive, const bool NormPassive, const int NNorm, const int NormIdx[],
+void Hydro_Pri2Con( const real In[], real Out[], const bool Passive, const bool CR, const bool NormPassive, const int NNorm, const int NormIdx[],
                     const EoS_DP2E_t EoS_DensPres2Eint, const EoS_TEM2H_t EoS_Temp2HTilde, const EoS_H2TEM_t EoS_HTilde2Temp,
                     const double EoS_AuxArray_Flt[], const int EoS_AuxArray_Int[],
                     const real *const EoS_Table[EOS_NTABLE_MAX],
@@ -308,7 +308,7 @@ void Hydro_DataReconstruction( const real g_ConVar   [][ CUBE(FLU_NXT) ],
          MHD_GetCellCenteredBField( ConVar_1Cell+NCOMP_TOTAL, g_FC_B[0], g_FC_B[1], g_FC_B[2], NIn, NIn, NIn, i, j, k );
 #        endif
 
-         Hydro_Con2Pri( ConVar_1Cell, PriVar_1Cell, MinPres, true, NormPassive, NNorm, NormIdx,
+         Hydro_Con2Pri( ConVar_1Cell, PriVar_1Cell, MinPres, true, true, NormPassive, NNorm, NormIdx,
                         JeansMinPres, JeansMinPres_Coeff, EoS_DensEint2Pres, EoS_DensPres2Eint,
                         EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table,
                         EintPtr, NULL );
@@ -628,10 +628,10 @@ void Hydro_DataReconstruction( const real g_ConVar   [][ CUBE(FLU_NXT) ],
          real* const EintPtr = NULL;
 #        endif
 
-         Hydro_Pri2Con( fcPri[faceL], fcCon[faceL], true, NormPassive, NNorm, NormIdx, EoS_DensPres2Eint,
+         Hydro_Pri2Con( fcPri[faceL], fcCon[faceL], true, true, NormPassive, NNorm, NormIdx, EoS_DensPres2Eint,
                         EoS_Temp2HTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr );
 
-         Hydro_Pri2Con( fcPri[faceR], fcCon[faceR], true, NormPassive, NNorm, NormIdx, EoS_DensPres2Eint,
+         Hydro_Pri2Con( fcPri[faceR], fcCon[faceR], true, true, NormPassive, NNorm, NormIdx, EoS_DensPres2Eint,
                         EoS_Temp2HTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr );
       } // for (int d=0; d<3; d++)
 
@@ -834,7 +834,7 @@ void Hydro_DataReconstruction( const real g_ConVar   [][ CUBE(FLU_NXT) ],
          MHD_GetCellCenteredBField( ConVar_1Cell+NCOMP_TOTAL, g_FC_B[0], g_FC_B[1], g_FC_B[2], NIn, NIn, NIn, i, j, k );
 #        endif
 
-         Hydro_Con2Pri( ConVar_1Cell, PriVar_1Cell, MinPres, true, NormPassive, NNorm, NormIdx,
+         Hydro_Con2Pri( ConVar_1Cell, PriVar_1Cell, MinPres, true, true, NormPassive, NNorm, NormIdx,
                         JeansMinPres, JeansMinPres_Coeff, EoS_DensEint2Pres, EoS_DensPres2Eint,
                         EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, NULL );
 
@@ -1228,10 +1228,10 @@ void Hydro_DataReconstruction( const real g_ConVar   [][ CUBE(FLU_NXT) ],
          real* const EintPtr = NULL;
 #        endif
 
-         Hydro_Pri2Con( fcPri[faceL], fcCon[faceL], true, NormPassive, NNorm, NormIdx, EoS_DensPres2Eint,
+         Hydro_Pri2Con( fcPri[faceL], fcCon[faceL], true,  true, NormPassive, NNorm, NormIdx, EoS_DensPres2Eint,
                         EoS_Temp2HTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr );
 
-         Hydro_Pri2Con( fcPri[faceR], fcCon[faceR], true, NormPassive, NNorm, NormIdx, EoS_DensPres2Eint,
+         Hydro_Pri2Con( fcPri[faceR], fcCon[faceR], true,  true, NormPassive, NNorm, NormIdx, EoS_DensPres2Eint,
                         EoS_Temp2HTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr );
       } // for (int d=0; d<3; d++)
 

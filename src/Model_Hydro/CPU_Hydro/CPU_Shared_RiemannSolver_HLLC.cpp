@@ -93,11 +93,11 @@ void Hydro_RiemannSolver_HLLC( const int XYZ, real Flux_Out[], const real L_In[]
 
 
 /* 1. compute primitive vars. from conserved vars. */
-   Hydro_Con2Pri( L, PL, (real)NULL_REAL, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+   Hydro_Con2Pri( L, PL, (real)NULL_REAL, true, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                  (real)NULL_REAL, NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
                  EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, &lFactor );
 
-   Hydro_Con2Pri( R, PR, (real)NULL_REAL, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+   Hydro_Con2Pri( R, PR, (real)NULL_REAL, true, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                   (real)NULL_REAL, NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
                  EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, &rFactor );
 

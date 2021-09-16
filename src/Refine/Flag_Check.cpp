@@ -171,7 +171,7 @@ bool Flag_Check( const int lv, const int PID, const int i, const int j, const in
       Cons[MOMZ]=Fluid[MOMZ][k][j][i];
       Cons[ENGY]=Fluid[ENGY][k][j][i];
 
-      Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
+      Hydro_Con2Pri( Cons, Prim, (real)NULL_REAL, false, false, NULL_BOOL, NULL_INT, NULL, NULL_BOOL,
                      (real)NULL_REAL, EoS_DensEint2Pres_CPUPtr, EoS_DensPres2Eint_CPUPtr,
                      EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                      EoS_AuxArray_Int, h_EoS_Table, NULL, &LorentzFactor );

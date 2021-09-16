@@ -209,7 +209,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    Prim[2] = 0.0;
    Prim[3] = 0.0;
    Prim[4] = ( r <= Blast_Radius ) ? Blast_Pres_Exp : Blast_Pres_Bg;
-   Hydro_Pri2Con( Prim, fluid, false, NULL_BOOL, NULL_INT, NULL, NULL,
+   Hydro_Pri2Con( Prim, fluid, false, false, NULL_BOOL, NULL_INT, NULL, NULL,
                   EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 #  ifdef COSMIC_RAY
    fluid[CRAY] = ( r <= Blast_Radius ) ? Blast_CRPres_Exp*0.33333333333333 : Blast_CRPres_Bg*0.33333333333333;
