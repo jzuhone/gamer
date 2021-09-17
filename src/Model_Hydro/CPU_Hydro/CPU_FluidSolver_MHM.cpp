@@ -608,6 +608,7 @@ void Hydro_RiemannPredict_Flux( const real g_ConVar[][ CUBE(FLU_NXT) ],
 
    const int didx_cvar[3] = { 1, FLU_NXT, SQR(FLU_NXT) };
    real ConVar_L[NCOMP_TOTAL_PLUS_MAG], ConVar_R[NCOMP_TOTAL_PLUS_MAG], Flux_1Face[NCOMP_TOTAL_PLUS_MAG];
+   real Con[NCOMP_TOTAL_PLUS_MAG], Pri[NCOMP_TOTAL_PLUS_MAG];
 
 // loop over different spatial directions
    for (int d=0; d<3; d++)
@@ -702,9 +703,16 @@ void Hydro_RiemannPredict_Flux( const real g_ConVar[][ CUBE(FLU_NXT) ],
          Hydro_RiemannSolver_HLLE ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres,
                                     EoS_DensEint2Pres, EoS_DensPres2CSqr, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table );
 #        elif ( RSOLVER == HLLC  &&  !defined MHD )
-         Hydro_RiemannSolver_HLLC ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres, EoS_DensEint2Pres, EoS_DensPres2CSqr,
-                                    EoS_GuessHTilde, EoS_HTilde2Temp, EoS_Temper2CSqr,
-                                    EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL );
+         //Hydro_RiemannSolver_HLLC ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres, EoS_DensEint2Pres, EoS_DensPres2CSqr,
+         //                           EoS_GuessHTilde, EoS_HTilde2Temp, EoS_Temper2CSqr,
+         //                           EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL );
+
+         for (int v=0; v<NCOMP_TOTAL; v++) Con[v] = ( ConVar_L[v] + ConVar_R[v] )*(real)0.5;
+
+         Hydro_Con2Pri(  Con,  Pri, (real)NULL_REAL, true, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL, (real)NULL_REAL,
+                        NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, NULL );
+
+         Hydro_Con2Flux( d, Flux_1Face, Con, NULL_REAL, NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, Pri );
 #        elif ( RSOLVER == HLLD  &&  defined MHD )
          Hydro_RiemannSolver_HLLD ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres,
                                     EoS_DensEint2Pres, EoS_DensPres2CSqr, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table );
@@ -829,6 +837,13 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
 //    update the input cell-centered conserved variables with the flux differences
       for (int v=0; v<NCOMP_TOTAL; v++)
          out_con[v] = g_ConVar_In[v][idx_in] - dt_dh2*( dflux[0][v] + dflux[1][v] + dflux[2][v] );
+
+
+      if (SRHD_CheckUnphysical( out_con, NULL, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int,
+                                EoS_Table, __FUNCTION__, __LINE__, false ) )
+      {
+         for (int v=0; v<NCOMP_TOTAL; v++)  out_con[v] = g_ConVar_In[v][idx_in];
+      }
 
 
 //    Cosmic ray half-step update
