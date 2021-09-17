@@ -709,6 +709,7 @@ void Hydro_RiemannPredict_Flux( const real g_ConVar[][ CUBE(FLU_NXT) ],
 
          for (int v=0; v<NCOMP_TOTAL; v++) Con[v] = ( ConVar_L[v] + ConVar_R[v] )*(real)0.5;
 
+//       Mix MHM_RP nad MHM
          Hydro_Con2Pri(  Con,  Pri, (real)NULL_REAL, true, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL, (real)NULL_REAL,
                         NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, NULL );
 
@@ -839,6 +840,7 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
          out_con[v] = g_ConVar_In[v][idx_in] - dt_dh2*( dflux[0][v] + dflux[1][v] + dflux[2][v] );
 
 
+//       Mix MHM_RP nad MHM
       if (SRHD_CheckUnphysical( out_con, NULL, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int,
                                 EoS_Table, __FUNCTION__, __LINE__, false ) )
       {
