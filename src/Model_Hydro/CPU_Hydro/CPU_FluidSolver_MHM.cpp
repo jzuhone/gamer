@@ -703,13 +703,13 @@ void Hydro_RiemannPredict_Flux( const real g_ConVar[][ CUBE(FLU_NXT) ],
          Hydro_RiemannSolver_HLLE ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres,
                                     EoS_DensEint2Pres, EoS_DensPres2CSqr, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table );
 #        elif ( RSOLVER == HLLC  &&  !defined MHD )
-         //Hydro_RiemannSolver_HLLC ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres, EoS_DensEint2Pres, EoS_DensPres2CSqr,
-         //                           EoS_GuessHTilde, EoS_HTilde2Temp, EoS_Temper2CSqr,
-         //                           EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL );
+//         Hydro_RiemannSolver_HLLC ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres, EoS_DensEint2Pres, EoS_DensPres2CSqr,
+//                                    EoS_GuessHTilde, EoS_HTilde2Temp, EoS_Temper2CSqr,
+//                                    EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL );
 
+//       MHM
          for (int v=0; v<NCOMP_TOTAL; v++) Con[v] = ( ConVar_L[v] + ConVar_R[v] )*(real)0.5;
 
-//       Mix MHM_RP nad MHM
          Hydro_Con2Pri(  Con,  Pri, (real)NULL_REAL, true, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL, (real)NULL_REAL,
                         NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, NULL );
 

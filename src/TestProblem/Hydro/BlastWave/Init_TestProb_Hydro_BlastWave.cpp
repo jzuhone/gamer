@@ -222,13 +222,13 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 #  if ( NCOMP_PASSIVE > 0 )
    if ( r <= Blast_Radius  )
    {
-     fluid[Passive_0000] = Prim[0]; 
+     fluid[Passive_0000] = fluid[0];
      fluid[Passive_0001] = 0.0;
    }
    else
    {
      fluid[Passive_0000] = 0.0; 
-     fluid[Passive_0001] = Prim[0];
+     fluid[Passive_0001] = fluid[0];
    }
 #  endif
 

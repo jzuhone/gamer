@@ -202,7 +202,6 @@ void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool 
                     const double EoS_AuxArray_Flt[], const int EoS_AuxArray_Int[],
                     const real *const EoS_Table[EOS_NTABLE_MAX], real* const EintOut, real* LorentzFactor_Ptr )
 {
-
 #  ifndef SRHD
    const bool CheckMinPres_Yes = true;
 #  endif
@@ -285,7 +284,7 @@ void Hydro_Con2Pri( const real In[], real Out[], const real MinPres, const bool 
 // copy all passive scalars
    if ( Passive )
 #     ifdef COSMIC_RAY
-      for (int v=NCOMP_FLUID; v<CRAY; v++)         Out[v] = In[v];
+      for (int v=NCOMP_FLUID; v<NCOMP_TOTAL-1; v++)  Out[v] = In[v];
 #     else
       for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)  Out[v] = In[v];
 #     endif
@@ -343,7 +342,6 @@ void Hydro_Pri2Con( const real In[], real Out[], const bool Passive, const bool 
                     const EoS_H2TEM_t EoS_HTilde2Temp, const double EoS_AuxArray_Flt[], const int EoS_AuxArray_Int[],
                     const real *const EoS_Table[EOS_NTABLE_MAX], const real* const EintIn )
 {
-
 #  ifdef SRHD
    real LorentzFactor, Temperature, HTilde, MSqr_DSqr, HTildeFunction, Factor0;
 #  else
@@ -394,8 +392,8 @@ void Hydro_Pri2Con( const real In[], real Out[], const bool Passive, const bool 
 #  if ( NCOMP_PASSIVE > 0 )
 // copy all passive scalars
    if ( Passive )
-#     ifdef COSMIC_RAY
-      for (int v=NCOMP_FLUID; v<CRAY; v++)          Out[v] = In[v];
+#     ifdef COSMIC_RAY // NCOMP_FLUID=5, CRAY=7, NCOMP_TOTAL=8
+      for (int v=NCOMP_FLUID; v<NCOMP_TOTAL-1; v++)   Out[v] = In[v];
 #     else
       for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)   Out[v] = In[v];
 #     endif
