@@ -42,6 +42,11 @@ static double   Jet_SrcTemp;             // jet temperature
 static bool     Jet_SmoothVel;           // smooth radial component of 4-velocity on cross section
 
 
+#ifdef COSMIC_RAY
+static double Jet_Src_CR_Engy;
+static double Amb_CR_Engy;
+#endif
+
 // sound speed
 static double   CharacteristicSpeed;     // the characteristic speed of the simulation problem
                                          // the default end-time (END_T) will be estimated from
@@ -216,6 +221,10 @@ void SetParameter()
    ReadPara->Add( "gasDisk_lowRes_LEVEL",    &gasDisk_lowRes_LEVEL,    -1,                       0,      NoMax_int    );
    ReadPara->Add( "jetSrc_highResRadius",    &jetSrc_highResRadius,    -1.0,          NoMin_double,   NoMax_double    );
    ReadPara->Add( "jetSrc_lowRes_LEVEL",     &jetSrc_lowRes_LEVEL,     -1,                       0,      NoMax_int    );
+#  ifdef COSMIC_RAY
+   ReadPara->Add( "Jet_Src_CR_Engy",         &Jet_Src_CR_Engy   ,      -1.0,                   0.0,   NoMax_double    );
+   ReadPara->Add( "Amb_CR_Engy",             &Amb_CR_Engy   ,          -1.0,                   0.0,   NoMax_double    );
+#  endif
 
 
 // load source geometry parameters
@@ -333,6 +342,11 @@ void SetParameter()
    Jet_SrcVel               *= Const_c     / UNIT_V;
    Jet_SrcTemp              *= Const_kB    / (ParticleMass*Const_c*Const_c);
    Jet_SrcDens              *= 1.0         / UNIT_D;
+
+#  ifdef COSMIC_RAY
+   Jet_Src_CR_Engy = 1.0 / UNIT_P;
+   Amb_CR_Engy     = 1.0 / UNIT_P;
+#  endif
 
    Jet_Radius               *= Const_kpc   / UNIT_L;
    Jet_HalfHeight           *= Const_kpc   / UNIT_L;
@@ -454,6 +468,10 @@ void SetParameter()
      Aux_Message( stdout, "  Jet_SrcVel               = %14.7e c\n",          Jet_SrcVel                                      );
      Aux_Message( stdout, "  Jet_SrcDens              = %14.7e g/cm^3\n",     Jet_SrcDens*UNIT_D                              );
      Aux_Message( stdout, "  Jet_SrcTemp              = %14.7e kT/mc**2\n",   Jet_SrcTemp                                     );
+#    ifdef COSMIC_RAY
+     Aux_Message( stdout, "  Jet_Src_CR_Engy          = %14.7e \n",           Jet_Src_CR_Engy*UNIT_P                          );
+     Aux_Message( stdout, "  Amb_CR_Engy              = %14.7e \n",           Amb_CR_Engy*UNIT_P                              );
+#    endif
      Aux_Message( stdout, "  Jet_NumDensSrc           = %14.7e per cc\n",     Jet_SrcDens*UNIT_D/ParticleMass                 );
      Aux_Message( stdout, "  Jet_CenOffset[x]         = %14.7e kpc\n",        Jet_CenOffset [0]*UNIT_L/Const_kpc              );
      Aux_Message( stdout, "  Jet_CenOffset[y]         = %14.7e kpc\n",        Jet_CenOffset [1]*UNIT_L/Const_kpc              );
@@ -749,7 +767,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
                 const int lv, double AuxArray[] )
 {
 // variables for jet
-   real Pri[NCOMP_TOTAL];
+   real Pri[NCOMP_FLUID];
    real xc = x - IsothermalSlab_Center[0];
    real yc = y - IsothermalSlab_Center[1];
    real zc = z - IsothermalSlab_Center[2];
@@ -769,15 +787,24 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
      {
        Interpolation_UM_IC( xc, yc, zc, Pri);
 
-#      if (NCOMP_PASSIVE > 0)
-       Pri[PassiveIdx_dis] = Pri[0];
-       Pri[PassiveIdx_jet] = 0.0;
-       Pri[PassiveIdx_amb] = 0.0;
-#      endif
 
        if ( SRHD_CheckUnphysical( NULL, Pri,
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                   EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
+
+       Hydro_Pri2Con( Pri, fluid, false, false, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
+                      EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
+                      EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
+
+#      if (NCOMP_PASSIVE > 0)
+       fluid[PassiveIdx_dis] = fluid[0];
+       fluid[PassiveIdx_jet] = 0.0;
+       fluid[PassiveIdx_amb] = 0.0;
+#      endif
+
+#      ifdef COSMIC_RAY
+       fluid[CRAY] = (real)0.333333333*Amb_CR_Engy;
+#      endif
      }
      else
      {
@@ -810,15 +837,24 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
        Pri[3] = 0.0;
        Pri[4] = ambientDens*ambientTemperature;
 
-#      if (NCOMP_PASSIVE > 0)
-       Pri[PassiveIdx_dis] = 0.0;
-       Pri[PassiveIdx_jet] = 0.0;
-       Pri[PassiveIdx_amb] = Pri[0];
-#      endif
+       Hydro_Pri2Con( Pri, fluid, false, false, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
+                      EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
+                      EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
+
 
        if ( SRHD_CheckUnphysical( NULL, Pri,
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                   EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
+#      if (NCOMP_PASSIVE > 0)
+       fluid[PassiveIdx_dis] = 0.0;
+       fluid[PassiveIdx_jet] = 0.0;
+       fluid[PassiveIdx_amb] = fluid[0];
+#      endif
+
+#      ifdef COSMIC_RAY
+       fluid[CRAY] = (real)0.333333333*Amb_CR_Engy;
+#      endif
+
      }
 #  endif
    }
@@ -882,9 +918,6 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    } // else if ( Jet_Ambient == 3 )
 
-   Hydro_Pri2Con( Pri, fluid, true, true, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
-                  EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
-                  EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
 } // FUNCTION : SetGridIC
 
@@ -939,8 +972,8 @@ bool Flu_ResetByUser_Jets( real fluid[], const double x, const double y, const d
   if ( Jet_Duration < Time ) return false;
 
   double xp[3], rp[3];
-  double Prim[5], Cons[5], Vel[3];
-  real PriReal[5];
+  double Prim[NCOMP_FLUID], Cons[NCOMP_FLUID], Vel[3];
+  real PriReal[NCOMP_FLUID];
   double PrecessionAxis_Spherical[3], Omega_t;
   bool InsideUpperCone, InsideLowerCone;
   double Jet_SrcVelSmooth;
@@ -1060,6 +1093,10 @@ bool Flu_ResetByUser_Jets( real fluid[], const double x, const double y, const d
     fluid[PassiveIdx_dis] = 0.0;
     fluid[PassiveIdx_jet] = fluid[DENS];
     fluid[PassiveIdx_amb] = 0.0;
+#   endif
+
+#   ifdef COSMIC_RAY
+    fluid[CRAY] = (real)0.333333333*Jet_Src_CR_Engy; 
 #   endif
 
 	return true;

@@ -9,8 +9,8 @@ void AddNewField_BlastWave();
 // this function pointer must be set by a test problem initializer
 #if ( NCOMP_PASSIVE > 0 )
 //void (*Init_Field_User_Ptr)() = AddNewField_Riemann;
-//void (*Init_Field_User_Ptr)() = AddNewField_Jet;
-void (*Init_Field_User_Ptr)() = AddNewField_BlastWave;
+void (*Init_Field_User_Ptr)() = AddNewField_Jet;
+//void (*Init_Field_User_Ptr)() = AddNewField_BlastWave;
 //void (*Init_Field_User_Ptr)() = NULL;
 #else
 void (*Init_Field_User_Ptr)() = NULL;
