@@ -123,9 +123,9 @@ static bool     Flag_BurstTemp;          // flag: burst temperature
 static double   Amb_FluSphereRadius;     //
 
 #if (NCOMP_PASSIVE > 0)
-static FieldIdx_t PassiveIdx_dis = 5;
-static FieldIdx_t PassiveIdx_jet = 6;
-static FieldIdx_t PassiveIdx_amb = 7;
+static FieldIdx_t Passive_0000 = 5;  // disk
+static FieldIdx_t Passive_0001 = 6;  // jet
+static FieldIdx_t Passive_0002 = 7;  // ambient
 #endif
 // =======================================================================================
 
@@ -344,8 +344,8 @@ void SetParameter()
    Jet_SrcDens              *= 1.0         / UNIT_D;
 
 #  ifdef COSMIC_RAY
-   Jet_Src_CR_Engy = 1.0 / UNIT_P;
-   Amb_CR_Engy     = 1.0 / UNIT_P;
+   Jet_Src_CR_Engy *= 1.0 / UNIT_P;
+   Amb_CR_Engy     *= 1.0 / UNIT_P;
 #  endif
 
    Jet_Radius               *= Const_kpc   / UNIT_L;
@@ -797,9 +797,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
                       EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
 #      if (NCOMP_PASSIVE > 0)
-       fluid[PassiveIdx_dis] = fluid[0];
-       fluid[PassiveIdx_jet] = 0.0;
-       fluid[PassiveIdx_amb] = 0.0;
+       fluid[Passive_0000] = fluid[0];
+       fluid[Passive_0001] = 0.0;
+       fluid[Passive_0002] = 0.0;
 #      endif
 
 #      ifdef COSMIC_RAY
@@ -846,9 +846,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                   EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
 #      if (NCOMP_PASSIVE > 0)
-       fluid[PassiveIdx_dis] = 0.0;
-       fluid[PassiveIdx_jet] = 0.0;
-       fluid[PassiveIdx_amb] = fluid[0];
+       fluid[Passive_0000] = 0.0;
+       fluid[Passive_0001] = 0.0;
+       fluid[Passive_0002] = fluid[0];
 #      endif
 
 #      ifdef COSMIC_RAY
@@ -866,9 +866,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
        Interpolation_UM_IC( xc, yc, zc, Pri);
 
 #      if (NCOMP_PASSIVE > 0)
-       Pri[PassiveIdx_dis] = Pri[0];
-       Pri[PassiveIdx_jet] = 0.0;
-       Pri[PassiveIdx_amb] = 0.0;
+       Pri[Passive_0000] = Pri[0];
+       Pri[Passive_0001] = 0.0;
+       Pri[Passive_0002] = 0.0;
 #      endif
 
        if ( SRHD_CheckUnphysical( NULL, Pri,
@@ -904,9 +904,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
        Pri[4] = ambientDens*ambientTemperature;
 
 #      if (NCOMP_PASSIVE > 0)
-       Pri[PassiveIdx_dis] = 0.0;
-       Pri[PassiveIdx_jet] = 0.0;
-       Pri[PassiveIdx_amb] = Pri[0];
+       Pri[Passive_0000] = 0.0;
+       Pri[Passive_0001] = 0.0;
+       Pri[Passive_0002] = Pri[0];
 #      endif
 
      } // if (fabs(zc) < interfaceHeight)
@@ -1090,9 +1090,9 @@ bool Flu_ResetByUser_Jets( real fluid[], const double x, const double y, const d
                    EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
 #   if (NCOMP_PASSIVE > 0)
-    fluid[PassiveIdx_dis] = 0.0;
-    fluid[PassiveIdx_jet] = fluid[DENS];
-    fluid[PassiveIdx_amb] = 0.0;
+    fluid[Passive_0000] = 0.0;
+    fluid[Passive_0001] = fluid[DENS];
+    fluid[Passive_0002] = 0.0;
 #   endif
 
 #   ifdef COSMIC_RAY
@@ -1238,9 +1238,9 @@ double Mis_GetTimeStep_User( const int lv, const double dTime_dt )
 #if (NCOMP_PASSIVE > 0)
 void AddNewField_Jet()
 {
-   if ( PassiveIdx_dis == 5 ) PassiveIdx_dis = AddField( "Passive_dis", NORMALIZE_NO );
-   if ( PassiveIdx_jet == 6 ) PassiveIdx_jet = AddField( "Passive_jet", NORMALIZE_NO );
-   if ( PassiveIdx_amb == 7 ) PassiveIdx_amb = AddField( "Passive_amb", NORMALIZE_NO );
+   if ( Passive_0000 == 5 ) Passive_0000 = AddField( "Passive_0000", NORMALIZE_NO );
+   if ( Passive_0001 == 6 ) Passive_0001 = AddField( "Passive_0001", NORMALIZE_NO );
+   if ( Passive_0002 == 7 ) Passive_0002 = AddField( "Passive_0002", NORMALIZE_NO );
 }
 #endif
 
