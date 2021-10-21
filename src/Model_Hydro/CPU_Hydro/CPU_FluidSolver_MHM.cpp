@@ -135,8 +135,9 @@ static void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
                                     real g_Output[][ CUBE(PS2) ],
                               const real g_Flux[][NCOMP_TOTAL_PLUS_MAG][ CUBE(N_FC_FLUX) ],
                               const real g_FC_Var[][NCOMP_TOTAL_PLUS_MAG][ CUBE(N_FC_VAR) ],
-                              const real dt, const real dh );
-                              //const EoS_t *EoS );
+                              const real dt, const real dh,
+                              const EoS_GUESS_t EoS_GuessHTilde,
+                              const EoS_H2TEM_t EoS_HTilde2Temp, const real MinPres );
 #endif
 
 #if ( FLU_SCHEME == MHM_RP )
@@ -550,8 +551,9 @@ void CPU_FluidSolver_MHM(
 
 #              ifdef COSMIC_RAY
                // Cosmic ray full-step update
+               if ( state == 0 || iteration == Max )
                CosmicRay_Update( g_PriVar_Half_1PG, g_Flu_Array_Out[P], g_FC_Flux_1PG, g_FC_Var_1PG,
-                                 dt, dh );
+                                 dt, dh, EoS_GuessHTilde_Func, EoS_HTilde2Temp_Func, MinPres );
                                  //dt, dh, &EoS);
 #              endif
 
@@ -745,7 +747,7 @@ void Hydro_RiemannPredict_Flux( const real g_ConVar[][ CUBE(FLU_NXT) ],
 //                   --> Reducing the global memory access on GPU
 //                3. Cell-centered B field is simply obtained by averaging the half-step face-centered B field
 //
-// Parameter   :  g_ConVar_In        : Array storing the input conserved variables
+// Parameter   :  g_ConVar_In        : Array storing the input conserved variables (cell-centered)
 //                g_FC_B_Half        : Array storing the input half-step face-centered B field
 //                g_Flux_Half        : Array storing the input face-centered fluxes
 //                                     --> Accessed with the stride N_HF_FLUX
@@ -854,6 +856,9 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
       //const double *EoS_AuxArray_Flt  = EoS->AuxArrayDevPtr_Flt;
       real div_V[3], Input_1Cell[NCOMP_TOTAL_PLUS_MAG];
       const int idx_fc = idx_in;
+      real con_4_div_v1[NCOMP_FLUID], con_4_div_v2[NCOMP_FLUID], con_4_div_v3[NCOMP_FLUID];
+      real pri_4_div_v1[NCOMP_FLUID], pri_4_div_v2[NCOMP_FLUID], pri_4_div_v3[NCOMP_FLUID];
+      real v1, v2, v3, LorentzFactor1, LorentzFactor2, LorentzFactor3;
 
       // ==============================
       // 1. store the cosmic ray and calculate the pressure
@@ -877,6 +882,55 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
                      ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc - didx_fc[d] ] ) :
                      ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc              ] );
 
+         //con_4_div_v1[DENS] = g_ConVar_In[DENS][ idx_fc              ];
+         //con_4_div_v1[MOMX] = g_ConVar_In[MOMX][ idx_fc              ];
+         //con_4_div_v1[MOMY] = g_ConVar_In[MOMY][ idx_fc              ];
+         //con_4_div_v1[MOMZ] = g_ConVar_In[MOMZ][ idx_fc              ];
+         //con_4_div_v1[ENGY] = g_ConVar_In[ENGY][ idx_fc              ];
+     
+         //con_4_div_v2[DENS] = g_ConVar_In[DENS][ idx_fc + didx_fc[d] ];
+         //con_4_div_v2[MOMX] = g_ConVar_In[MOMX][ idx_fc + didx_fc[d] ];
+         //con_4_div_v2[MOMY] = g_ConVar_In[MOMY][ idx_fc + didx_fc[d] ];
+         //con_4_div_v2[MOMZ] = g_ConVar_In[MOMZ][ idx_fc + didx_fc[d] ];
+         //con_4_div_v2[ENGY] = g_ConVar_In[ENGY][ idx_fc + didx_fc[d] ];
+     
+         //con_4_div_v3[DENS] = g_ConVar_In[DENS][ idx_fc - didx_fc[d] ];
+         //con_4_div_v3[MOMX] = g_ConVar_In[MOMX][ idx_fc - didx_fc[d] ];
+         //con_4_div_v3[MOMY] = g_ConVar_In[MOMY][ idx_fc - didx_fc[d] ];
+         //con_4_div_v3[MOMZ] = g_ConVar_In[MOMZ][ idx_fc - didx_fc[d] ];
+         //con_4_div_v3[ENGY] = g_ConVar_In[ENGY][ idx_fc - didx_fc[d] ];
+     
+
+         //Hydro_Con2Pri( con_4_div_v1, pri_4_div_v1, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
+         //               EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
+         //               EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, &LorentzFactor1 );
+
+         //Hydro_Con2Pri( con_4_div_v2, pri_4_div_v2, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
+         //               EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
+         //               EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, &LorentzFactor2 );
+
+         //Hydro_Con2Pri( con_4_div_v3, pri_4_div_v3, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
+         //               EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
+         //               EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, &LorentzFactor3 );
+
+
+         //v1 = pri_4_div_v1[d+1] / LorentzFactor1;
+         //v2 = pri_4_div_v2[d+1] / LorentzFactor2;
+         //v3 = pri_4_div_v3[d+1] / LorentzFactor3;
+
+         //div_V[d]  = ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] > 0 ) ? v1 : v2;
+         //div_V[d] -= ( g_Flux_Half[d][DENS][ idx_flux                 ] > 0 ) ? v3 : v1;
+
+         //real V1 = g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc              ];
+         //real V2 = g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc + didx_fc[d] ];
+         //real V3 = g_Flux_Half[d][DENS][ idx_flux                 ] / g_ConVar_In[DENS][ idx_fc - didx_fc[d] ];
+         //real V4 = g_Flux_Half[d][DENS][ idx_flux                 ] / g_ConVar_In[DENS][ idx_fc              ];
+
+         //if (V1 >=1.0) printf("%d: %e\n",  __LINE__, V1 );
+         //if (V2 >=1.0) printf("%d: %e\n",  __LINE__, V2 );
+         //if (V3 >=1.0) printf("%d: %e\n",  __LINE__, V3 );
+         //if (V4 >=1.0) printf("%d: %e\n",  __LINE__, V4 );
+
 
       } // for (int d=0; d<3; d++)
 
@@ -884,6 +938,7 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
       // ==============================
       // 3. Update the cosmic ray
       // ==============================
+      //if ( out_con[CRAY] > (real)1.0) printf("out_con[CRAY]=%e, pCR_old=%e, dt_dh2=%e,  div_V[0]=%e, div_V[1]=%e, div_V[2]=%e\n", out_con[CRAY], pCR_old, dt_dh2,  div_V[0], div_V[1], div_V[2]);
       out_con[CRAY] = out_con[CRAY] - pCR_old * dt_dh2 * ( div_V[0] + div_V[1] + div_V[2] );
 
 #     endif // # ifdef COSMIC_RAY
@@ -958,8 +1013,9 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
                              real g_Output[][ CUBE(PS2) ],
                        const real g_Flux[][NCOMP_TOTAL_PLUS_MAG][ CUBE(N_FC_FLUX) ],
                        const real g_FC_Var[][NCOMP_TOTAL_PLUS_MAG][ CUBE(N_FC_VAR) ],
-                       const real dt, const real dh )
-//                       const EoS_t *EoS)
+                       const real dt, const real dh,
+                       const EoS_GUESS_t EoS_GuessHTilde,
+                       const EoS_H2TEM_t EoS_HTilde2Temp, const real MinPres )
 {
    const int didx_flux[3] = { 1, N_FL_FLUX, SQR(N_FL_FLUX) };
    const int didx_fc[3]   = { 1, N_FC_VAR,  SQR(N_FC_VAR)  };
@@ -968,6 +1024,11 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
    const real dt_dh       = dt/dh;
 
    real div_V[3], Input_Half_1Cell[NCOMP_TOTAL_PLUS_MAG], Output_1Cell[NCOMP_TOTAL_PLUS_MAG];
+
+   real con_4_div_v1[NCOMP_FLUID], con_4_div_v2[NCOMP_FLUID], con_4_div_v3[NCOMP_FLUID], con_4_div_v4[NCOMP_FLUID];
+   real pri_4_div_v1[NCOMP_FLUID], pri_4_div_v2[NCOMP_FLUID], pri_4_div_v3[NCOMP_FLUID], pri_4_div_v4[NCOMP_FLUID];
+   real v1, v2, v3, v4;
+   real LorentzFactor1, LorentzFactor2, LorentzFactor3, LorentzFactor4;
 
    const int size_ij = SQR(PS2);
    CGPU_LOOP( idx_out, CUBE(PS2) )
@@ -1005,7 +1066,8 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
       // ==============================
       Input_Half_1Cell[CRAY] = g_PriVar_Half[CRAY][idx_hf];
       Output_1Cell[CRAY]     = g_Output[CRAY][idx_out];
-      real pCR_half = (real)0.3333333333333333*Output_1Cell[CRAY];
+      //real pCR_half = (real)0.3333333333333333*Output_1Cell[CRAY];
+      real pCR_half = Input_Half_1Cell[CRAY];
       //real pCR_half = EoS_CREint2CRPres( Input_Half_1Cell+NCOMP_FLUID, EoS_AuxArray_Flt, NULL, NULL, NULL );
 
 
@@ -1021,10 +1083,68 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
          div_V[d]  = ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] > 0 ) ?
                      ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceR][DENS][ idx_fc              ] ) :
                      ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ] );
-
+ 
          div_V[d] -= ( g_Flux[d][DENS][ idx_flux ] > 0 ) ?
                      ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ] ) :
                      ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceL][DENS][ idx_fc              ] );
+
+         //con_4_div_v1[DENS] = g_FC_Var[faceR][DENS][ idx_fc              ];
+         //con_4_div_v1[MOMX] = g_FC_Var[faceR][MOMX][ idx_fc              ];
+         //con_4_div_v1[MOMY] = g_FC_Var[faceR][MOMY][ idx_fc              ];
+         //con_4_div_v1[MOMZ] = g_FC_Var[faceR][MOMZ][ idx_fc              ];
+         //con_4_div_v1[ENGY] = g_FC_Var[faceR][ENGY][ idx_fc              ];
+
+         //con_4_div_v2[DENS] = g_FC_Var[faceL][DENS][ idx_fc              ];
+         //con_4_div_v2[MOMX] = g_FC_Var[faceL][MOMX][ idx_fc              ];
+         //con_4_div_v2[MOMY] = g_FC_Var[faceL][MOMY][ idx_fc              ];
+         //con_4_div_v2[MOMZ] = g_FC_Var[faceL][MOMZ][ idx_fc              ];
+         //con_4_div_v2[ENGY] = g_FC_Var[faceL][ENGY][ idx_fc              ];
+
+         //con_4_div_v3[DENS] = g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ];
+         //con_4_div_v3[MOMX] = g_FC_Var[faceL][MOMX][ idx_fc + didx_fc[d] ];
+         //con_4_div_v3[MOMY] = g_FC_Var[faceL][MOMY][ idx_fc + didx_fc[d] ];
+         //con_4_div_v3[MOMZ] = g_FC_Var[faceL][MOMZ][ idx_fc + didx_fc[d] ];
+         //con_4_div_v3[ENGY] = g_FC_Var[faceL][ENGY][ idx_fc + didx_fc[d] ];
+     
+         //con_4_div_v4[DENS] = g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ];
+         //con_4_div_v4[MOMX] = g_FC_Var[faceR][MOMX][ idx_fc - didx_fc[d] ];
+         //con_4_div_v4[MOMY] = g_FC_Var[faceR][MOMY][ idx_fc - didx_fc[d] ];
+         //con_4_div_v4[MOMZ] = g_FC_Var[faceR][MOMZ][ idx_fc - didx_fc[d] ];
+         //con_4_div_v4[ENGY] = g_FC_Var[faceR][ENGY][ idx_fc - didx_fc[d] ];
+
+         //Hydro_Con2Pri( con_4_div_v1, pri_4_div_v1, MinPres, false, false, false, 1, NULL, false, 1e0,
+         //               NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
+         //               NULL, NULL, NULL, NULL, &LorentzFactor1 );
+
+         //Hydro_Con2Pri( con_4_div_v2, pri_4_div_v2, MinPres, false, false, false, 1, NULL, false, 1e0,
+         //               NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
+         //               NULL, NULL, NULL, NULL, &LorentzFactor2 );
+
+         //Hydro_Con2Pri( con_4_div_v3, pri_4_div_v3, MinPres, false, false, false, 1, NULL, false, 1e0,
+         //               NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
+         //               NULL, NULL, NULL, NULL, &LorentzFactor3 );
+
+         //Hydro_Con2Pri( con_4_div_v4, pri_4_div_v4, MinPres, false, false, false, 1, NULL, false, 1e0,
+         //               NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
+         //               NULL, NULL, NULL, NULL, &LorentzFactor4 );
+
+         //v1 = pri_4_div_v1[d+1] / LorentzFactor1;
+         //v2 = pri_4_div_v2[d+1] / LorentzFactor2;
+         //v3 = pri_4_div_v3[d+1] / LorentzFactor3;
+         //v4 = pri_4_div_v4[d+1] / LorentzFactor4;
+
+         //div_V[d]  = ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] > 0 ) ? v1 : v3;
+         //div_V[d] -= ( g_Flux[d][DENS][ idx_flux                ] > 0 ) ? v4 : v2;
+
+         //real V1 = g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceR][DENS][ idx_fc              ];
+         //real V2 = g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ];
+         //real V3 = g_Flux[d][DENS][ idx_flux                ] / g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ];
+         //real V4 = g_Flux[d][DENS][ idx_flux                ] / g_FC_Var[faceL][DENS][ idx_fc              ];
+
+         //if (V1 >=1.0) printf("%d: %e\n",  __LINE__, V1 );
+         //if (V2 >=1.0) printf("%d: %e\n",  __LINE__, V2 );
+         //if (V3 >=1.0) printf("%d: %e\n",  __LINE__, V3 );
+         //if (V4 >=1.0) printf("%d: %e\n",  __LINE__, V4 );
 
       } // for (int d=0; d<3; d++)
 
@@ -1032,7 +1152,15 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
       // ==============================
       // 3. Update the cosmic ray
       // ==============================
+      //if ( Output_1Cell[CRAY] > (real)1e-11/8.98755178736818e-04)
+      //printf("Output_1Cell[CRAY]=%e, pCR_half=%e, dt_dh=%e,  div_V[0]=%e, div_V[1]=%e, div_V[2]=%e\n",
+      //        Output_1Cell[CRAY],    pCR_half,    dt_dh,     div_V[0],    div_V[1],    div_V[2]);
+
+
       Output_1Cell[CRAY] = Output_1Cell[CRAY] - pCR_half * dt_dh * ( div_V[0] + div_V[1] + div_V[2] );
+      //Output_1Cell[CRAY] = Output_1Cell[CRAY] - pCR_half * dt_dh;// * ( div_V[0] + div_V[1] + div_V[2] );
+      //Output_1Cell[CRAY] = Output_1Cell[CRAY] - dt_dh * ( div_V[0] + div_V[1] + div_V[2] );
+
       g_Output[CRAY][idx_out] = Output_1Cell[CRAY];
 
    } // CGPU_LOOP( idx_out, CUBE(PS2) )

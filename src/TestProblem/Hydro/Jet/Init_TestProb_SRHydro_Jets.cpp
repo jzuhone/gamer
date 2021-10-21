@@ -779,6 +779,23 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
       Pri[2] = (real)Amb_UniformVel[1];
       Pri[3] = (real)Amb_UniformVel[2];
       Pri[4] = (real)Amb_UniformTemp * Amb_UniformDens;
+
+      Hydro_Pri2Con( Pri, fluid, false, false, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
+                     EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
+                     EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
+
+
+      if ( SRHD_CheckUnphysical( NULL, Pri,
+                                 EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
+                                 EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
+#     if (NCOMP_PASSIVE > 0)
+      fluid[Passive_0000] = fluid[0];
+      fluid[Passive_0001] = 0.0;
+      fluid[Passive_0002] = 0.0;
+#     endif
+#     ifdef COSMIC_RAY
+      fluid[CRAY] = (real)0.333333333*Amb_CR_Engy;
+#     endif
    }
    else if ( Jet_Ambient == 2 ) // cold disk in stratified ambient
    {

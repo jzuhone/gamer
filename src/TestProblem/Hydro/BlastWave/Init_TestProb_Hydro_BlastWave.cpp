@@ -162,8 +162,10 @@ void SetParameter()
       Aux_Message( stdout, "  background pressure        = %13.7e\n", Blast_Pres_Bg );
       Aux_Message( stdout, "  explosion pressure         = %13.7e\n", Blast_Pres_Exp );
       Aux_Message( stdout, "  total explosion gas energy = %13.7e (assuming constant-gamma EoS)\n", ExpEngy );
-#     ifdef COSMIC_ARY
+#     ifdef COSMIC_RAY
       Aux_Message( stdout, "  total explosion cr energy  = %13.7e (assuming constant-gamma EoS)\n", ExpCREngy );
+      Aux_Message( stdout, "  explosion cr pressure      = %13.7e\n", Blast_CRPres_Exp );
+      Aux_Message( stdout, "  background cr pressure     = %13.7e\n", Blast_CRPres_Bg );
 #     endif
       Aux_Message( stdout, "  explosion radius           = %13.7e\n", Blast_Radius );
       Aux_Message( stdout, "  explosion center           = (%13.7e, %13.7e, %13.7e)\n", Blast_Center[0], Blast_Center[1],
@@ -220,16 +222,16 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 #  endif
 
 #  if ( NCOMP_PASSIVE > 0 )
-   if ( r <= Blast_Radius  )
-   {
-     fluid[Passive_0000] = fluid[0];
-     fluid[Passive_0001] = 0.0;
-   }
-   else
-   {
-     fluid[Passive_0000] = 0.0; 
-     fluid[Passive_0001] = fluid[0];
-   }
+//   if ( r <= Blast_Radius  )
+//   {
+//     fluid[Passive_0000] = fluid[0];
+//     fluid[Passive_0001] = 0.0;
+//   }
+//   else
+//   {
+//     fluid[Passive_0000] = 0.0; 
+//     fluid[Passive_0001] = fluid[0];
+//   }
 #  endif
 
 #  else
