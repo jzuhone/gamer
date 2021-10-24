@@ -882,15 +882,23 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
      {
        Interpolation_UM_IC( xc, yc, zc, Pri);
 
-#      if (NCOMP_PASSIVE > 0)
-       Pri[Passive_0000] = Pri[0];
-       Pri[Passive_0001] = 0.0;
-       Pri[Passive_0002] = 0.0;
-#      endif
-
        if ( SRHD_CheckUnphysical( NULL, Pri,
                                   EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
                                   EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
+
+       Hydro_Pri2Con( Pri, fluid, false, false, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
+                      EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
+                      EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
+
+#      if (NCOMP_PASSIVE > 0)
+       fluid[Passive_0000] = fluid[0];
+       fluid[Passive_0001] = 0.0;
+       fluid[Passive_0002] = 0.0;
+#      endif
+#      ifdef COSMIC_RAY
+       fluid[CRAY] = (real)0.333333333*Amb_CR_Engy;
+#      endif
+
      }
      else
      {
@@ -920,17 +928,26 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
        Pri[3] = 0.0;
        Pri[4] = ambientDens*ambientTemperature;
 
+     if ( SRHD_CheckUnphysical( NULL, Pri,
+                                EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
+                                EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
+
+       Hydro_Pri2Con( Pri, fluid, false, false, false, PassiveNorm_NVar, PassiveNorm_VarIdx, EoS_DensPres2Eint_CPUPtr,
+                      EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
+                      EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
+
+
 #      if (NCOMP_PASSIVE > 0)
-       Pri[Passive_0000] = 0.0;
-       Pri[Passive_0001] = 0.0;
-       Pri[Passive_0002] = Pri[0];
+       fluid[Passive_0000] = 0.0;
+       fluid[Passive_0001] = 0.0;
+       fluid[Passive_0002] = fluid[0];
+#      endif
+#      ifdef COSMIC_RAY
+       fluid[CRAY] = (real)0.333333333*Amb_CR_Engy;
 #      endif
 
      } // if (fabs(zc) < interfaceHeight)
 
-     if ( SRHD_CheckUnphysical( NULL, Pri,
-                                EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr, EoS_AuxArray_Flt,
-                                EoS_AuxArray_Int, h_EoS_Table,  __FUNCTION__, __LINE__, true  ) ) exit(0);
 #    endif
 
    } // else if ( Jet_Ambient == 3 )
