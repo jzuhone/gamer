@@ -1119,7 +1119,7 @@ bool Flu_ResetByUser_Jets( real fluid[], const double x, const double y, const d
     PriReal[3] = (real)Prim[3];
     PriReal[4] = (real)Prim[4];
 
-    Hydro_Pri2Con( PriReal, fluid, true, true, NULL_BOOL, NULL_INT, NULL, EoS_DensPres2Eint_CPUPtr,
+    Hydro_Pri2Con( PriReal, fluid, false, false, NULL_BOOL, NULL_INT, NULL, EoS_DensPres2Eint_CPUPtr,
                    EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                    EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
@@ -1307,16 +1307,16 @@ void Init_TestProb_Hydro_Jets()
    Flag_User_Ptr            = Flag_User;
    Flag_Region_Ptr          = Flag_Region;
 
-   if (Jet_Fire > 0)
-   {
-     OPT__DT_USER             = 1;
-     Mis_GetTimeStep_User_Ptr = Mis_GetTimeStep_User;
-   }
-   else
-   {
-     OPT__DT_USER             = 0;
-     Mis_GetTimeStep_User_Ptr = NULL;
-   }
+   //if (Jet_Fire > 0)
+   //{
+   //  OPT__DT_USER             = 1;
+   //  Mis_GetTimeStep_User_Ptr = Mis_GetTimeStep_User;
+   //}
+   //else
+   //{
+   //  OPT__DT_USER             = 0;
+   //  Mis_GetTimeStep_User_Ptr = NULL;
+   //}
 
    BC_User_Ptr              = NULL;
    Flu_ResetByUser_Func_Ptr = Flu_ResetByUser_Jets;

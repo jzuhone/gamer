@@ -385,14 +385,14 @@ void Hydro_Pri2Con( const real In[], real Out[], const bool Passive, const bool 
 
 
 #  ifdef COSMIC_RAY
-   Out[CRAY] = In[CRAY]*(real)3.0;
+   if (CR) Out[CRAY] = In[CRAY]*(real)3.0;
 #  endif
 
 // passive scalars
 #  if ( NCOMP_PASSIVE > 0 )
 // copy all passive scalars
    if ( Passive )
-#     ifdef COSMIC_RAY // NCOMP_FLUID=5, CRAY=7, NCOMP_TOTAL=8
+#     ifdef COSMIC_RAY // NCOMP_FLUID=5, CRAY=8, NCOMP_TOTAL=9
       for (int v=NCOMP_FLUID; v<NCOMP_TOTAL-1; v++)   Out[v] = In[v];
 #     else
       for (int v=NCOMP_FLUID; v<NCOMP_TOTAL; v++)   Out[v] = In[v];

@@ -321,7 +321,6 @@ void CPU_FluidSolver_MHM(
    const char Max = 4;
    char iteration;
    real AdaptiveMinModCoeff;
-
 #  ifdef __CUDACC__
    __shared__ char state;
 #  else
@@ -549,20 +548,18 @@ void CPU_FluidSolver_MHM(
                                      EoS_Temp2HTilde_Func, c_EoS_AuxArray_Flt, c_EoS_AuxArray_Int,
                                      c_EoS_Table, &state);
 
-#              ifdef COSMIC_RAY
-               // Cosmic ray full-step update
-               if ( state == 0 || iteration == Max )
-               CosmicRay_Update( g_PriVar_Half_1PG, g_Flu_Array_Out[P], g_FC_Flux_1PG, g_FC_Var_1PG,
-                                 dt, dh, EoS_GuessHTilde_Func, EoS_HTilde2Temp_Func, MinPres );
-                                 //dt, dh, &EoS);
-#              endif
-
 
                iteration++;
 
 
             } while( state && iteration <= Max );
 
+#           ifdef COSMIC_RAY
+            // Cosmic ray full-step update
+            CosmicRay_Update( g_PriVar_Half_1PG, g_Flu_Array_Out[P], g_FC_Flux_1PG, g_FC_Var_1PG,
+                              dt, dh, EoS_GuessHTilde_Func, EoS_HTilde2Temp_Func, MinPres );
+                              //dt, dh, &EoS);
+#           endif
 
       } // loop over all patch groups
    } // OpenMP parallel region
@@ -705,17 +702,9 @@ void Hydro_RiemannPredict_Flux( const real g_ConVar[][ CUBE(FLU_NXT) ],
          Hydro_RiemannSolver_HLLE ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres,
                                     EoS_DensEint2Pres, EoS_DensPres2CSqr, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table );
 #        elif ( RSOLVER == HLLC  &&  !defined MHD )
-//         Hydro_RiemannSolver_HLLC ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres, EoS_DensEint2Pres, EoS_DensPres2CSqr,
-//                                    EoS_GuessHTilde, EoS_HTilde2Temp, EoS_Temper2CSqr,
-//                                    EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL );
-
-//       MHM
-         for (int v=0; v<NCOMP_TOTAL; v++) Con[v] = ( ConVar_L[v] + ConVar_R[v] )*(real)0.5;
-
-         Hydro_Con2Pri(  Con,  Pri, (real)NULL_REAL, true, true, NULL_BOOL, NULL_INT, NULL, NULL_BOOL, (real)NULL_REAL,
-                        NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL, NULL );
-
-         Hydro_Con2Flux( d, Flux_1Face, Con, NULL_REAL, NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, Pri );
+         Hydro_RiemannSolver_HLLC ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres, EoS_DensEint2Pres, EoS_DensPres2CSqr,
+                                    EoS_GuessHTilde, EoS_HTilde2Temp, EoS_Temper2CSqr,
+                                    EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, NULL );
 #        elif ( RSOLVER == HLLD  &&  defined MHD )
          Hydro_RiemannSolver_HLLD ( d, Flux_1Face, ConVar_L, ConVar_R, MinDens, MinPres,
                                     EoS_DensEint2Pres, EoS_DensPres2CSqr, EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table );
@@ -842,7 +831,6 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
          out_con[v] = g_ConVar_In[v][idx_in] - dt_dh2*( dflux[0][v] + dflux[1][v] + dflux[2][v] );
 
 
-//       Mix MHM_RP nad MHM
       if (SRHD_CheckUnphysical( out_con, NULL, EoS_GuessHTilde, EoS_HTilde2Temp, EoS_AuxArray_Flt, EoS_AuxArray_Int,
                                 EoS_Table, __FUNCTION__, __LINE__, false ) )
       {
@@ -858,7 +846,6 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
       const int idx_fc = idx_in;
       real con_4_div_v1[NCOMP_FLUID], con_4_div_v2[NCOMP_FLUID], con_4_div_v3[NCOMP_FLUID];
       real pri_4_div_v1[NCOMP_FLUID], pri_4_div_v2[NCOMP_FLUID], pri_4_div_v3[NCOMP_FLUID];
-      real v1, v2, v3, LorentzFactor1, LorentzFactor2, LorentzFactor3;
 
       // ==============================
       // 1. store the cosmic ray and calculate the pressure
@@ -874,52 +861,53 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
       // Reference: "Simple Method to Track Pressure Accurately", S. Li, Astronum Proceeding, 2007
       for (int d=0; d<3; d++)
       {
+         //div_V[d]  = ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] > 0 ) ?
+         //            ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc              ] ) :
+         //            ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc + didx_fc[d] ] );
+
+         //div_V[d] -= ( g_Flux_Half[d][DENS][ idx_flux ] > 0 ) ?
+         //            ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc - didx_fc[d] ] ) :
+         //            ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc              ] );
+
+         con_4_div_v1[DENS] = g_ConVar_In[DENS][ idx_fc              ];
+         con_4_div_v1[MOMX] = g_ConVar_In[MOMX][ idx_fc              ];
+         con_4_div_v1[MOMY] = g_ConVar_In[MOMY][ idx_fc              ];
+         con_4_div_v1[MOMZ] = g_ConVar_In[MOMZ][ idx_fc              ];
+         con_4_div_v1[ENGY] = g_ConVar_In[ENGY][ idx_fc              ];
+     
+         con_4_div_v2[DENS] = g_ConVar_In[DENS][ idx_fc + didx_fc[d] ];
+         con_4_div_v2[MOMX] = g_ConVar_In[MOMX][ idx_fc + didx_fc[d] ];
+         con_4_div_v2[MOMY] = g_ConVar_In[MOMY][ idx_fc + didx_fc[d] ];
+         con_4_div_v2[MOMZ] = g_ConVar_In[MOMZ][ idx_fc + didx_fc[d] ];
+         con_4_div_v2[ENGY] = g_ConVar_In[ENGY][ idx_fc + didx_fc[d] ];
+     
+         con_4_div_v3[DENS] = g_ConVar_In[DENS][ idx_fc - didx_fc[d] ];
+         con_4_div_v3[MOMX] = g_ConVar_In[MOMX][ idx_fc - didx_fc[d] ];
+         con_4_div_v3[MOMY] = g_ConVar_In[MOMY][ idx_fc - didx_fc[d] ];
+         con_4_div_v3[MOMZ] = g_ConVar_In[MOMZ][ idx_fc - didx_fc[d] ];
+         con_4_div_v3[ENGY] = g_ConVar_In[ENGY][ idx_fc - didx_fc[d] ];
+     
+
+         Hydro_Con2Pri( con_4_div_v1, pri_4_div_v1, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
+                        EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
+                        EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, NULL );
+
+         Hydro_Con2Pri( con_4_div_v2, pri_4_div_v2, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
+                        EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
+                        EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, NULL );
+
+         Hydro_Con2Pri( con_4_div_v3, pri_4_div_v3, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
+                        EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
+                        EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, NULL );
+
+
          div_V[d]  = ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] > 0 ) ?
-                     ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc              ] ) :
-                     ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc + didx_fc[d] ] );
+                     ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / pri_4_div_v1[0] ):
+                     ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / pri_4_div_v2[0] );
 
          div_V[d] -= ( g_Flux_Half[d][DENS][ idx_flux ] > 0 ) ?
-                     ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc - didx_fc[d] ] ) :
-                     ( g_Flux_Half[d][DENS][ idx_flux ] / g_ConVar_In[DENS][ idx_fc              ] );
-
-         //con_4_div_v1[DENS] = g_ConVar_In[DENS][ idx_fc              ];
-         //con_4_div_v1[MOMX] = g_ConVar_In[MOMX][ idx_fc              ];
-         //con_4_div_v1[MOMY] = g_ConVar_In[MOMY][ idx_fc              ];
-         //con_4_div_v1[MOMZ] = g_ConVar_In[MOMZ][ idx_fc              ];
-         //con_4_div_v1[ENGY] = g_ConVar_In[ENGY][ idx_fc              ];
-     
-         //con_4_div_v2[DENS] = g_ConVar_In[DENS][ idx_fc + didx_fc[d] ];
-         //con_4_div_v2[MOMX] = g_ConVar_In[MOMX][ idx_fc + didx_fc[d] ];
-         //con_4_div_v2[MOMY] = g_ConVar_In[MOMY][ idx_fc + didx_fc[d] ];
-         //con_4_div_v2[MOMZ] = g_ConVar_In[MOMZ][ idx_fc + didx_fc[d] ];
-         //con_4_div_v2[ENGY] = g_ConVar_In[ENGY][ idx_fc + didx_fc[d] ];
-     
-         //con_4_div_v3[DENS] = g_ConVar_In[DENS][ idx_fc - didx_fc[d] ];
-         //con_4_div_v3[MOMX] = g_ConVar_In[MOMX][ idx_fc - didx_fc[d] ];
-         //con_4_div_v3[MOMY] = g_ConVar_In[MOMY][ idx_fc - didx_fc[d] ];
-         //con_4_div_v3[MOMZ] = g_ConVar_In[MOMZ][ idx_fc - didx_fc[d] ];
-         //con_4_div_v3[ENGY] = g_ConVar_In[ENGY][ idx_fc - didx_fc[d] ];
-     
-
-         //Hydro_Con2Pri( con_4_div_v1, pri_4_div_v1, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
-         //               EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
-         //               EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, &LorentzFactor1 );
-
-         //Hydro_Con2Pri( con_4_div_v2, pri_4_div_v2, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
-         //               EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
-         //               EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, &LorentzFactor2 );
-
-         //Hydro_Con2Pri( con_4_div_v3, pri_4_div_v3, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
-         //               EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
-         //               EoS_AuxArray_Flt, EoS_AuxArray_Int, EoS_Table, EintPtr, &LorentzFactor3 );
-
-
-         //v1 = pri_4_div_v1[d+1] / LorentzFactor1;
-         //v2 = pri_4_div_v2[d+1] / LorentzFactor2;
-         //v3 = pri_4_div_v3[d+1] / LorentzFactor3;
-
-         //div_V[d]  = ( g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] > 0 ) ? v1 : v2;
-         //div_V[d] -= ( g_Flux_Half[d][DENS][ idx_flux                 ] > 0 ) ? v3 : v1;
+                     ( g_Flux_Half[d][DENS][ idx_flux ] / pri_4_div_v3[0] ):
+                     ( g_Flux_Half[d][DENS][ idx_flux ] / pri_4_div_v1[0] );
 
          //real V1 = g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc              ];
          //real V2 = g_Flux_Half[d][DENS][ idx_flux + didx_flux[d]  ] / g_ConVar_In[DENS][ idx_fc + didx_fc[d] ];
@@ -1027,8 +1015,6 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
 
    real con_4_div_v1[NCOMP_FLUID], con_4_div_v2[NCOMP_FLUID], con_4_div_v3[NCOMP_FLUID], con_4_div_v4[NCOMP_FLUID];
    real pri_4_div_v1[NCOMP_FLUID], pri_4_div_v2[NCOMP_FLUID], pri_4_div_v3[NCOMP_FLUID], pri_4_div_v4[NCOMP_FLUID];
-   real v1, v2, v3, v4;
-   real LorentzFactor1, LorentzFactor2, LorentzFactor3, LorentzFactor4;
 
    const int size_ij = SQR(PS2);
    CGPU_LOOP( idx_out, CUBE(PS2) )
@@ -1080,71 +1066,62 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
          const int faceL = 2*d;
          const int faceR = faceL+1;
 
+         //div_V[d]  = ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] > 0 ) ?
+         //            ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceR][DENS][ idx_fc              ] ) :
+         //            ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ] );
+ 
+         //div_V[d] -= ( g_Flux[d][DENS][ idx_flux ] > 0 ) ?
+         //            ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ] ) :
+         //            ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceL][DENS][ idx_fc              ] );
+
+         con_4_div_v1[DENS] = g_FC_Var[faceR][DENS][ idx_fc              ];
+         con_4_div_v1[MOMX] = g_FC_Var[faceR][MOMX][ idx_fc              ];
+         con_4_div_v1[MOMY] = g_FC_Var[faceR][MOMY][ idx_fc              ];
+         con_4_div_v1[MOMZ] = g_FC_Var[faceR][MOMZ][ idx_fc              ];
+         con_4_div_v1[ENGY] = g_FC_Var[faceR][ENGY][ idx_fc              ];
+
+         con_4_div_v2[DENS] = g_FC_Var[faceL][DENS][ idx_fc              ];
+         con_4_div_v2[MOMX] = g_FC_Var[faceL][MOMX][ idx_fc              ];
+         con_4_div_v2[MOMY] = g_FC_Var[faceL][MOMY][ idx_fc              ];
+         con_4_div_v2[MOMZ] = g_FC_Var[faceL][MOMZ][ idx_fc              ];
+         con_4_div_v2[ENGY] = g_FC_Var[faceL][ENGY][ idx_fc              ];
+
+         con_4_div_v3[DENS] = g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ];
+         con_4_div_v3[MOMX] = g_FC_Var[faceL][MOMX][ idx_fc + didx_fc[d] ];
+         con_4_div_v3[MOMY] = g_FC_Var[faceL][MOMY][ idx_fc + didx_fc[d] ];
+         con_4_div_v3[MOMZ] = g_FC_Var[faceL][MOMZ][ idx_fc + didx_fc[d] ];
+         con_4_div_v3[ENGY] = g_FC_Var[faceL][ENGY][ idx_fc + didx_fc[d] ];
+     
+         con_4_div_v4[DENS] = g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ];
+         con_4_div_v4[MOMX] = g_FC_Var[faceR][MOMX][ idx_fc - didx_fc[d] ];
+         con_4_div_v4[MOMY] = g_FC_Var[faceR][MOMY][ idx_fc - didx_fc[d] ];
+         con_4_div_v4[MOMZ] = g_FC_Var[faceR][MOMZ][ idx_fc - didx_fc[d] ];
+         con_4_div_v4[ENGY] = g_FC_Var[faceR][ENGY][ idx_fc - didx_fc[d] ];
+
+         Hydro_Con2Pri( con_4_div_v1, pri_4_div_v1, MinPres, false, false, false, 1, NULL, false, 1e0,
+                        NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
+                        NULL, NULL, NULL, NULL, NULL );
+
+         Hydro_Con2Pri( con_4_div_v2, pri_4_div_v2, MinPres, false, false, false, 1, NULL, false, 1e0,
+                        NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
+                        NULL, NULL, NULL, NULL, NULL );
+
+         Hydro_Con2Pri( con_4_div_v3, pri_4_div_v3, MinPres, false, false, false, 1, NULL, false, 1e0,
+                        NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
+                        NULL, NULL, NULL, NULL, NULL );
+
+         Hydro_Con2Pri( con_4_div_v4, pri_4_div_v4, MinPres, false, false, false, 1, NULL, false, 1e0,
+                        NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
+                        NULL, NULL, NULL, NULL, NULL );
+
+
          div_V[d]  = ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] > 0 ) ?
-                     ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceR][DENS][ idx_fc              ] ) :
-                     ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ] );
+                     ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / pri_4_div_v1[0] ) :
+                     ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / pri_4_div_v3[0] );
  
          div_V[d] -= ( g_Flux[d][DENS][ idx_flux ] > 0 ) ?
-                     ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ] ) :
-                     ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceL][DENS][ idx_fc              ] );
-
-         //con_4_div_v1[DENS] = g_FC_Var[faceR][DENS][ idx_fc              ];
-         //con_4_div_v1[MOMX] = g_FC_Var[faceR][MOMX][ idx_fc              ];
-         //con_4_div_v1[MOMY] = g_FC_Var[faceR][MOMY][ idx_fc              ];
-         //con_4_div_v1[MOMZ] = g_FC_Var[faceR][MOMZ][ idx_fc              ];
-         //con_4_div_v1[ENGY] = g_FC_Var[faceR][ENGY][ idx_fc              ];
-
-         //con_4_div_v2[DENS] = g_FC_Var[faceL][DENS][ idx_fc              ];
-         //con_4_div_v2[MOMX] = g_FC_Var[faceL][MOMX][ idx_fc              ];
-         //con_4_div_v2[MOMY] = g_FC_Var[faceL][MOMY][ idx_fc              ];
-         //con_4_div_v2[MOMZ] = g_FC_Var[faceL][MOMZ][ idx_fc              ];
-         //con_4_div_v2[ENGY] = g_FC_Var[faceL][ENGY][ idx_fc              ];
-
-         //con_4_div_v3[DENS] = g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ];
-         //con_4_div_v3[MOMX] = g_FC_Var[faceL][MOMX][ idx_fc + didx_fc[d] ];
-         //con_4_div_v3[MOMY] = g_FC_Var[faceL][MOMY][ idx_fc + didx_fc[d] ];
-         //con_4_div_v3[MOMZ] = g_FC_Var[faceL][MOMZ][ idx_fc + didx_fc[d] ];
-         //con_4_div_v3[ENGY] = g_FC_Var[faceL][ENGY][ idx_fc + didx_fc[d] ];
-     
-         //con_4_div_v4[DENS] = g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ];
-         //con_4_div_v4[MOMX] = g_FC_Var[faceR][MOMX][ idx_fc - didx_fc[d] ];
-         //con_4_div_v4[MOMY] = g_FC_Var[faceR][MOMY][ idx_fc - didx_fc[d] ];
-         //con_4_div_v4[MOMZ] = g_FC_Var[faceR][MOMZ][ idx_fc - didx_fc[d] ];
-         //con_4_div_v4[ENGY] = g_FC_Var[faceR][ENGY][ idx_fc - didx_fc[d] ];
-
-         //Hydro_Con2Pri( con_4_div_v1, pri_4_div_v1, MinPres, false, false, false, 1, NULL, false, 1e0,
-         //               NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
-         //               NULL, NULL, NULL, NULL, &LorentzFactor1 );
-
-         //Hydro_Con2Pri( con_4_div_v2, pri_4_div_v2, MinPres, false, false, false, 1, NULL, false, 1e0,
-         //               NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
-         //               NULL, NULL, NULL, NULL, &LorentzFactor2 );
-
-         //Hydro_Con2Pri( con_4_div_v3, pri_4_div_v3, MinPres, false, false, false, 1, NULL, false, 1e0,
-         //               NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
-         //               NULL, NULL, NULL, NULL, &LorentzFactor3 );
-
-         //Hydro_Con2Pri( con_4_div_v4, pri_4_div_v4, MinPres, false, false, false, 1, NULL, false, 1e0,
-         //               NULL, NULL, EoS_GuessHTilde, EoS_HTilde2Temp,
-         //               NULL, NULL, NULL, NULL, &LorentzFactor4 );
-
-         //v1 = pri_4_div_v1[d+1] / LorentzFactor1;
-         //v2 = pri_4_div_v2[d+1] / LorentzFactor2;
-         //v3 = pri_4_div_v3[d+1] / LorentzFactor3;
-         //v4 = pri_4_div_v4[d+1] / LorentzFactor4;
-
-         //div_V[d]  = ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] > 0 ) ? v1 : v3;
-         //div_V[d] -= ( g_Flux[d][DENS][ idx_flux                ] > 0 ) ? v4 : v2;
-
-         //real V1 = g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceR][DENS][ idx_fc              ];
-         //real V2 = g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ];
-         //real V3 = g_Flux[d][DENS][ idx_flux                ] / g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ];
-         //real V4 = g_Flux[d][DENS][ idx_flux                ] / g_FC_Var[faceL][DENS][ idx_fc              ];
-
-         //if (V1 >=1.0) printf("%d: %e\n",  __LINE__, V1 );
-         //if (V2 >=1.0) printf("%d: %e\n",  __LINE__, V2 );
-         //if (V3 >=1.0) printf("%d: %e\n",  __LINE__, V3 );
-         //if (V4 >=1.0) printf("%d: %e\n",  __LINE__, V4 );
+                     ( g_Flux[d][DENS][ idx_flux ] / pri_4_div_v4[0] ) :
+                     ( g_Flux[d][DENS][ idx_flux ] / con_4_div_v2[0] );
 
       } // for (int d=0; d<3; d++)
 
