@@ -874,19 +874,19 @@ void Hydro_RiemannPredict( const real g_ConVar_In[][ CUBE(FLU_NXT) ],
          //con_4_div_v1[MOMY] = g_ConVar_In[MOMY][ idx_fc              ];
          //con_4_div_v1[MOMZ] = g_ConVar_In[MOMZ][ idx_fc              ];
          //con_4_div_v1[ENGY] = g_ConVar_In[ENGY][ idx_fc              ];
-     
+
          //con_4_div_v2[DENS] = g_ConVar_In[DENS][ idx_fc + didx_fc[d] ];
          //con_4_div_v2[MOMX] = g_ConVar_In[MOMX][ idx_fc + didx_fc[d] ];
          //con_4_div_v2[MOMY] = g_ConVar_In[MOMY][ idx_fc + didx_fc[d] ];
          //con_4_div_v2[MOMZ] = g_ConVar_In[MOMZ][ idx_fc + didx_fc[d] ];
          //con_4_div_v2[ENGY] = g_ConVar_In[ENGY][ idx_fc + didx_fc[d] ];
-     
+
          //con_4_div_v3[DENS] = g_ConVar_In[DENS][ idx_fc - didx_fc[d] ];
          //con_4_div_v3[MOMX] = g_ConVar_In[MOMX][ idx_fc - didx_fc[d] ];
          //con_4_div_v3[MOMY] = g_ConVar_In[MOMY][ idx_fc - didx_fc[d] ];
          //con_4_div_v3[MOMZ] = g_ConVar_In[MOMZ][ idx_fc - didx_fc[d] ];
          //con_4_div_v3[ENGY] = g_ConVar_In[ENGY][ idx_fc - didx_fc[d] ];
-     
+
 
          //Hydro_Con2Pri( con_4_div_v1, pri_4_div_v1, MinPres, false, false, NormPassive, NNorm, NormIdx, JeansMinPres, JeansMinPres_Coeff,
          //               EoS_DensEint2Pres, EoS_DensPres2Eint, EoS_GuessHTilde, EoS_HTilde2Temp,
@@ -1069,7 +1069,7 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
          div_V[d]  = ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] > 0 ) ?
                      ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceR][DENS][ idx_fc              ] ) :
                      ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / g_FC_Var[faceL][DENS][ idx_fc + didx_fc[d] ] );
- 
+
          div_V[d] -= ( g_Flux[d][DENS][ idx_flux ] > 0 ) ?
                      ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ] ) :
                      ( g_Flux[d][DENS][ idx_flux ] / g_FC_Var[faceL][DENS][ idx_fc              ] );
@@ -1091,7 +1091,7 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
          //con_4_div_v3[MOMY] = g_FC_Var[faceL][MOMY][ idx_fc + didx_fc[d] ];
          //con_4_div_v3[MOMZ] = g_FC_Var[faceL][MOMZ][ idx_fc + didx_fc[d] ];
          //con_4_div_v3[ENGY] = g_FC_Var[faceL][ENGY][ idx_fc + didx_fc[d] ];
-     
+
          //con_4_div_v4[DENS] = g_FC_Var[faceR][DENS][ idx_fc - didx_fc[d] ];
          //con_4_div_v4[MOMX] = g_FC_Var[faceR][MOMX][ idx_fc - didx_fc[d] ];
          //con_4_div_v4[MOMY] = g_FC_Var[faceR][MOMY][ idx_fc - didx_fc[d] ];
@@ -1118,7 +1118,7 @@ void CosmicRay_Update( const real g_PriVar_Half[][ CUBE(FLU_NXT) ],
          //div_V[d]  = ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] > 0 ) ?
          //            ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / pri_4_div_v1[0] ) :
          //            ( g_Flux[d][DENS][ idx_flux + didx_flux[d] ] / pri_4_div_v3[0] );
- 
+
          //div_V[d] -= ( g_Flux[d][DENS][ idx_flux ] > 0 ) ?
          //            ( g_Flux[d][DENS][ idx_flux ] / pri_4_div_v4[0] ) :
          //            ( g_Flux[d][DENS][ idx_flux ] / con_4_div_v2[0] );
