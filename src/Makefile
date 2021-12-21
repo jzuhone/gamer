@@ -1,6 +1,5 @@
 
 
-
 # ===========================================================================
 # INSTRUCTIONS
 #
@@ -56,7 +55,7 @@ ifeq "$(filter -DMODEL=HYDRO, $(SIMU_OPTION))" "-DMODEL=HYDRO"
 # --> must be set when MODEL=HYDRO
 # --> MHD only supports MHM_RP and CTU
 # --> SRHD only supports MHM and MHM_RP
-SIMU_OPTION += -DFLU_SCHEME=CTU
+SIMU_OPTION += -DFLU_SCHEME=MHM
 
 # scheme of spatial data reconstruction: PLM/PPM (piecewise-linear/piecewise-parabolic)
 # --> useless for RTVD
@@ -67,7 +66,7 @@ SIMU_OPTION += -DLR_SCHEME=PPM
 #                 (recommended solvers are highlighted by *)
 # --> useless for RTVD
 # --> SRHD only supports HLLC and HLLC
-SIMU_OPTION += -DRSOLVER=ROE
+SIMU_OPTION += -DRSOLVER=HLLC
 
 # dual energy formalism: DE_ENPY/DE_EINT (evolve entropy or internal energy)
 # --> DE_EINT is not supported yet; useless for RTVD
@@ -76,19 +75,19 @@ SIMU_OPTION += -DRSOLVER=ROE
 # number of user-defined passively advected scalars
 # --> set it to 0 or comment it out if none is required
 # --> useless for RTVD
-SIMU_OPTION += -DNCOMP_PASSIVE_USER=0
+SIMU_OPTION += -DNCOMP_PASSIVE_USER=3
 
 # magnetohydrodynamics
 #SIMU_OPTION += -DMHD
 
 # special relativistic hydrodynamics
-#SIMU_OPTION += -DSRHD
+SIMU_OPTION += -DSRHD
 
 # evolving reduced energy density instead of total energy density
-#SIMU_OPTION += -DREDUCED_ENERGY
+SIMU_OPTION += -DREDUCED_ENERGY
 
 # using 4-velocity instead of 3-velocity in data reconstruction and recovering primitive variables
-#SIMU_OPTION += -DFOUR_VELOCITY
+SIMU_OPTION += -DFOUR_VELOCITY
 
 # equation of state: EOS_GAMMA/EOS_ISOTHERMAL/EOS_NUCLEAR/EOS_TAUBMATHEWS/EOS_TABULAR/EOS_USER
 # cosmic rays (not supported yet)
@@ -97,7 +96,7 @@ SIMU_OPTION += -DNCOMP_PASSIVE_USER=0
 # equation of state: EOS_GAMMA/EOS_ISOTHERMAL/EOS_NUCLEAR/EOS_TABULAR/EOS_USER
 # --> must be set when MODEL=HYDRO; must also enable BAROTROPIC_EOS for EOS_ISOTHERMAL
 # --> SRHD only supports EOS_GAMMA and EOS_TAUBMATHEWS
-SIMU_OPTION += -DEOS=EOS_GAMMA
+SIMU_OPTION += -DEOS=EOS_TAUBMATHEWS
 
 # whether or not the EOS set above is barotropic
 # --> mandatory for EOS_ISOTHERMAL; optional for EOS_TABULAR/EOS_USER
@@ -174,10 +173,10 @@ SIMU_OPTION += -DMAX_PATCH=1000000
 
 # GPU acceleration
 # --> must set GPU_ARCH as well
-#SIMU_OPTION += -DGPU
+SIMU_OPTION += -DGPU
 
 # GPU architecture: FERMI/KEPLER/MAXWELL/PASCAL/VOLTA/TURING
-SIMU_OPTION += -DGPU_ARCH=KEPLER
+SIMU_OPTION += -DGPU_ARCH=VOLTA
 
 # debug mode
 #SIMU_OPTION += -DGAMER_DEBUG
@@ -197,11 +196,11 @@ SIMU_OPTION += -DTIMING
 
 # serial mode (in which no MPI libraries are required)
 # --> must disable LOAD_BALANCE
-SIMU_OPTION += -DSERIAL
+#SIMU_OPTION += -DSERIAL
 
 # load-balance parallelization: HILBERT
 # --> must disable SERIAL
-#SIMU_OPTION += -DLOAD_BALANCE=HILBERT
+SIMU_OPTION += -DLOAD_BALANCE=HILBERT
 
 # overlap MPI communication with computation
 # --> NOT supported yet; must enable LOAD_BALANCE
@@ -214,7 +213,7 @@ SIMU_OPTION += -DOPENMP
 #SIMU_OPTION += -DLAOHU
 
 # support HDF5 format
-#SIMU_OPTION += -DSUPPORT_HDF5
+SIMU_OPTION += -DSUPPORT_HDF5
 
 # support GNU scientific library
 #SIMU_OPTION += -DSUPPORT_GSL
@@ -260,8 +259,8 @@ SIMU_OPTION += -DRANDOM_NUMBER=RNG_GNU_EXT
 
 # gnu
 # -------------------------------------------------------------------------------
- CXX         = g++                                       # serial compiler
-#CXX         = $(MPI_PATH)/bin/mpicxx                    # MPI compiler
+# CXX         = g++                                       # serial compiler
+CXX         = $(MPI_PATH)/bin/mpicxx                    # MPI compiler
 #CXX         = CC                                        # cray wrapper script
  CXXFLAG     = -g -O3                                    # general flags
 #CXXFLAG     = -g -O3 -std=c++11
@@ -286,7 +285,7 @@ endif
 
 # CUDA
 # -------------------------------------------------------------------------------
- NVCC = $(CUDA_PATH)/bin/nvcc                            # CUDA compiler
+NVCC = $(CUDA_PATH)/bin/nvcc                            # CUDA compiler
 #NVCC = $(CUDA_PATH)/bin/nvcc -ccbin YOUR_G++            # with a specified host compiler
 #NVCC = nvcc -ccbin CC                                   # for the Cray environment
 
@@ -298,13 +297,13 @@ endif
 #######################################################################################################
 
 # template
-CUDA_PATH    :=
-FFTW_PATH    :=
-MPI_PATH     :=
-HDF5_PATH    :=
-GRACKLE_PATH :=
 GSL_PATH     :=
 LIBYT_PATH   :=
+
+CUDA_PATH    := /nasa/cuda/11.2
+FFTW_PATH    := /u/jzuhone/opt/fftw-2.1.5
+MPI_PATH     := /nasa/hpe/mpt/2.25_rhel79
+HDF5_PATH    := /nasa/hdf5/1.8.18_serial
 
 # NCSA-bluewaters (only need to specify the path of user-installed packages)
 #GRACKLE_PATH :=

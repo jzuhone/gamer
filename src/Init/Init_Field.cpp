@@ -3,13 +3,14 @@
 // declare as static so that other functions cannot invoke it directly and must use the function pointer
 static void Init_Field_User_Template();
 
-void AddNewField_Jet();
-void AddNewField_Riemann();
-void AddNewField_BlastWave();
+//void AddNewField_Jet();
+//void AddNewField_Riemann();
+//void AddNewField_BlastWave();
+void AddNewField_JetICMWall();
 // this function pointer must be set by a test problem initializer
 #if ( NCOMP_PASSIVE > 0 )
-//void (*Init_Field_User_Ptr)() = AddNewField_Riemann;
-void (*Init_Field_User_Ptr)() = AddNewField_Jet;
+void (*Init_Field_User_Ptr)() = AddNewField_JetICMWall;
+//void (*Init_Field_User_Ptr)() = AddNewField_Jet;
 //void (*Init_Field_User_Ptr)() = AddNewField_BlastWave;
 //void (*Init_Field_User_Ptr)() = NULL;
 #else
