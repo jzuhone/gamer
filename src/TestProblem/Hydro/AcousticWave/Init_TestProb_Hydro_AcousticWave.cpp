@@ -8,7 +8,7 @@ static void OutputError();
 // problem-specific global variables
 // =======================================================================================
 
-//# if   (  defined SRHD  &&  defined COSMIC_RAY ) // 2
+# if   (  defined SRHD  &&  defined COSMIC_RAY ) // 2
 static double CR_Acoustic_Delta;        // amplitude of the velocity perturbation #2
 static double CR_Acoustic_Rho0;         // background density
 static double CR_Acoustic_Pres0;        // background pressure
@@ -19,23 +19,23 @@ static double CR_Acoustic_Phase;        // initial phase shift
 static double GAMMA_CR = 4.0/3.0;
 static double GAMMA    = 5.0/3.0;
 static int CR_Acoustic_Direction;
-//# endif
+# endif
 
-//# if (  defined SRHD  && !defined COSMIC_RAY ) // 1
+# if (  defined SRHD  && !defined COSMIC_RAY ) // 1
 static double Acoustic_Temp_Bg;     // ambient temperature
 static double Acoustic_Rho_Bg;      // ambient proper mass density
-//# endif
+# endif
 
-//# if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
+# if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
 static double Acoustic_v0;          // background velocity
-//# endif
+# endif
 
-//# if (  defined HYDRO && !defined COSMIC_RAY ) // 6
+# if (  defined HYDRO && !defined COSMIC_RAY ) // 6
 static double Acoustic_RhoAmp;      // amplitude of the density perturbation (assuming background density = 1.0) #6
 static double Acoustic_Cs2;         // sound speed squared
 static double Acoustic_Sign;        // (+1/-1) --> (right/left-moving wave)
 static double Acoustic_Phase0;      // initial phase shift
-//# endif
+# endif
 
 
 static double Acoustic_WaveLength;  // wavelength
@@ -142,7 +142,7 @@ void SetParameter()
 // ********************************************************************************************************************************
 // ReadPara->Add( "KEY_IN_THE_FILE",   &VARIABLE,              DEFAULT,       MIN,              MAX               );
 // ********************************************************************************************************************************
-//#  if   (  defined SRHD  &&  defined COSMIC_RAY ) // 2
+#  if   (  defined SRHD  &&  defined COSMIC_RAY ) // 2
    ReadPara->Add( "CR_Acoustic_Delta",    &CR_Acoustic_Delta,    -1.0,      NoMin_double,       NoMax_double      );
    ReadPara->Add( "CR_Acoustic_Rho0",     &CR_Acoustic_Rho0,     -1.0,      NoMin_double,       NoMax_double      );
    ReadPara->Add( "CR_Acoustic_Pres0",    &CR_Acoustic_Pres0,    -1.0,      NoMin_double,       NoMax_double      );
@@ -151,61 +151,61 @@ void SetParameter()
    ReadPara->Add( "CR_Acoustic_Sign",     &CR_Acoustic_Sign,     -1.0,      NoMin_double,       NoMax_double      );
    ReadPara->Add( "CR_Acoustic_Phase",    &CR_Acoustic_Phase,    -1.0,      NoMin_double,       NoMax_double      );
    ReadPara->Add( "CR_Acoustic_Direction",&CR_Acoustic_Direction, 0,           NoMin_int,          NoMax_int      );
-//#  endif
+#  endif
 
-//#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
+#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
    ReadPara->Add( "Acoustic_Temp_Bg",  &Acoustic_Temp_Bg,       1.0,          Eps_double,       NoMax_double      );
    ReadPara->Add( "Acoustic_Rho_Bg",   &Acoustic_Rho_Bg,        1.0,          Eps_double,       NoMax_double      );
-//#  endif
+#  endif
 
-//#  if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
+#  if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
    ReadPara->Add( "Acoustic_v0",       &Acoustic_v0,            0.0,          NoMin_double,     NoMax_double      );
    ReadPara->Add( "Acoustic_Cs",       &Acoustic_Cs,           -1.0,          NoMin_double,       NoMax_double      );
-//#  endif
+#  endif
 
-//#  if (  defined HYDRO && !defined COSMIC_RAY ) // 6
+#  if (  defined HYDRO && !defined COSMIC_RAY ) // 6
    ReadPara->Add( "Acoustic_RhoAmp",   &Acoustic_RhoAmp,       -1.0,          NoMin_double,       NoMax_double      );
    ReadPara->Add( "Acoustic_Sign",     &Acoustic_Sign,          1.0,          NoMin_double,     NoMax_double      );
    ReadPara->Add( "Acoustic_Phase0",   &Acoustic_Phase0,        0.0,          NoMin_double,     NoMax_double      );
-//#  endif
+#  endif
 
    ReadPara->Read( FileName );
 
    delete ReadPara;
 
 // force Acoustic_Sign to be +1.0/-1.0
-//#  if (  defined HYDRO && !defined COSMIC_RAY ) // 6
+#  if (  defined HYDRO && !defined COSMIC_RAY ) // 6
    if ( Acoustic_Sign >= 0.0 )   Acoustic_Sign = +1.0;
    else                          Acoustic_Sign = -1.0;
-//#  endif
+#  endif
 
 
 // (2) set the problem-specific derived parameters
    Acoustic_WaveLength = amr->BoxSize[0] / sqrt(3.0);
 
-//#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
+#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
    Acoustic_Cs2 = EoS_Temper2CSqr_CPUPtr(Acoustic_Rho_Bg, Acoustic_Rho_Bg*Acoustic_Temp_Bg,
                                           NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table );
    Acoustic_Cs  = sqrt(Acoustic_Cs2);
-//#  endif
+#  endif
 
 
-//#  if (  defined SRHD  && defined COSMIC_RAY ) // 1
+#  if (  defined SRHD  && defined COSMIC_RAY ) // 1
    Acoustic_Cs = SQRT( ( GAMMA * CR_Acoustic_Pres0 + GAMMA_CR * CR_Acoustic_Pres_CR0 ) / CR_Acoustic_Rho0 );
-//#  endif
+#  endif
 
 
 
 
 // (3) reset other general-purpose parameters
 //     --> a helper macro PRINT_WARNING is defined in TestProb.h
-//#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
+#  if (  defined SRHD  && !defined COSMIC_RAY ) // 1
    const double End_T_Default    = Acoustic_WaveLength / Acoustic_Cs;
-//#  endif
+#  endif
 
-//#  if (  defined SRHD  && defined COSMIC_RAY ) // 1
+#  if (  defined SRHD  && defined COSMIC_RAY ) // 1
 //   const double End_T_Default    = Acoustic_WaveLength / Acoustic_Cs;
-//#  endif
+#  endif
 
    const long   End_Step_Default = __INT_MAX__;
 
@@ -225,20 +225,20 @@ void SetParameter()
    {
       Aux_Message( stdout, "=============================================================================\n" );
       Aux_Message( stdout, "  test problem ID     = %d\n",      TESTPROB_ID );
-//#     if (  defined SRHD  && !defined COSMIC_RAY ) // 1
+#     if (  defined SRHD  && !defined COSMIC_RAY ) // 1
       Aux_Message( stdout, "  ambient density     = % 14.7e\n", Acoustic_Rho_Bg   );
       Aux_Message( stdout, "  ambient temperature = % 14.7e\n", Acoustic_Temp_Bg   );
-//#     endif
+#     endif
 
-//#     if (  defined HYDRO && !defined COSMIC_RAY ) // 6
+#     if (  defined HYDRO && !defined COSMIC_RAY ) // 6
       Aux_Message( stdout, "  density amplitude   = % 14.7e\n", Acoustic_RhoAmp );
       Aux_Message( stdout, "  sign (R/L)          = % 14.7e\n", Acoustic_Sign );
       Aux_Message( stdout, "  initial phase shift = % 14.7e\n", Acoustic_Phase0 );
-//#     endif
+#     endif
 
-//#     if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
+#     if ( !defined SRHD  && !defined COSMIC_RAY ) // 5
       Aux_Message( stdout, "  background velocity = % 14.7e\n", Acoustic_v0 );
-//#     endif
+#     endif
 
       Aux_Message( stdout, "  sound speed         = % 14.7e\n", Acoustic_Cs );
       Aux_Message( stdout, "  wavelength          = % 14.7e\n", Acoustic_WaveLength );
@@ -451,7 +451,8 @@ void OutputError()
    const char Prefix[100]     = "AcousticWave";
 
    OptOutputPart_t Part_Temp = OUTPUT_DIAG;
- 
+
+#  if ( defined SRHD && defined COSMIC_RAY ) 
    if      ( CR_Acoustic_Direction == 'd' )
    { 
      Part_Temp = OUTPUT_DIAG;
@@ -469,6 +470,7 @@ void OutputError()
      Part_Temp = OUTPUT_Z;
    } 
 
+#endif
    const OptOutputPart_t Part = Part_Temp;
 
    const real x = 0.5;
