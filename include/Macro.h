@@ -460,6 +460,7 @@
 #  define  PAR_VELY           5
 #  define  PAR_VELZ           6
 #  define  PAR_TYPE           7
+#  define  PAR_INDX           8
 
 // always put acceleration and time at the END of the particle attribute list
 // --> make it easier to discard them when storing data on disk (see Output_DumpData_Total(_HDF5).cpp)
@@ -481,6 +482,7 @@
 #  define _PAR_VELY           ( 1L << PAR_VELY )
 #  define _PAR_VELZ           ( 1L << PAR_VELZ )
 #  define _PAR_TYPE           ( 1L << PAR_TYPE )
+#  define _PAR_INDX           ( 1L << PAR_INDX )
 # if ( defined STORE_PAR_ACC  &&  defined GRAVITY )
 #  define _PAR_ACCX           ( 1L << PAR_ACCX )
 #  define _PAR_ACCY           ( 1L << PAR_ACCY )
