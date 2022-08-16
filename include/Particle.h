@@ -131,6 +131,7 @@ struct Particle_t
    int           GhostSizeTracer;
    real         *Attribute[PAR_NATT_TOTAL];
    long         *InactiveParList;
+   long          StartIndexNumber;
 
 #  ifdef LOAD_BALANCE
    int           R2B_Real_NPatchTotal   [NLEVEL][2];
@@ -199,6 +200,7 @@ struct Particle_t
       RemoveCell          = -999.9;
       GhostSize           = -1;
       GhostSizeTracer     = -1;
+      StartIndexNumber    = -1;
 
       for (int lv=0; lv<NLEVEL; lv++)  NPar_Lv[lv] = 0;
 
@@ -383,6 +385,10 @@ struct Particle_t
       AccY = Attribute[PAR_ACCY];
       AccZ = Attribute[PAR_ACCZ];
 #     endif
+
+//    set the start index number
+
+      StartIndexNumber = 0;
 
    } // METHOD : InitRepo
 
