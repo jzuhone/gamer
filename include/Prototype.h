@@ -691,6 +691,8 @@ void Par_LB_MapBuffer2RealPatch( const int lv, const int  Buff_NPatchTotal, int 
                                                      int &Real_NPatchTotal, int *&Real_PIDList, int *Real_NPatchEachRank,
                                  const bool UseInputLBIdx, long *Buff_LBIdxList_Input );
 #endif
+void Par_Init_IndicesDefault();
+void Par_FindIndexOffset( const long newCount, long *indexOffset );
 #endif // #ifdef PARTICLE
 
 

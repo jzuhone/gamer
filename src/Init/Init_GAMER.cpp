@@ -7,6 +7,7 @@ extern void (*Par_Init_ByFunction_Ptr)( const long NPar_ThisRank, const long NPa
                                         real *ParMass, real *ParPosX, real *ParPosY, real *ParPosZ,
                                         real *ParVelX, real *ParVelY, real *ParVelZ, real *ParTime,
                                         real *ParType, real *AllAttribute[PAR_NATT_TOTAL] );
+extern void (*Par_Init_Indices_Ptr)();
 #endif
 
 
@@ -210,6 +211,13 @@ void Init_GAMER( int *argc, char ***argv )
          Aux_Error( ERROR_INFO, "unsupported particle initialization (%s = %d) !!\n",
                     "PAR_INIT", (int)amr->Par->Init );
    }
+
+   if ( Par_Init_Indices_Ptr != NULL ) 
+//    If the user supplied a custom particle index generator
+      Par_Init_Indices_Ptr();
+   else
+//    If not we use the default one
+      Par_Init_IndicesDefault();   
 
    if ( amr->Par->Init != PAR_INIT_BY_RESTART )    Par_Aux_InitCheck();
 #  endif // #ifdef PARTICLE

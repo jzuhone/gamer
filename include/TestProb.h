@@ -62,6 +62,7 @@ extern void (*Par_Init_ByFunction_Ptr)( const long NPar_ThisRank, const long NPa
                                         real *ParVelX, real *ParVelY, real *ParVelZ, real *ParTime,
                                         real *ParType, real *AllAttribute[PAR_NATT_TOTAL] );
 extern void (*Par_Init_Attribute_User_Ptr)();
+extern void (*Par_Init_Indices_Ptr)();
 #endif
 #if ( MODEL == HYDRO )
 extern void (*EoS_Init_Ptr)();

@@ -19,7 +19,7 @@ void Par_FindIndexOffset( const long newCount, long *indexOffset )
 
     delete [] localNumParticles;
 
-//  Update value of start_index_number
+//  Update value of startIndexNumber
 
     int maxIndexOwner = MPI_NRank-1; 
 
