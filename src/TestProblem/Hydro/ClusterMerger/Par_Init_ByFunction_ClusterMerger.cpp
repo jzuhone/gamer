@@ -98,19 +98,12 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       // get the number of particles loaded by each rank for each cluster
       long NPar_ThisCluster_EachRank[MPI_NRank];
 
-      switch (c) {
-      case 0:
-         NPar_ThisRank_EachCluster[0] = NPar_EachCluster[0] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[0]%MPI_NRank)?1:0 );
-         break;
-      case 1:
-         if (NCluster == 2)
-            NPar_ThisRank_EachCluster[1] = NPar_ThisRank - NPar_ThisRank_EachCluster[0];
-         else
-            NPar_ThisRank_EachCluster[1] = NPar_EachCluster[1] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[1]%MPI_NRank)?1:0 );
-         break;
-      case 2:
-         NPar_ThisRank_EachCluster[2] = NPar_ThisRank - NPar_ThisRank_EachCluster[0] - NPar_ThisRank_EachCluster[1];
-         break;
+      if (c == 0 || c < NCluster - 1) {
+         NPar_ThisRank_EachCluster[c] = NPar_EachCluster[c] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[c]%MPI_NRank)?1:0 );
+      } else if (c == NCluster-1) {
+         NPar_ThisRank_EachCluster[c] = NPar_ThisRank;
+         for (int cr = 1; cr<NCluster-1; cr++)
+            NPar_ThisRank_EachCluster[c] -= NPar_ThisRank_EachCluster[cr]l
       }
 
       MPI_Allgather( &NPar_ThisRank_EachCluster[c], 1, MPI_LONG, NPar_ThisCluster_EachRank, 1, MPI_LONG, MPI_COMM_WORLD );
