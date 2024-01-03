@@ -22,17 +22,23 @@ static char    Merger_File_Prof3[1000];   // profile table of cluster 3
        bool    Merger_Coll_UseMetals;     // (true/false) --> do the clusters have a metal field
        double  Merger_Coll_PosX1;         // x-position of the first cluster
        double  Merger_Coll_PosY1;         // y-position of the first cluster
+       double  Merger_Coll_PosZ1;         // z-position of the first cluster
        double  Merger_Coll_PosX2;         // x-position of the second cluster
        double  Merger_Coll_PosY2;         // y-position of the second cluster
+       double  Merger_Coll_PosZ2;         // z-position of the second cluster
        double  Merger_Coll_PosX3;         // x-position of the third cluster
        double  Merger_Coll_PosY3;         // y-position of the third cluster
+       double  Merger_Coll_PosZ3;         // z-position of the third cluster
        double  Merger_Coll_VelX1;         // x-velocity of the first cluster
        double  Merger_Coll_VelY1;         // y-velocity of the first cluster
+       double  Merger_Coll_VelZ1;         // z-velocity of the first cluster
        double  Merger_Coll_VelX2;         // x-velocity of the second cluster
        double  Merger_Coll_VelY2;         // y-velocity of the second cluster
+       double  Merger_Coll_VelZ2;         // z-velocity of the second cluster
        double  Merger_Coll_VelX3;         // x-velocity of the third cluster
        double  Merger_Coll_VelY3;         // y-velocity of the third cluster
-
+       double  Merger_Coll_VelZ3;         // z-velocity of the third cluster
+					  //
 static double *Table_R1 = NULL;           // radius of cluster 1
 static double *Table_D1 = NULL;           // density of cluster 1
 static double *Table_P1 = NULL;           // pressure of cluster 1
@@ -175,16 +181,22 @@ void SetParameter()
    ReadPara->Add( "Merger_File_Par3",        Merger_File_Par3,       NoDef_str,        Useless_str,   Useless_str    );
    ReadPara->Add( "Merger_Coll_PosX1",      &Merger_Coll_PosX1,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_PosY1",      &Merger_Coll_PosY1,     -1.0,              NoMin_double,  NoMax_double   );
+   ReadPara->Add( "Merger_Coll_PosZ1",      &Merger_Coll_PosZ1,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_PosX2",      &Merger_Coll_PosX2,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_PosY2",      &Merger_Coll_PosY2,     -1.0,              NoMin_double,  NoMax_double   );
+   ReadPara->Add( "Merger_Coll_PosZ2",      &Merger_Coll_PosZ2,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_PosX3",      &Merger_Coll_PosX3,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_PosY3",      &Merger_Coll_PosY3,     -1.0,              NoMin_double,  NoMax_double   );
+   ReadPara->Add( "Merger_Coll_PosZ3",      &Merger_Coll_PosZ3,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_VelX1",      &Merger_Coll_VelX1,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_VelY1",      &Merger_Coll_VelY1,     -1.0,              NoMin_double,  NoMax_double   );
+   ReadPara->Add( "Merger_Coll_VelZ1",      &Merger_Coll_VelZ1,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_VelX2",      &Merger_Coll_VelX2,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_VelY2",      &Merger_Coll_VelY2,     -1.0,              NoMin_double,  NoMax_double   );
+   ReadPara->Add( "Merger_Coll_VelZ2",      &Merger_Coll_VelZ2,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_VelX3",      &Merger_Coll_VelX3,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_VelY3",      &Merger_Coll_VelY3,     -1.0,              NoMin_double,  NoMax_double   );
+   ReadPara->Add( "Merger_Coll_VelZ3",      &Merger_Coll_VelZ3,     -1.0,              NoMin_double,  NoMax_double   );
    ReadPara->Add( "Merger_Coll_UseMetals",  &Merger_Coll_UseMetals,  true,             Useless_bool,  Useless_bool   );
 
    ReadPara->Read( FileName );
@@ -430,9 +442,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    if ( !( Merger_Coll_IsGas1 || Merger_Coll_IsGas2 || Merger_Coll_IsGas3 ))
       return;
 
-   const double ClusterCenter1[3] = { Merger_Coll_PosX1, Merger_Coll_PosY1, amr->BoxCenter[2] };
-   const double ClusterCenter2[3] = { Merger_Coll_PosX2, Merger_Coll_PosY2, amr->BoxCenter[2] };
-   const double ClusterCenter3[3] = { Merger_Coll_PosX3, Merger_Coll_PosY3, amr->BoxCenter[2] };
+   const double ClusterCenter1[3] = { Merger_Coll_PosX1, Merger_Coll_PosY1, Merger_Coll_PosZ1 };
+   const double ClusterCenter2[3] = { Merger_Coll_PosX2, Merger_Coll_PosY2, Merger_Coll_PosZ2 };
+   const double ClusterCenter3[3] = { Merger_Coll_PosX3, Merger_Coll_PosY3, Merger_Coll_PosZ3 };
 
    double r1, r2, r3, Dens1, Dens2, Dens3, Pres1, Pres2, Pres3;
    double Metl1, Metl2, Metl3, rmax1, rmax2, rmax3;
@@ -508,19 +520,22 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    MomX = 0.0;
    MomY = 0.0;
+   MomZ = 0.0;
    if ( r1 <= rmax1 ) {
       MomX += Merger_Coll_VelX1*Dens1;
       MomY += Merger_Coll_VelY1*Dens1;
+      MomZ += Merger_Coll_VelZ1*Dens1;
    }
    if ( r2 <= rmax2 ) {
      MomX += Merger_Coll_VelX2*Dens2;
      MomY += Merger_Coll_VelY2*Dens2;
+     MomZ += Merger_Coll_VelZ2*Dens2;
    }
    if ( r3 <= rmax3 ) {
      MomX += Merger_Coll_VelX3*Dens3;
      MomY += Merger_Coll_VelY3*Dens3;
+     MomZ += Merger_Coll_VelZ3*Dens3;
    }
-   MomZ = 0.0;
 
    // compute the total gas energy
    Eint = EoS_DensPres2Eint_CPUPtr( Dens, Pres, NULL, EoS_AuxArray_Flt,

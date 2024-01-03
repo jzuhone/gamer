@@ -16,16 +16,22 @@ extern char    Merger_File_Par3[1000];
 extern int     Merger_Coll_NumHalos;
 extern double  Merger_Coll_PosX1;
 extern double  Merger_Coll_PosY1;
+extern double  Merger_Coll_PosZ1;
 extern double  Merger_Coll_PosX2;
 extern double  Merger_Coll_PosY2;
+extern double  Merger_Coll_PosZ2;
 extern double  Merger_Coll_PosX3;
 extern double  Merger_Coll_PosY3;
+extern double  Merger_Coll_PosZ3;
 extern double  Merger_Coll_VelX1;
 extern double  Merger_Coll_VelY1;
+extern double  Merger_Coll_VelZ1;
 extern double  Merger_Coll_VelX2;
 extern double  Merger_Coll_VelY2;
+extern double  Merger_Coll_VelZ2;
 extern double  Merger_Coll_VelX3;
 extern double  Merger_Coll_VelY3;
+extern double  Merger_Coll_VelZ3;
 
 #ifdef MASSIVE_PARTICLES
 long Read_Particle_Number_ClusterMerger(std::string filename);
@@ -137,25 +143,34 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
    const int NCluster = Merger_Coll_NumHalos;
    long NPar_ThisRank_EachCluster[3]={0,0,0}, Offset[3];   // [0/1/2] --> cluster 1/2/3
 
-   for (int c=0; c<NCluster; c++)
+   for (int c=0; c<NCluster; c++) 
    {
-      // get the number of particles loaded by each rank for each cluster
-      long NPar_ThisCluster_EachRank[MPI_NRank];
+	 // get the number of particles loaded by each rank for each cluster
+	 long NPar_ThisCluster_EachRank[MPI_NRank];
+	 
+	 if (c == 0 || c < NCluster - 1) {
+         	NPar_ThisRank_EachCluster[c] = NPar_EachCluster[c] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[c]%MPI_NRank)?1:0 );
+             } 
+	 else if (c == NCluster-1) {
+         	NPar_ThisRank_EachCluster[c] = NPar_ThisRank;
+         	for (int cr = 1; cr<NCluster-1; cr++)
+            		NPar_ThisRank_EachCluster[c] -= NPar_ThisRank_EachCluster[cr]
+            }
 
-      switch (c) {
-      case 0:
-         NPar_ThisRank_EachCluster[0] = NPar_EachCluster[0] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[0]%MPI_NRank)?1:0 );
-         break;
-      case 1:
-         if (NCluster == 2)
-            NPar_ThisRank_EachCluster[1] = NPar_ThisRank - NPar_ThisRank_EachCluster[0];
-         else
-            NPar_ThisRank_EachCluster[1] = NPar_EachCluster[1] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[1]%MPI_NRank)?1:0 );
-         break;
-      case 2:
-         NPar_ThisRank_EachCluster[2] = NPar_ThisRank - NPar_ThisRank_EachCluster[0] - NPar_ThisRank_EachCluster[1];
-         break;
-      }
+//  switch (c) {
+//      case 0:
+//         NPar_ThisRank_EachCluster[0] = NPar_EachCluster[0] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[0]%MPI_NRank)?1:0 );
+//         break;
+//      case 1:
+//         if (NCluster == 2)
+//            NPar_ThisRank_EachCluster[1] = NPar_ThisRank - NPar_ThisRank_EachCluster[0];
+//         else
+//            NPar_ThisRank_EachCluster[1] = NPar_EachCluster[1] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[1]%MPI_NRank)?1:0 );
+//         break;
+//      case 2:
+//         NPar_ThisRank_EachCluster[2] = NPar_ThisRank - NPar_ThisRank_EachCluster[0] - NPar_ThisRank_EachCluster[1];
+//         break;
+// }
 
       MPI_Allgather( &NPar_ThisRank_EachCluster[c], 1, MPI_LONG, NPar_ThisCluster_EachRank, 1, MPI_LONG, MPI_COMM_WORLD );
 
@@ -171,7 +186,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       Offset[c] = 0;
       for (int r=0; r<MPI_Rank; r++)
          Offset[c] = Offset[c] + NPar_ThisCluster_EachRank[r];
-   }
+   } // for c in Ncluster 
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
 
@@ -214,18 +229,25 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       // Compute offsets for assigning particles
 
       double coffset;
-      switch (c) {
-      case 0:
-         coffset = 0;
-         break;
-      case 1:
-         coffset = NPar_ThisRank_EachCluster[0];
-         break;
-      case 2:
-         coffset = NPar_ThisRank_EachCluster[0]+NPar_ThisRank_EachCluster[1];
-         break;
+      coffset = 0;
+       
+      if (c > 0) {
+         for (int cr = 0; cr < c; cr++)
+            coffset += NPar_ThisRank_EachCluster[cr]
       }
 
+//      switch (c) {
+//      case 0:
+//         coffset = 0;
+//        break;
+//      case 1:
+//         coffset = NPar_ThisRank_EachCluster[0];
+//         break;
+//      case 2:
+//         coffset = NPar_ThisRank_EachCluster[0]+NPar_ThisRank_EachCluster[1];
+//        break;
+//      }
+//
       for (long p=0; p<NPar_ThisRank_EachCluster[c]; p++)
       {
          // particle index offset
@@ -248,7 +270,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
             ParMass[pp] = 0.0;
             ParVelX[pp] = 0.0;
             ParVelY[pp] = 0.0;
-            ParVelX[pp] = 0.0;
+            ParVelZ[pp] = 0.0;
          } else {
             // For massive particles get their mass
             // and velocity
@@ -282,16 +304,17 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
    real *ParPos[3] = { ParPosX, ParPosY, ParPosZ };
 
    const double ClusterCenter1[3]
-      = { Merger_Coll_PosX1, Merger_Coll_PosY1, amr->BoxCenter[2] };
+      = { Merger_Coll_PosX1, Merger_Coll_PosY1, Merger_Coll_PosZ1 };
    const double ClusterCenter2[3]
-      = { Merger_Coll_PosX2, Merger_Coll_PosY2, amr->BoxCenter[2] };
+      = { Merger_Coll_PosX2, Merger_Coll_PosY2, Merger_Coll_PosZ2 };
    const double ClusterCenter3[3]
-      = { Merger_Coll_PosX3, Merger_Coll_PosY3, amr->BoxCenter[2] };
+      = { Merger_Coll_PosX3, Merger_Coll_PosY3, Merger_Coll_PosZ3 };
 
    for (long p=0; p<NPar_ThisRank_EachCluster[0]; p++) {
       if ( (int)ParType[p] != PTYPE_TRACER ) {
          ParVelX[p] += Merger_Coll_VelX1;
          ParVelY[p] += Merger_Coll_VelY1;
+	 ParVelZ[p] += Merger_Coll_VelZ1;
       }
       for (int d=0; d<3; d++)
          ParPos[d][p] += ClusterCenter1[d];
@@ -301,6 +324,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       if ( (int)ParType[p] != PTYPE_TRACER ) {
          ParVelX[p] += Merger_Coll_VelX2;
          ParVelY[p] += Merger_Coll_VelY2;
+	 ParVelZ[p] += Merger_Coll_VelZ2;
       }
       for (int d=0; d<3; d++)
          ParPos[d][p] += ClusterCenter2[d];
@@ -310,6 +334,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       if ( (int)ParType[p] != PTYPE_TRACER ) {
          ParVelX[p] += Merger_Coll_VelX3;
          ParVelY[p] += Merger_Coll_VelY3;
+	 ParVelZ[p] += Merger_Coll_VelZ3;
       }
       for (int d=0; d<3; d++)
          ParPos[d][p] += ClusterCenter3[d];
