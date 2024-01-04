@@ -186,7 +186,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
 	 else if (c == NCluster-1) {
          	NPar_ThisRank_EachCluster[c] = NPar_ThisRank;
          	for (int cr = 1; cr<NCluster-1; cr++)
-            		NPar_ThisRank_EachCluster[c] -= NPar_ThisRank_EachCluster[cr]
+            		NPar_ThisRank_EachCluster[c] -= NPar_ThisRank_EachCluster[cr]; 
             }
 
       MPI_Allgather( &NPar_ThisRank_EachCluster[c], 1, MPI_LONG, NPar_ThisCluster_EachRank, 1, MPI_LONG, MPI_COMM_WORLD );
@@ -250,7 +250,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
        
       if (c > 0) {
          for (int cr = 0; cr < c; cr++)
-            coffset += NPar_ThisRank_EachCluster[cr]
+            coffset += NPar_ThisRank_EachCluster[cr]; 
       }
 
       for (long p=0; p<NPar_ThisRank_EachCluster[c]; p++)
@@ -586,3 +586,9 @@ void Read_Particles_ClusterMerger( std::string filename, long offset, long num,
 
 #endif // #ifdef SUPPORT_HDF5
 #endif // #ifdef MASSIVE_PARTICLES
+
+
+
+
+
+

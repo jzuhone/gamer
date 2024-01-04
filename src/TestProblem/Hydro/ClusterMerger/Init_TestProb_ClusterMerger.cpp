@@ -285,8 +285,8 @@ void SetParameter()
       const std::string filename1(Merger_File_Prof1);
       const std::string filename2(Merger_File_Prof2);
       const std::string filename3(Merger_File_Prof3);
-      const std::string filename3(Merger_File_Prof4);
-      const std::string filename3(Merger_File_Prof5);
+      const std::string filename4(Merger_File_Prof4);
+      const std::string filename5(Merger_File_Prof5);
 
       // cluster 1
       if ( Merger_Coll_IsGas1 ) {
