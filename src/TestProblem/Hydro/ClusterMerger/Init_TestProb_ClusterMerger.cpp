@@ -606,7 +606,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
                 const int lv, double AuxArray[] )
 {
 
-   if ( !( Merger_Coll_IsGas1 || Merger_Coll_IsGas2 || Merger_Coll_IsGas3 || Merger_Coll_IsGas4 || Merger_Coll_IsGas5 ) ))
+   if ( !( Merger_Coll_IsGas1 || Merger_Coll_IsGas2 || Merger_Coll_IsGas3 || Merger_Coll_IsGas4 || Merger_Coll_IsGas5 ) )
       return;
 
    const double ClusterCenter1[3] = { Merger_Coll_PosX1, Merger_Coll_PosY1, Merger_Coll_PosZ1 };
@@ -957,16 +957,18 @@ void Read_Profile_ClusterMerger(std::string filename, std::string fieldname,
 #if ( MODEL == HYDRO )
 void AddNewField_ClusterMerger()
 {
-
-   if ( Merger_Coll_UseMetals )
-      Idx_Metal = AddField( "Metal", NORMALIZE_NO, INTERP_FRAC_NO );
+if ( Merger_Coll_UseMetals )
+      Idx_Metal = AddField( "Metal", FIXUP_FLUX_YES, FIXUP_REST_YES, NORMALIZE_NO, INTERP_FRAC_NO );
    if ( ColorField1Idx == Idx_Undefined )
-      ColorField1Idx = AddField( "ColorField1", NORMALIZE_NO, INTERP_FRAC_NO );
+      ColorField1Idx = AddField( "ColorField1", FIXUP_FLUX_YES, FIXUP_REST_YES, NORMALIZE_NO, INTERP_FRAC_NO );
    if ( Merger_Coll_NumHalos > 1 && ColorField2Idx == Idx_Undefined )
-      ColorField2Idx = AddField( "ColorField2", NORMALIZE_NO, INTERP_FRAC_NO );
+      ColorField2Idx = AddField( "ColorField2", FIXUP_FLUX_YES, FIXUP_REST_YES, NORMALIZE_NO, INTERP_FRAC_NO );
    if ( Merger_Coll_NumHalos > 2 && ColorField3Idx == Idx_Undefined )
-      ColorField3Idx = AddField( "ColorField3", NORMALIZE_NO, INTERP_FRAC_NO );
-
+      ColorField3Idx = AddField( "ColorField3", FIXUP_FLUX_YES, FIXUP_REST_YES, NORMALIZE_NO, INTERP_FRAC_NO );
+   if ( Merger_Coll_NumHalos > 3 && ColorField4Idx == Idx_Undefined )
+      ColorField4Idx = AddField( "ColorField4", FIXUP_FLUX_YES, FIXUP_REST_YES, NORMALIZE_NO, INTERP_FRAC_NO );
+   if ( Merger_Coll_NumHalos > 4 && ColorField5Idx == Idx_Undefined )
+      ColorField5Idx = AddField( "ColorField5", FIXUP_FLUX_YES, FIXUP_REST_YES, NORMALIZE_NO, INTERP_FRAC_NO );
 }
 
 #endif

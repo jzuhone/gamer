@@ -314,6 +314,10 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       = { Merger_Coll_PosX2, Merger_Coll_PosY2, Merger_Coll_PosZ2 };
    const double ClusterCenter3[3]
       = { Merger_Coll_PosX3, Merger_Coll_PosY3, Merger_Coll_PosZ3 };
+   const double ClusterCenter4[3]
+      = { Merger_Coll_PosX4, Merger_Coll_PosY4, Merger_Coll_PosZ4 };
+   const double ClusterCenter5[3]
+      = { Merger_Coll_PosX5, Merger_Coll_PosY5, Merger_Coll_PosZ5 };
 
    for (long p=0; p<NPar_ThisRank_EachCluster[0]; p++) {
       if ( (int)ParType[p] != PTYPE_TRACER ) {
