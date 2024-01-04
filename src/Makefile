@@ -1,6 +1,3 @@
-
-
-
 # ===========================================================================
 # INSTRUCTIONS
 #
@@ -11,19 +8,13 @@
 # (3) library paths
 # ===========================================================================
 
-
-
 # executable
 #######################################################################################################
 EXECUTABLE := gamer-3d
 
-
-
 # output detailed compilation commands (0/1 = off/on)
 #######################################################################################################
 COMPILE_VERBOSE := 0
-
-
 
 # simulation options
 #######################################################################################################
@@ -46,7 +37,6 @@ SIMU_OPTION += -DPARTICLE
 # --> must set NCOMP_PASSIVE_USER according to the primordial chemistry network set by GRACKLE_PRIMORDIAL
 # --> please enable OpenMP when compiling Grackle (by "make omp-on")
 #SIMU_OPTION += -DSUPPORT_GRACKLE
-
 
 # (b) options of different physical modules
 # (b-1) hydro options
@@ -244,10 +234,6 @@ SIMU_OPTION += -DSUPPORT_HDF5
 # --> use RNG_GNU_EXT for compilers supporting GNU extensions (**not supported on some macOS**)
 #     use RNG_CPP11   for compilers supporting c++11 (**may need to add -std=c++11 to CXXFLAG**)
 SIMU_OPTION += -DRANDOM_NUMBER=RNG_GNU_EXT
-
-
-
-
 
 # compiler and flags
 #######################################################################################################
