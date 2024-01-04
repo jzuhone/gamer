@@ -35,26 +35,30 @@ double              *FlagTable_User       [NLEVEL-1];
 double              *DumpTable = NULL;
 int                  DumpTable_NDump;
 int                 *UM_IC_RefineRegion = NULL;
+long                 FixUpVar_Flux, FixUpVar_Restrict;
 int                  PassiveNorm_NVar, PassiveNorm_VarIdx[NCOMP_PASSIVE];
 int                  PassiveIntFrac_NVar, PassiveIntFrac_VarIdx[NCOMP_PASSIVE];
+int                  StrLen_Flt;
+char                 BlankPlusFormat_Flt[MAX_STRING];
 
 int                  MPI_Rank, MPI_Rank_X[3], MPI_SibRank[26], NX0[3], NPatchTotal[NLEVEL];
 int                 *BaseP = NULL;
 int                  Flu_ParaBuf;
 
-double               BOX_SIZE, DT__MAX, DT__FLUID, DT__FLUID_INIT, END_T, OUTPUT_DT, DT__SYNC_PARENT_LV, DT__SYNC_CHILDREN_LV;
+double               BOX_SIZE, DT__MAX, DT__FLUID, DT__FLUID_INIT, END_T, OUTPUT_DT, OUTPUT_WALLTIME, DT__SYNC_PARENT_LV, DT__SYNC_CHILDREN_LV;
 long                 END_STEP;
-int                  NX0_TOT[3], OUTPUT_STEP, REGRID_COUNT, FLU_GPU_NPGROUP, SRC_GPU_NPGROUP, OMP_NTHREAD;
+int                  NX0_TOT[3], OUTPUT_STEP, OUTPUT_WALLTIME_UNIT, REGRID_COUNT, REFINE_NLEVEL, FLU_GPU_NPGROUP, SRC_GPU_NPGROUP, OMP_NTHREAD;
 int                  MPI_NRank, MPI_NRank_X[3];
 int                  GPU_NSTREAM, FLAG_BUFFER_SIZE, FLAG_BUFFER_SIZE_MAXM1_LV, FLAG_BUFFER_SIZE_MAXM2_LV, MAX_LEVEL;
 
 IntScheme_t          OPT__FLU_INT_SCHEME, OPT__REF_FLU_INT_SCHEME;
 double               OUTPUT_PART_X, OUTPUT_PART_Y, OUTPUT_PART_Z, AUTO_REDUCE_DT_FACTOR, AUTO_REDUCE_DT_FACTOR_MIN;
+double               AUTO_REDUCE_INT_MONO_FACTOR, AUTO_REDUCE_INT_MONO_MIN;
 double               OPT__CK_MEMFREE, INT_MONO_COEFF, UNIT_L, UNIT_M, UNIT_T, UNIT_V, UNIT_D, UNIT_E, UNIT_P;
 int                  OPT__UM_IC_LEVEL, OPT__UM_IC_NLEVEL, OPT__UM_IC_NVAR, OPT__UM_IC_LOAD_NRANK, OPT__GPUID_SELECT, OPT__PATCH_COUNT;
 int                  INIT_DUMPID, INIT_SUBSAMPLING_NCELL, OPT__TIMING_BARRIER, OPT__REUSE_MEMORY, RESTART_LOAD_NRANK;
 bool                 OPT__FLAG_RHO, OPT__FLAG_RHO_GRADIENT, OPT__FLAG_USER, OPT__FLAG_LOHNER_DENS, OPT__FLAG_REGION;
-int                  OPT__FLAG_USER_NUM, MONO_MAX_ITER;
+int                  OPT__FLAG_USER_NUM, MONO_MAX_ITER, OPT__RESET_FLUID_INIT;
 bool                 OPT__DT_USER, OPT__RECORD_DT, OPT__RECORD_MEMORY, OPT__MEMORY_POOL, OPT__RESTART_RESET;
 bool                 OPT__FIXUP_RESTRICT, OPT__INIT_RESTRICT, OPT__VERBOSE, OPT__MANUAL_CONTROL, OPT__UNIT;
 bool                 OPT__INT_TIME, OPT__OUTPUT_USER, OPT__OUTPUT_BASE, OPT__OUTPUT_RESTART, OPT__OVERLAP_MPI, OPT__TIMING_BALANCE;
@@ -64,7 +68,8 @@ bool                 OPT__UM_IC_DOWNGRADE, OPT__UM_IC_REFINE, OPT__TIMING_MPI;
 bool                 OPT__CK_CONSERVATION, OPT__RESET_FLUID, OPT__FREEZE_FLUID, OPT__RECORD_USER, OPT__NORMALIZE_PASSIVE, AUTO_REDUCE_DT;
 bool                 OPT__OPTIMIZE_AGGRESSIVE, OPT__INIT_GRID_WITH_OMP, OPT__NO_FLAG_NEAR_BOUNDARY;
 bool                 OPT__RECORD_NOTE, OPT__RECORD_UNPHY, INT_OPP_SIGN_0TH_ORDER;
-bool                 OPT__INT_FRAC_PASSIVE_LR;
+bool                 OPT__INT_FRAC_PASSIVE_LR, OPT__CK_INPUT_FLUID, OPT__SORT_PATCH_BY_LBIDX;
+char                 OPT__OUTPUT_TEXT_FORMAT_FLT[MAX_STRING-1];
 
 UM_IC_Format_t       OPT__UM_IC_FORMAT;
 TestProbID_t         TESTPROB_ID;
@@ -83,7 +88,7 @@ OptTimeStepLevel_t   OPT__DT_LEVEL;
 // (2-1) fluid solver in different models
 #if   ( MODEL == HYDRO )
 double               FlagTable_PresGradient[NLEVEL-1], FlagTable_Vorticity[NLEVEL-1], FlagTable_Jeans[NLEVEL-1];
-double               GAMMA, MINMOD_COEFF, MOLECULAR_WEIGHT, ISO_TEMP;
+double               GAMMA, MINMOD_COEFF, AUTO_REDUCE_MINMOD_FACTOR, AUTO_REDUCE_MINMOD_MIN, MOLECULAR_WEIGHT, MU_NORM, ISO_TEMP;
 LR_Limiter_t         OPT__LR_LIMITER;
 Opt1stFluxCorr_t     OPT__1ST_FLUX_CORR;
 OptRSolver1st_t      OPT__1ST_FLUX_CORR_SCHEME;
@@ -98,13 +103,15 @@ double               MIN_DENS, MIN_PRES, MIN_EINT, MIN_TEMP, MIN_ENTR;
 double               DUAL_ENERGY_SWITCH;
 #endif
 #ifdef MHD
-double               FlagTable_Current[NLEVEL-1];
+double               FlagTable_Current[NLEVEL-1], INT_MONO_COEFF_B;
 IntScheme_t          OPT__MAG_INT_SCHEME, OPT__REF_MAG_INT_SCHEME;
 bool                 OPT__FIXUP_ELECTRIC, OPT__CK_INTERFACE_B, OPT__OUTPUT_CC_MAG, OPT__FLAG_CURRENT;
 bool                 OPT__OUTPUT_DIVMAG;
 int                  OPT__CK_DIVERGENCE_B;
 double               UNIT_B;
-bool                 OPT__INIT_BFIELD_BYFILE;
+bool                 OPT__SAME_INTERFACE_B;
+
+OptInitMagByVecPot_t OPT__INIT_BFIELD_BYVECPOT;
 #endif
 
 #elif ( MODEL == ELBDM )
@@ -173,6 +180,12 @@ double               LB_INPUT__PAR_WEIGHT;
 bool                 OPT__RECORD_LOAD_BALANCE;
 #endif
 bool                 OPT__MINIMIZE_MPI_BARRIER;
+#ifdef SUPPORT_FFTW
+int                  OPT__FFTW_STARTUP;
+#if ( SUPPORT_FFTW == FFTW3 )
+bool                 FFTW3_Double_OMP_Enabled, FFTW3_Single_OMP_Enabled;
+#endif // # if ( SUPPORT_FFTW == FFTW3 )
+#endif // # ifdef SUPPORT_FFTW
 
 // (2-5) particle
 #ifdef PARTICLE
@@ -228,21 +241,27 @@ double EoS_AuxArray_Flt[EOS_NAUX_MAX];
 int    EoS_AuxArray_Int[EOS_NAUX_MAX];
 
 // b. function pointers
-EoS_DE2P_t EoS_DensEint2Pres_CPUPtr = NULL;
-EoS_DP2E_t EoS_DensPres2Eint_CPUPtr = NULL;
-EoS_DP2C_t EoS_DensPres2CSqr_CPUPtr = NULL;
-EoS_DE2T_t EoS_DensEint2Temp_CPUPtr = NULL;
-EoS_DT2P_t EoS_DensTemp2Pres_CPUPtr = NULL;
-EoS_DE2S_t EoS_DensEint2Entr_CPUPtr = NULL;
-EoS_GENE_t EoS_General_CPUPtr       = NULL;
+EoS_DE2P_t    EoS_DensEint2Pres_CPUPtr = NULL;
+EoS_DP2E_t    EoS_DensPres2Eint_CPUPtr = NULL;
+EoS_DP2C_t    EoS_DensPres2CSqr_CPUPtr = NULL;
+EoS_DE2T_t    EoS_DensEint2Temp_CPUPtr = NULL;
+EoS_DT2P_t    EoS_DensTemp2Pres_CPUPtr = NULL;
+EoS_DE2S_t    EoS_DensEint2Entr_CPUPtr = NULL;
+EoS_GENE_t    EoS_General_CPUPtr       = NULL;
+#ifdef COSMIC_RAY
+EoS_CRE2CRP_t EoS_CREint2CRPres_CPUPtr = NULL;
+#endif
 #ifdef GPU
-EoS_DE2P_t EoS_DensEint2Pres_GPUPtr = NULL;
-EoS_DP2E_t EoS_DensPres2Eint_GPUPtr = NULL;
-EoS_DP2C_t EoS_DensPres2CSqr_GPUPtr = NULL;
-EoS_DE2T_t EoS_DensEint2Temp_GPUPtr = NULL;
-EoS_DT2P_t EoS_DensTemp2Pres_GPUPtr = NULL;
-EoS_DE2S_t EoS_DensEint2Entr_GPUPtr = NULL;
-EoS_GENE_t EoS_General_GPUPtr       = NULL;
+EoS_DE2P_t    EoS_DensEint2Pres_GPUPtr = NULL;
+EoS_DP2E_t    EoS_DensPres2Eint_GPUPtr = NULL;
+EoS_DP2C_t    EoS_DensPres2CSqr_GPUPtr = NULL;
+EoS_DE2T_t    EoS_DensEint2Temp_GPUPtr = NULL;
+EoS_DT2P_t    EoS_DensTemp2Pres_GPUPtr = NULL;
+EoS_DE2S_t    EoS_DensEint2Entr_GPUPtr = NULL;
+EoS_GENE_t    EoS_General_GPUPtr       = NULL;
+#ifdef COSMIC_RAY
+EoS_CRE2CRP_t EoS_CREint2CRPres_GPUPtr = NULL;
+#endif
 #endif
 
 // c. data structure for the CPU/GPU solvers
@@ -263,6 +282,33 @@ bool OPT__OUTPUT_USER_FIELD;
 int  UserDerField_Num                  = -1;    // must be negative for Output_DumpData_Total_HDF5()
 char (*UserDerField_Label)[MAX_STRING] = NULL;
 char (*UserDerField_Unit )[MAX_STRING] = NULL;
+
+// (2-12) feedback
+#ifdef FEEDBACK
+int  FB_LEVEL, FB_RSEED;
+bool FB_SNE, FB_USER;
+bool FB_Any;
+int  FB_ParaBuf;
+#endif
+
+// (2-13) cosmic ray
+#ifdef COSMIC_RAY
+double GAMMA_CR;
+bool   OPT__FLAG_CRAY, OPT__FLAG_LOHNER_CRAY;
+double FlagTable_CRay[NLEVEL-1];
+#endif
+
+// (2-14) microphysics
+// a. data structure for the CPU/GPU solvers
+MicroPhy_t MicroPhy;
+
+// b. cosmic-ray diffusion
+#ifdef CR_DIFFUSION
+double CR_DIFF_PARA;
+double CR_DIFF_PERP;
+double DT__CR_DIFFUSION;
+double CR_DIFF_MIN_B;
+#endif
 
 
 // 3. CPU (host) arrays for transferring data between CPU and GPU
@@ -444,6 +490,7 @@ Timer_t *Timer_Gra_Advance[NLEVEL];
 Timer_t *Timer_Src_Advance[NLEVEL];
 Timer_t *Timer_Che_Advance[NLEVEL];
 Timer_t *Timer_SF         [NLEVEL];
+Timer_t *Timer_FB_Advance [NLEVEL];
 Timer_t *Timer_FixUp      [NLEVEL];
 Timer_t *Timer_Flag       [NLEVEL];
 Timer_t *Timer_Refine     [NLEVEL];
@@ -466,9 +513,7 @@ Timer_t *Timer_Poi_PrePot_C[NLEVEL];
 Timer_t *Timer_Poi_PrePot_F[NLEVEL];
 #endif
 
-
-// function pointer for recording the user-specified info
-extern void (*Aux_Record_User_Ptr)();
+Timer_t  Timer_OutputWalltime;
 
 
 
@@ -484,6 +529,7 @@ int main( int argc, char *argv[] )
 // ======================================================================================================
    Timer_t Timer_Total;
    Timer_Total.Start();
+   Timer_OutputWalltime.Start();
 
 #  ifdef TIMING
    Timer_t  Timer_Init, Timer_Other;
@@ -556,10 +602,25 @@ int main( int argc, char *argv[] )
 
 
 //    2. apply various corrections
-//       --> synchronize particles, restrict data, recalculate potential and particle acceleration, ...
+//       --> synchronize particles, restrict data, recalculate potential and particle acceleration,
+//           B field consistency ...
 //    ---------------------------------------------------------------------------------------------------
       if ( OPT__CORR_AFTER_ALL_SYNC == CORR_AFTER_SYNC_EVERY_STEP )
       TIMING_FUNC(   Flu_CorrAfterAllSync(),          Timer_Main[6],   TIMER_ON   );
+
+#     if ( MODEL == HYDRO  &&  defined MHD )
+      if ( OPT__SAME_INTERFACE_B )
+      {
+         if ( OPT__VERBOSE  &&  MPI_Rank == 0 )
+            Aux_Message( stdout, "   MHD_SameInterfaceB                       ... " );
+
+         for (int lv=0; lv<NLEVEL; lv++)
+         TIMING_FUNC(   MHD_SameInterfaceB( lv ),     Timer_Main[6],   TIMER_ON   );
+
+         if ( OPT__VERBOSE  &&  MPI_Rank == 0 )
+            Aux_Message( stdout, "done\n" );
+      }
+#     endif
 //    ---------------------------------------------------------------------------------------------------
 
 
@@ -596,13 +657,17 @@ int main( int argc, char *argv[] )
 //    ---------------------------------------------------------------------------------------------------
 
 
-//    5. check whether to manually terminate the run
+//    5. check whether to manually terminate or pause the run
 //    ---------------------------------------------------------------------------------------------------
       int Terminate = false;
 
 //    enable this functionality only if OPT__MANUAL_CONTROL is on
       if ( OPT__MANUAL_CONTROL )
-      TIMING_FUNC(   End_StopManually( Terminate ),   Timer_Main[4],   TIMER_ON   );
+      {
+         TIMING_FUNC(   End_StopManually( Terminate ),   Timer_Main[4],   TIMER_ON   );
+
+         TIMING_FUNC(   Aux_PauseManually(),             Timer_Main[4],   TIMER_ON   );
+      }
 //    ---------------------------------------------------------------------------------------------------
 
 
@@ -626,6 +691,7 @@ int main( int argc, char *argv[] )
          const bool   Redistribute_Yes = true;
          const bool   SendGridData_Yes = true;
          const bool   ResetLB_Yes      = true;
+         const bool   SortRealPatch_No = false;
 #        ifdef PARTICLE
          const double ParWeight        = amr->LB->Par_Weight;
 #        else
@@ -633,7 +699,7 @@ int main( int argc, char *argv[] )
 #        endif
          const int    AllLv            = -1;
 
-         LB_Init_LoadBalance( Redistribute_Yes, SendGridData_Yes, ParWeight, ResetLB_Yes, AllLv );
+         LB_Init_LoadBalance( Redistribute_Yes, SendGridData_Yes, ParWeight, ResetLB_Yes, SortRealPatch_No, AllLv );
 
          if ( OPT__PATCH_COUNT > 0 )         Aux_Record_PatchCount();
 

@@ -76,7 +76,8 @@
 #define EOS_ISOTHERMAL  2
 #define EOS_NUCLEAR     3
 #define EOS_TABULAR     4
-#define EOS_USER        5
+#define EOS_COSMIC_RAY  5
+#define EOS_USER        6
 
 
 // Poisson solvers
@@ -86,7 +87,6 @@
 
 // load-balance parallelization
 #define HILBERT      1
-
 
 // random number implementation
 #define RNG_GNU_EXT  1
@@ -656,6 +656,15 @@
 #        define DER_GHOST_SIZE      1
 
 
+// number of ghost zones for feedback
+// --> can be changed manually
+// --> set to 0 if applicable to improve performance
+#ifdef FEEDBACK
+#        define FB_GHOST_SIZE       3
+#endif
+
+
+
 // patch size (number of cells of a single patch in the x/y/z directions)
 #define PS1             ( 1*PATCH_SIZE )
 #define PS2             ( 2*PATCH_SIZE )
@@ -689,6 +698,9 @@
 #  define SRC_NXT       ( PS1 + 2*SRC_GHOST_SIZE )                // use patch as the unit
 #  define SRC_NXT_P1    ( SRC_NXT + 1 )
 #  define DER_NXT       ( PS1 + 2*DER_GHOST_SIZE )                // use patch as the unit
+#ifdef FEEDBACK
+#  define FB_NXT        ( PS2 + 2*FB_GHOST_SIZE )                 // use patch group as the unit
+#endif
 
 
 // size of auxiliary arrays and EoS tables
@@ -727,6 +739,20 @@
 #  define BIT_REP_ELECTRIC
 //# endif
 # endif // MHD
+
+
+// only apply iterations to broken cells in Interpolate_Iterate()
+#define INTERP_MASK
+
+// used by INTERP_MASK for now but can be applied to other places in the future
+#define MASKED                   true
+#define UNMASKED                 false
+
+
+// in FB_AdvanceDt(), store the updated fluid data in a separate array to avoid data racing among different patch groups
+#if ( defined FEEDBACK  &&  FB_GHOST_SIZE > 0 )
+#  define FB_SEP_FLUOUT
+#endif
 
 
 // extreme values
@@ -845,6 +871,7 @@
 
 
 // GAMER status
+// --> if we ever want to swap the following values, must check all MPI functions using MPI_BAND or MPI_BOR
 #define GAMER_SUCCESS      1
 #define GAMER_FAILED       0
 
@@ -921,6 +948,10 @@
 #define MIN( a, b )     (  ( (a) < (b) ) ? (a) : (b)  )
 
 
+// safe ATAN2 that does not return nan when a = b = 0
+#define SATAN2( a, b )   (  ( (a) == (real)0.0  &&  (b) == (real)0.0 ) ? (real)0.0 : ATAN2( (a), (b) )  )
+
+
 // square/cube function
 #define SQR(  a )       ( (a)*(a)     )
 #define CUBE( a )       ( (a)*(a)*(a) )
@@ -970,6 +1001,21 @@
 #define BIDX( idx )     ( 1L << (idx) )
 
 
+// helper macro for printing warning messages when resetting parameters
+#  define FORMAT_INT       %- 21d
+#  define FORMAT_LONG      %- 21ld
+#  define FORMAT_UINT      %- 21u
+#  define FORMAT_ULONG     %- 21lu
+#  define FORMAT_BOOL      %- 21d
+#  define FORMAT_REAL      %- 21.14e
+#  define PRINT_RESET_PARA( name, format, reason )                                                       \
+   {                                                                                                     \
+      if ( MPI_Rank == 0 )                                                                               \
+         Aux_Message( stderr, "WARNING : parameter [%-30s] is reset to [" EXPAND_AND_QUOTE(format) "] "  \
+                              "%s\n", #name, name, reason );                                             \
+   }
+
+
 // ################################
 // ## Remove useless definitions ##
 // ################################
@@ -998,7 +1044,6 @@
 #ifndef GRAVITY
 #  undef STORE_PAR_ACC
 #endif
-
 
 
 #endif  // #ifndef __MACRO_H__

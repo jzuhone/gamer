@@ -67,6 +67,9 @@ struct KeyInfo_t
    long   Par_NPar;                 // amr->Par->NPar_Active_AllRank
    int    Par_NAttStored;           // PAR_NATT_STORED
 #  endif
+#  ifdef COSMIC_RAY
+   int    CR_Diffusion;
+#  endif
 
    double BoxSize[3];
    double Time       [NLEVEL];
@@ -116,9 +119,11 @@ struct Makefile_t
    int Laohu;
    int SupportHDF5;
    int SupportGSL;
+   int SupportFFTW;
    int SupportLibYT;
 #  ifdef SUPPORT_LIBYT
    int LibYTUsePatchGroup;
+   int LibYTInteractive;
 #  endif
    int SupportGrackle;
    int RandomNumber;
@@ -157,7 +162,12 @@ struct Makefile_t
    int Tracer;
    int StoreParAcc;
    int StarFormation;
+   int Feedback;
    int Par_NAttUser;
+#  endif
+
+#  ifdef COSMIC_RAY
+   int CR_Diffusion;
 #  endif
 
 }; // struct Makefile_t
@@ -251,6 +261,9 @@ struct SymConst_t
    int    BitRep_Electric;
 #  endif
 
+   int    InterpMask;
+   int    FB_SepFluOut;
+
 
 #  if   ( MODEL == HYDRO )
    int    Flu_BlockSize_x;
@@ -259,6 +272,7 @@ struct SymConst_t
    int    CharReconstruction;
    int    LR_Eint;
    int    CheckIntermediate;
+   int    RSolverRescue;
    int    HLL_NoRefState;
    int    HLL_IncludeAllWaves;
    int    HLLC_WaveSpeed;
@@ -275,6 +289,7 @@ struct SymConst_t
 #  ifdef MHD
    int    EulerY;
 #  endif
+   int    MHM_CheckPredict;
    int    EoSNAuxMax;
    int    EoSNTableMax;
 
@@ -305,6 +320,11 @@ struct SymConst_t
    int    Der_GhostSize;
    int    Der_Nxt;
    int    Der_NOut_Max;
+
+#  ifdef FEEDBACK
+   int    FB_GhostSize;
+   int    FB_Nxt;
+#  endif
 
    int    NFieldStoredMax;
 
@@ -396,6 +416,9 @@ struct InputPara_t
    double Dt__ParVelMax;
    double Dt__ParAcc;
 #  endif
+#  ifdef CR_DIFFUSION
+   double Dt__CR_Diffusion;
+#  endif
 #  ifdef COMOVING
    double Dt__MaxDeltaA;
 #  endif
@@ -407,9 +430,16 @@ struct InputPara_t
    int    AutoReduceDt;
    double AutoReduceDtFactor;
    double AutoReduceDtFactorMin;
+#  if ( MODEL == HYDRO )
+   double AutoReduceMinModFactor;
+   double AutoReduceMinModMin;
+#  endif
+   double AutoReduceIntMonoFactor;
+   double AutoReduceIntMonoMin;
 
 // domain refinement
    int    RegridCount;
+   int    RefineNLevel;
    int    FlagBufferSize;
    int    FlagBufferSizeMaxM1Lv;
    int    FlagBufferSizeMaxM2Lv;
@@ -423,6 +453,9 @@ struct InputPara_t
 #  ifdef MHD
    int    Opt__Flag_Current;
 #  endif
+#  ifdef COSMIC_RAY
+   int    Opt__Flag_CRay;
+#  endif
 #  endif
 #  if ( MODEL == ELBDM )
    int    Opt__Flag_EngyDensity;
@@ -433,6 +466,9 @@ struct InputPara_t
    int    Opt__Flag_LohnerPres;
    int    Opt__Flag_LohnerTemp;
    int    Opt__Flag_LohnerEntr;
+#  ifdef COSMIC_RAY
+   int    Opt__Flag_LohnerCRay;
+#  endif
 #  endif
    int    Opt__Flag_LohnerForm;
    int    Opt__Flag_User;
@@ -465,13 +501,20 @@ struct InputPara_t
 #  if ( MODEL == HYDRO )
    double Gamma;
    double MolecularWeight;
+   double MuNorm;
    double IsoTemp;
    double MinMod_Coeff;
    int    MinMod_MaxIter;
    int    Opt__LR_Limiter;
    int    Opt__1stFluxCorr;
    int    Opt__1stFluxCorrScheme;
+#  ifdef DUAL_ENERGY
+   double DualEnergySwitch;
 #  endif
+#  ifdef MHD
+   int    Opt__SameInterfaceB;
+#  endif
+#  endif // HYDRO
 
 // ELBDM solvers
 #  if ( MODEL == ELBDM )
@@ -482,16 +525,18 @@ struct InputPara_t
 #  endif
    double ELBDM_Taylor3_Coeff;
    int    ELBDM_Taylor3_Auto;
-#  endif
+#  endif // ELBDM
 
 // fluid solvers in different models
    int    Flu_GPU_NPGroup;
    int    GPU_NStream;
    int    Opt__FixUp_Flux;
+   long   FixUpFlux_Var;
 #  ifdef MHD
    int    Opt__FixUp_Electric;
 #  endif
    int    Opt__FixUp_Restrict;
+   long   FixUpRestrict_Var;
    int    Opt__CorrAfterAllSync;
    int    Opt__NormalizePassive;
    int    NormalizePassive_NVar;
@@ -505,6 +550,7 @@ struct InputPara_t
 #  endif
    int    Opt__OverlapMPI;
    int    Opt__ResetFluid;
+   int    Opt__ResetFluidInit;
    int    Opt__FreezeFluid;
 #  if ( MODEL == HYDRO  ||  MODEL == ELBDM )
    double MinDens;
@@ -519,9 +565,6 @@ struct InputPara_t
    int    JeansMinPres;
    int    JeansMinPres_Level;
    int    JeansMinPres_NCell;
-#  endif
-#  ifdef DUAL_ENERGY
-   double DualEnergySwitch;
 #  endif
 
 // gravity
@@ -585,6 +628,26 @@ struct InputPara_t
    double SF_CreateStar_MaxStarMFrac;
 #  endif
 
+// feedback
+#  ifdef FEEDBACK
+   int   FB_Level;
+   int   FB_RSeed;
+   int   FB_SNe;
+   int   FB_User;
+#  endif
+
+// cosmic ray
+#  ifdef COSMIC_RAY
+   double CR_Gamma;
+#  endif
+
+// microphysics
+#  ifdef CR_DIFFUSION
+   double CR_Diffusion_ParaCoeff;
+   double CR_Diffusion_PerpCoeff;
+   double CR_Diffusion_MinB;
+#  endif
+
 // initialization
    int    Opt__Init;
    int    RestartLoadNRank;
@@ -602,7 +665,10 @@ struct InputPara_t
    int    Opt__GPUID_Select;
    int    Init_Subsampling_NCell;
 #  ifdef MHD
-   int    Opt__InitBFieldByFile;
+   int    Opt__InitBFieldByVecPot;
+#  endif
+#  ifdef SUPPORT_FFTW
+   int    Opt__FFTW_Startup;
 #  endif
 
 // interpolation schemes
@@ -626,6 +692,9 @@ struct InputPara_t
    int    Opt__RefPot_IntScheme;
 #  endif
    double IntMonoCoeff;
+#  ifdef MHD
+   double IntMonoCoeffB;
+#  endif
    int    Mono_MaxIter;
    int    IntOppSign0thOrder;
 
@@ -663,6 +732,7 @@ struct InputPara_t
    int    Opt__Output_Restart;
    int    Opt__Output_Step;
    double Opt__Output_Dt;
+   char  *Opt__Output_Text_Format_Flt;
    double Output_PartX;
    double Output_PartY;
    double Output_PartZ;
@@ -680,6 +750,7 @@ struct InputPara_t
    int    Opt__ManualControl;
    int    Opt__RecordUser;
    int    Opt__OptimizeAggressive;
+   int    Opt__SortPatchByLBIdx;
 
 // simulation checks
    int    Opt__Ck_Refine;
@@ -701,6 +772,7 @@ struct InputPara_t
    int    Opt__Ck_InterfaceB;
    int    Opt__Ck_DivergenceB;
 #  endif
+   int    Opt__Ck_InputFluid;
 
 // flag tables
    double FlagTable_Rho         [NLEVEL-1];
@@ -713,6 +785,9 @@ struct InputPara_t
    double FlagTable_Jeans       [NLEVEL-1];
 #  ifdef MHD
    double FlagTable_Current     [NLEVEL-1];
+#  endif
+#  ifdef COSMIC_RAY
+   double FlagTable_CRay        [NLEVEL-1];
 #  endif
 #  elif ( MODEL == ELBDM )
    double FlagTable_EngyDensity [NLEVEL-1][2];

@@ -7,6 +7,7 @@ extern Timer_t *Timer_Gra_Advance[NLEVEL];
 extern Timer_t *Timer_Src_Advance[NLEVEL];
 extern Timer_t *Timer_Che_Advance[NLEVEL];
 extern Timer_t *Timer_SF         [NLEVEL];
+extern Timer_t *Timer_FB_Advance [NLEVEL];
 extern Timer_t *Timer_FixUp      [NLEVEL];
 extern Timer_t *Timer_Flag       [NLEVEL];
 extern Timer_t *Timer_Refine     [NLEVEL];
@@ -18,10 +19,6 @@ extern Timer_t *Timer_Par_2Son   [NLEVEL];
 #endif
 
 bool AutoReduceDt_Continue;
-
-extern void (*Flu_ResetByUser_API_Ptr)( const int lv, const int FluSg, const double TimeNew, const double dt );
-extern void (*Mis_UserWorkBeforeNextLevel_Ptr)( const int lv, const double TimeNew, const double TimeOld, const double dt );
-extern void (*Mis_UserWorkBeforeNextSubstep_Ptr)( const int lv, const double TimeNew, const double TimeOld, const double dt );
 
 
 
@@ -45,15 +42,22 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
 
 
 #  ifdef GRAVITY
-   const bool UsePot            = ( OPT__SELF_GRAVITY  ||  OPT__EXT_POT );
+   const bool   UsePot            = ( OPT__SELF_GRAVITY  ||  OPT__EXT_POT );
 #  endif
 #  ifdef PARTICLE
-   const bool StoreAcc_Yes      = true;
-   const bool StoreAcc_No       = false;
-   const bool UseStoredAcc_Yes  = true;
-   const bool UseStoredAcc_No   = false;
-   const bool TimingSendPar_Yes = true;
+   const bool   StoreAcc_Yes      = true;
+   const bool   StoreAcc_No       = false;
+   const bool   UseStoredAcc_Yes  = true;
+   const bool   UseStoredAcc_No   = false;
+   const bool   TimingSendPar_Yes = true;
 #  endif
+#  if ( MODEL == HYDRO )
+   const double MinModCoeff_Ori   = MINMOD_COEFF;     // back up the original MINMOD_COEFF/INT_MONO_COEFF(_B)
+#  ifdef MHD
+   const double IntMonoCoeffB_Ori = INT_MONO_COEFF_B;
+#  endif
+#  endif // HYDRO
+   const double IntMonoCoeff_Ori  = INT_MONO_COEFF;
 
    double dTime_SoFar, dTime_SubStep, dt_SubStep, TimeOld, TimeNew, AutoReduceDtCoeff;
 
@@ -207,39 +211,89 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
 //             restore the original parameters
                AutoReduceDtCoeff     = 1.0;
                AutoReduceDt_Continue = true;
+#              if ( MODEL == HYDRO )
+               MINMOD_COEFF          = MinModCoeff_Ori;
+#              ifdef MHD
+               INT_MONO_COEFF_B      = IntMonoCoeffB_Ori;
+#              endif
+#              endif // HYDRO
+               INT_MONO_COEFF        = IntMonoCoeff_Ori;
             }
 
             else
             {
-//             reduce the time-step coefficient if allowed
-               if ( AutoReduceDtCoeff >= AUTO_REDUCE_DT_FACTOR_MIN )
+//             reduce the time-step and interpolation coefficients if allowed
+               if ( AutoReduceDtCoeff >= AUTO_REDUCE_DT_FACTOR_MIN  &&
+#                   if ( MODEL == HYDRO )
+                    MINMOD_COEFF      >= AUTO_REDUCE_MINMOD_MIN     &&
+#                   ifdef MHD
+                    INT_MONO_COEFF_B  >= AUTO_REDUCE_INT_MONO_MIN   &&
+#                   endif
+#                   endif // HYDRO
+                    INT_MONO_COEFF    >= AUTO_REDUCE_INT_MONO_MIN    )
                {
                   AutoReduceDtCoeff    *= AUTO_REDUCE_DT_FACTOR;
                   AutoReduceDt_Continue = true;
+#                 if ( MODEL == HYDRO )
+                  MINMOD_COEFF         *= AUTO_REDUCE_MINMOD_FACTOR;
+#                 ifdef MHD
+                  INT_MONO_COEFF_B     *= AUTO_REDUCE_INT_MONO_FACTOR;
+#                 endif
+#                 endif // HYDRO
+                  INT_MONO_COEFF       *= AUTO_REDUCE_INT_MONO_FACTOR;
 
                   if ( MPI_Rank == 0 )
                   {
-                     Aux_Message( stderr, "WARNING : fluid solver failed (Lv %2d, counter %8ld) --> ", lv, AdvanceCounter[lv] );
-                     Aux_Message( stderr, "reduce dt by %13.7e\n", AutoReduceDtCoeff );
+                     Aux_Message( stderr, "WARNING : fluid solver failed (Lv %2d, counter %8ld)\n", lv, AdvanceCounter[lv] );
+                     Aux_Message( stderr, "   --> reduce dt by %13.7e", AutoReduceDtCoeff );
+#                    if ( MODEL == HYDRO )
+                     Aux_Message( stderr, ", MINMOD_COEFF to %13.7e", MINMOD_COEFF );
+#                    ifdef MHD
+                     Aux_Message( stderr, ", INT_MONO_COEFF_B to %13.7e", INT_MONO_COEFF_B );
+#                    endif
+#                    endif // HYDRO
+                     Aux_Message( stderr, ", INT_MONO_COEFF to %13.7e\n", INT_MONO_COEFF );
                   }
                }
 
-//             if the time-step coefficient becomes smaller than the given threshold, restore the original time-step
-//             and apply floor values in Flu_Close()
+//             if the time-step and interpolation coefficients become smaller than the given thresholds,
+//             restore the original coefficients and apply floor values in Flu_Close()
                else
                {
                   const double AutoReduceDtCoeff_Failed = AutoReduceDtCoeff;
+#                 if ( MODEL == HYDRO )
+                  const double MinModCoeff_Failed       = MINMOD_COEFF;
+#                 ifdef MHD
+                  const double IntMonoCoeffB_Failed     = INT_MONO_COEFF_B;
+#                 endif
+#                 endif // HYDRO
+                  const double IntMonoCoeff_Failed      = INT_MONO_COEFF;
 
                   AutoReduceDtCoeff     = 1.0;     // restore the original dt
                   AutoReduceDt_Continue = false;   // trigger density/energy floors in Flu_Close()
+#                 if ( MODEL == HYDRO )
+                  MINMOD_COEFF          = MinModCoeff_Ori;
+#                 ifdef MHD
+                  INT_MONO_COEFF_B      = IntMonoCoeffB_Ori;
+#                 endif
+#                 endif // HYDRO
+                  INT_MONO_COEFF        = IntMonoCoeff_Ori;
 
                   if ( MPI_Rank == 0 )
                   {
-                     Aux_Message( stderr, "WARNING : AUTO_REDUCE_DT failed (Lv %2d, counter %8ld, dt-coeff=%13.7e < min=%13.7e) !!\n",
-                                  lv, AdvanceCounter[lv], AutoReduceDtCoeff_Failed, AUTO_REDUCE_DT_FACTOR_MIN );
-                     Aux_Message( stderr, "          --> Apply floor values with the original dt as the last resort ...\n" );
+                     Aux_Message( stderr, "WARNING : AUTO_REDUCE_DT failed (Lv %2d, counter %8ld) !!\n", lv, AdvanceCounter[lv] );
+                     Aux_Message( stderr, "   --> dt-coeff %13.7e (min %13.7e)", AutoReduceDtCoeff_Failed, AUTO_REDUCE_DT_FACTOR_MIN );
+#                    if ( MODEL == HYDRO )
+                     Aux_Message( stderr, ", MINMOD_COEFF %13.7e (min %13.7e)", MinModCoeff_Failed, AUTO_REDUCE_MINMOD_MIN );
+#                    ifdef MHD
+                     Aux_Message( stderr, ", INT_MONO_COEFF_B %13.7e (min %13.7e)", IntMonoCoeffB_Failed, AUTO_REDUCE_INT_MONO_MIN );
+#                    endif
+#                    endif // HYDRO
+                     Aux_Message( stderr, ", INT_MONO_COEFF %13.7e (min %13.7e)\n", IntMonoCoeff_Failed, AUTO_REDUCE_INT_MONO_MIN );
+                     Aux_Message( stderr, "   --> Apply floor values with the original dt and interpolation coefficients as the last resort ...\n" );
+                     Aux_Message( stderr, "   --> Consider setting AUTO_REDUCE_DT_FACTOR < 1.0 in Input__Parameter if not done yet\n" );
                   }
-               } // if ( AutoReduceDtCoeff >= AUTO_REDUCE_DT_FACTOR_MIN ) ... else ...
+               } // if ( AutoReduceDtCoeff >= AUTO_REDUCE_DT_FACTOR_MIN  && ... ) ... else ...
 
 //             restart the sub-step while loop
                continue;
@@ -477,9 +531,12 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
 #     endif // #ifdef SUPPORT_GRACKLE
 
 
+// *********************************
+//    6-3. star formation
+// *********************************
 #     ifdef PARTICLE
 //    pass particles to the children patches here if OPT__MINIMIZE_MPI_BARRIER is adopted
-//    --> do this before any star-formation routines so that particles always live in the leaf patches
+//    --> do this before any star-formation and feedback routines so that particles always live in the leaf patches
       if ( OPT__MINIMIZE_MPI_BARRIER )
       {
          if ( OPT__VERBOSE  &&  MPI_Rank == 0 )
@@ -493,9 +550,6 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
 #     endif // #ifdef PARTICLE
 
 
-// *********************************
-//    6-3. star formation
-// *********************************
 #     ifdef STAR_FORMATION
       if ( SF_CREATE_STAR_SCHEME != SF_CREATE_STAR_SCHEME_NONE )
       {
@@ -510,6 +564,33 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
       } // if ( SF_CREATE_STAR_SCHEME != SF_CREATE_STAR_SCHEME_NONE )
 #     endif // #ifdef STAR_FORMATION
 
+
+// *********************************
+//    6-4. feedback
+// *********************************
+#     ifdef FEEDBACK
+      const int SaveSg_FBFlu = SaveSg_Flu;   // save in the same Flu/MagSg
+      const int SaveSg_FBMag = SaveSg_Mag;
+
+      if ( FB_Any )
+      {
+         if ( OPT__VERBOSE  &&  MPI_Rank == 0 )
+            Aux_Message( stdout, "   Lv %2d: FB_AdvanceDt, counter = %9ld ... ", lv, AdvanceCounter[lv] );
+
+//       exchange the updated fluid field in the buffer patches for the feedback routines
+//       --> does NOT support MHD for now
+//       --> reuse the timer Timer_FB_Advance[lv] for now
+         TIMING_FUNC(   Buf_GetBufferData( lv, SaveSg_Flu, SaveSg_Mag, NULL_INT, DATA_GENERAL,
+                                           _TOTAL, _NONE, FB_ParaBuf, USELB_YES ),
+                        Timer_FB_Advance[lv],   TIMER_ON   );
+
+         TIMING_FUNC(   FB_AdvanceDt( lv, TimeNew, TimeOld, dt_SubStep, SaveSg_FBFlu, SaveSg_FBMag ),
+                        Timer_FB_Advance[lv],   TIMER_ON   );
+
+         if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
+      }
+#     endif // #ifdef FEEDBACK
+
 // ===============================================================================================
 
 
@@ -520,7 +601,7 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
 //       use the same timer as the fluid solver for now
          if ( Flu_ResetByUser_API_Ptr != NULL )
          {
-            TIMING_FUNC(   Flu_ResetByUser_API_Ptr( lv, SaveSg_Flu, TimeNew, dt_SubStep ),
+            TIMING_FUNC(   Flu_ResetByUser_API_Ptr( lv, SaveSg_Flu, SaveSg_Mag, TimeNew, dt_SubStep ),
                            Timer_Flu_Advance[lv],   TIMER_ON   );
          }
 
@@ -636,12 +717,12 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
          if ( OPT__FIXUP_RESTRICT )
          {
             TIMING_FUNC(   Flu_FixUp_Restrict( lv, amr->FluSg[lv+1], amr->FluSg[lv], amr->MagSg[lv+1], amr->MagSg[lv],
-                                               NULL_INT, NULL_INT, _TOTAL, _MAG ),
+                                               NULL_INT, NULL_INT, FixUpVar_Restrict, _MAG ),
                            Timer_FixUp[lv],   TIMER_ON   );
 
 #           ifdef LOAD_BALANCE
             TIMING_FUNC(   LB_GetBufferData( lv, amr->FluSg[lv], amr->MagSg[lv], NULL_INT, DATA_RESTRICT,
-                                             _TOTAL, _MAG, NULL_INT ),
+                                             FixUpVar_Restrict, _MAG, NULL_INT ),
                            Timer_GetBuf[lv][7],   TIMER_ON   );
 #           endif
          }
@@ -668,11 +749,11 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
          {
 #           ifdef LOAD_BALANCE
             TIMING_FUNC(   Buf_GetBufferData( lv, NULL_INT, NULL_INT, NULL_INT, COARSE_FINE_FLUX,
-                                              _FLUX_TOTAL, _NONE, NULL_INT, USELB_YES ),
+                                              FixUpVar_Flux, _NONE, NULL_INT, USELB_YES ),
                            Timer_GetBuf[lv][6],   TIMER_ON   );
 #           endif
 
-            TIMING_FUNC(   Flu_FixUp_Flux( lv ),
+            TIMING_FUNC(   Flu_FixUp_Flux( lv, FixUpVar_Flux ),
                            Timer_FixUp[lv],   TIMER_ON   );
          }
 
@@ -683,7 +764,7 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
          if ( OPT__FIXUP_FLUX  ||  OPT__FIXUP_RESTRICT )
 #        endif
          TIMING_FUNC(   Buf_GetBufferData( lv, amr->FluSg[lv], amr->MagSg[lv], NULL_INT, DATA_AFTER_FIXUP,
-                                           _TOTAL, _MAG, Flu_ParaBuf, USELB_YES  ),
+                                           FixUpVar_Flux | FixUpVar_Restrict, _MAG, Flu_ParaBuf, USELB_YES  ),
                         Timer_GetBuf[lv][3],   TIMER_ON   );
 
          if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
@@ -692,77 +773,86 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
       } // if ( lv != TOP_LEVEL  &&  NPatchTotal[lv+1] != 0 )
 
 
-//    13. flag the current level and create patches at the next finer level
+//    13. refine to higher level(s)
 // ===============================================================================================
       if ( lv != TOP_LEVEL  &&  AdvanceCounter[lv] % REGRID_COUNT == 0 )
       {
-//       13-1. flag
-         if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "   Lv %2d: Flag %29s... ", lv, "" );
+//       REFINE_NLEVEL>1 allows for refining multiple levels at once
+         const int lv_refine_max = MIN( lv+REFINE_NLEVEL, TOP_LEVEL ) - 1;
 
-#        ifdef LOAD_BALANCE
-         TIMING_FUNC(   Flag_Real( lv, USELB_YES ),       Timer_Flag[lv],   TIMER_ON   );
-#        else
-         TIMING_FUNC(   Flag_Real( lv, USELB_NO ),        Timer_Flag[lv],   TIMER_ON   );
+         for (int lv_refine=lv; lv_refine<=lv_refine_max; lv_refine++)
+         {
+            if ( NPatchTotal[lv_refine] == 0 )  break;
 
-         TIMING_FUNC(   MPI_ExchangeBoundaryFlag( lv ),   Timer_Flag[lv],   TIMER_ON   );
+//          13-1. flag
+            if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "   Lv %2d: Flag %29s... ", lv_refine, "" );
 
-         TIMING_FUNC(   Flag_Buffer( lv ),                Timer_Flag[lv],   TIMER_ON   );
-#        endif
+#           ifdef LOAD_BALANCE
+            TIMING_FUNC(   Flag_Real( lv_refine, USELB_YES ),       Timer_Flag[lv_refine],   TIMER_ON   );
+#           else
+            TIMING_FUNC(   Flag_Real( lv_refine, USELB_NO ),        Timer_Flag[lv_refine],   TIMER_ON   );
 
-         if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
+            TIMING_FUNC(   MPI_ExchangeBoundaryFlag( lv_refine ),   Timer_Flag[lv_refine],   TIMER_ON   );
+
+            TIMING_FUNC(   Flag_Buffer( lv_refine ),                Timer_Flag[lv_refine],   TIMER_ON   );
+#           endif
+
+            if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
 
 
-//       13-2. refine
-         if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "   Lv %2d: Refine %27s... ", lv, "" );
+//          13-2. refine
+            if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "   Lv %2d: Refine %27s... ", lv_refine, "" );
 
-         TIMING_FUNC(   Refine( lv, USELB_YES ),
-                        Timer_Refine[lv],   TIMER_ON   );
+            TIMING_FUNC(   Refine( lv_refine, USELB_YES ),
+                           Timer_Refine[lv_refine],   TIMER_ON   );
 
-         Time          [lv+1]                     = Time[lv];
-         amr->FluSgTime[lv+1][ amr->FluSg[lv+1] ] = Time[lv];
-#        ifdef MHD
-         amr->MagSgTime[lv+1][ amr->MagSg[lv+1] ] = Time[lv];
-#        endif
-#        ifdef GRAVITY
-         if ( UsePot )
-         amr->PotSgTime[lv+1][ amr->PotSg[lv+1] ] = Time[lv];
-#        endif
+            Time          [lv_refine+1]                            = Time[lv_refine];
+            amr->FluSgTime[lv_refine+1][ amr->FluSg[lv_refine+1] ] = Time[lv_refine];
+#           ifdef MHD
+            amr->MagSgTime[lv_refine+1][ amr->MagSg[lv_refine+1] ] = Time[lv_refine];
+#           endif
+#           ifdef GRAVITY
+            if ( UsePot )
+            amr->PotSgTime[lv_refine+1][ amr->PotSg[lv_refine+1] ] = Time[lv_refine];
+#           endif
 
-#        ifdef LOAD_BALANCE
-         TIMING_FUNC(   Buf_GetBufferData( lv, amr->FluSg[lv], amr->MagSg[lv], NULL_INT, DATA_AFTER_REFINE,
-                                           _TOTAL, _MAG, Flu_ParaBuf, USELB_YES ),
-                        Timer_GetBuf[lv][4],   TIMER_ON   );
-#        ifdef GRAVITY
-         if ( UsePot )
-         TIMING_FUNC(   Buf_GetBufferData( lv, NULL_INT, NULL_INT, amr->PotSg[lv], POT_AFTER_REFINE,
-                                           _POTE, _NONE, Pot_ParaBuf, USELB_YES ),
-                        Timer_GetBuf[lv][5],   TIMER_ON   );
-#        endif
-#        endif // #ifdef LOAD_BALANCE
+//          LOAD_BALANCE requires exchanging buffer data on the level being refined
+#           ifdef LOAD_BALANCE
+            TIMING_FUNC(   Buf_GetBufferData( lv_refine, amr->FluSg[lv_refine], amr->MagSg[lv_refine], NULL_INT, DATA_AFTER_REFINE,
+                                              _TOTAL, _MAG, Flu_ParaBuf, USELB_YES ),
+                           Timer_GetBuf[lv_refine][4],   TIMER_ON   );
+#           ifdef GRAVITY
+            if ( UsePot )
+            TIMING_FUNC(   Buf_GetBufferData( lv_refine, NULL_INT, NULL_INT, amr->PotSg[lv_refine], POT_AFTER_REFINE,
+                                              _POTE, _NONE, Pot_ParaBuf, USELB_YES ),
+                           Timer_GetBuf[lv_refine][5],   TIMER_ON   );
+#           endif
+#           endif // #ifdef LOAD_BALANCE
 
-         TIMING_FUNC(   Buf_GetBufferData( lv+1, amr->FluSg[lv+1], amr->MagSg[lv+1], NULL_INT, DATA_AFTER_REFINE,
-                                           _TOTAL, _MAG, Flu_ParaBuf, USELB_YES ),
-                        Timer_GetBuf[lv][4],   TIMER_ON   );
-#        ifdef GRAVITY
-         if ( UsePot )
-         TIMING_FUNC(   Buf_GetBufferData( lv+1, NULL_INT, NULL_INT, amr->PotSg[lv+1], POT_AFTER_REFINE,
-                                           _POTE, _NONE, Pot_ParaBuf, USELB_YES ),
-                        Timer_GetBuf[lv][5],   TIMER_ON   );
-#        endif
+            TIMING_FUNC(   Buf_GetBufferData( lv_refine+1, amr->FluSg[lv_refine+1], amr->MagSg[lv_refine+1], NULL_INT, DATA_AFTER_REFINE,
+                                              _TOTAL, _MAG, Flu_ParaBuf, USELB_YES ),
+                           Timer_GetBuf[lv_refine][4],   TIMER_ON   );
+#           ifdef GRAVITY
+            if ( UsePot )
+            TIMING_FUNC(   Buf_GetBufferData( lv_refine+1, NULL_INT, NULL_INT, amr->PotSg[lv_refine+1], POT_AFTER_REFINE,
+                                              _POTE, _NONE, Pot_ParaBuf, USELB_YES ),
+                           Timer_GetBuf[lv_refine][5],   TIMER_ON   );
+#           endif
 
-//       must call Poi_StorePotWithGhostZone() AFTER collecting potential for buffer patches
-#        ifdef STORE_POT_GHOST
-         if ( UsePot )
-         TIMING_FUNC(   Poi_StorePotWithGhostZone( lv+1, amr->PotSg[lv+1], false ),
-                        Timer_Refine[lv],   TIMER_ON   );
-#        endif
+//          must call Poi_StorePotWithGhostZone() AFTER collecting potential for buffer patches
+#           ifdef STORE_POT_GHOST
+            if ( UsePot )
+            TIMING_FUNC(   Poi_StorePotWithGhostZone( lv_refine+1, amr->PotSg[lv_refine+1], false ),
+                           Timer_Refine[lv_refine],   TIMER_ON   );
+#           endif
 
-         if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
+            if ( OPT__VERBOSE  &&  MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
 
-         if ( OPT__PATCH_COUNT == 2 )  Aux_Record_PatchCount();
-#        ifdef PARTICLE
-         if ( OPT__PARTICLE_COUNT == 2 )  Par_Aux_Record_ParticleCount();
-#        endif
+            if ( OPT__PATCH_COUNT == 2 )     Aux_Record_PatchCount();
+#           ifdef PARTICLE
+            if ( OPT__PARTICLE_COUNT == 2 )  Par_Aux_Record_ParticleCount();
+#           endif
+         } // for (int lv_refine=lv, lv_refine<=lv_refine_max; lv_refine++)
 
       } // if ( lv != TOP_LEVEL  &&  AdvanceCounter[lv] % REGRID_COUNT == 0 )
 // ===============================================================================================

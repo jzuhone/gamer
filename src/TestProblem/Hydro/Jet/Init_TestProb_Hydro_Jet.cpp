@@ -1,5 +1,4 @@
 #include "GAMER.h"
-#include "TestProb.h"
 
 
 
@@ -292,18 +291,18 @@ void SetParameter()
 
 
 // (3) reset other general-purpose parameters
-//     --> a helper macro PRINT_WARNING is defined in TestProb.h
+//     --> a helper macro PRINT_RESET_PARA is defined in Macro.h
    const long   End_Step_Default = __INT_MAX__;
    const double End_T_Default    = 50.0*Const_Myr/UNIT_T;
 
    if ( END_STEP < 0 ) {
       END_STEP = End_Step_Default;
-      PRINT_WARNING( "END_STEP", END_STEP, FORMAT_LONG );
+      PRINT_RESET_PARA( END_STEP, FORMAT_LONG, "" );
    }
 
    if ( END_T < 0.0 ) {
       END_T = End_T_Default;
-      PRINT_WARNING( "END_T", END_T, FORMAT_REAL );
+      PRINT_RESET_PARA( END_T, FORMAT_REAL, "" );
    }
 
 
@@ -447,6 +446,7 @@ void End_Jet()
 //
 // Parameter   :  fluid    : Fluid array storing both the input (origial) and reset values
 //                           --> Including both active and passive variables
+//                Emag     : Magnetic energy (MHD only)
 //                x/y/z    : Target physical coordinates
 //                Time     : Target physical time
 //                dt       : Time interval to advance solution
@@ -456,8 +456,8 @@ void End_Jet()
 // Return      :  true  : This cell has been reset
 //                false : This cell has not been reset
 //-------------------------------------------------------------------------------------------------------
-bool Flu_ResetByUser_Jet( real fluid[], const double x, const double y, const double z, const double Time,
-                          const double dt, const int lv, double AuxArray[] )
+int Flu_ResetByUser_Jet( real fluid[], const double Emag, const double x, const double y, const double z, const double Time,
+                         const double dt, const int lv, double AuxArray[] )
 {
 
    const double r[3] = { x, y, z };
@@ -468,7 +468,7 @@ bool Flu_ResetByUser_Jet( real fluid[], const double x, const double y, const do
    real   MomSin;
 
 
-// loop over all cells to add the jet source
+// loop over all jet sources
    for (int n=0; n<Jet_NJet; n++)
    {
 //    distance: jet center to mesh

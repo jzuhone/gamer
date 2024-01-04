@@ -52,8 +52,13 @@ const TestProbID_t
    TESTPROB_HYDRO_JEANS_INSTABILITY            =   16,
    TESTPROB_HYDRO_PARTICLE_EQUILIBRIUM_IC      =   17,
    TESTPROB_HYDRO_PARTICLE_TEST                =   18,
+   TESTPROB_HYDRO_ENERGY_POWER_SPECTRUM        =   19,
+   TESTPROB_HYDRO_CR_SOUNDWAVE                 =   20,
+   TESTPROB_HYDRO_CR_SHOCKTUBE                 =   21,
+   TESTPROB_HYDRO_CR_DIFFUSION                 =   23,
    TESTPROB_HYDRO_BARRED_POT                   =   51,
    TESTPROB_HYDRO_CDM_LSS                      =  100,
+   TESTPROB_HYDRO_ZELDOVICH                    =  101,
    TESTPROB_ELBDM_EXTPOT                       = 1000;
 
 
@@ -63,6 +68,14 @@ const OptInit_t
    INIT_BY_FUNCTION = 1,
    INIT_BY_RESTART  = 2,
    INIT_BY_FILE     = 3;
+
+
+// program initialization options for the magnetic field by vector potential
+typedef int OptInitMagByVecPot_t;
+const OptInitMagByVecPot_t
+   INIT_MAG_BYVECPOT_NONE = 0,
+   INIT_MAG_BYVECPOT_FILE = 1,
+   INIT_MAG_BYVECPOT_FUNC = 2;
 
 
 // data format for OPT__INIT=INIT_BY_FILE
@@ -79,6 +92,15 @@ const ParICFormat_t
    PAR_IC_FORMAT_NONE   = 0,
    PAR_IC_FORMAT_ATT_ID = 1,
    PAR_IC_FORMAT_ID_ATT = 2;
+
+
+// FFTW startup options
+typedef int FFTWStartup_t;
+const FFTWStartup_t
+   FFTW_STARTUP_DEFAULT  = -1,
+   FFTW_STARTUP_ESTIMATE = 0,
+   FFTW_STARTUP_MEASURE  = 1,
+   FFTW_STARTUP_PATIENT  = 2;
 
 
 // program restart options
@@ -112,7 +134,8 @@ const LR_Limiter_t
    LR_LIMITER_ALBADA     = 3,
    LR_LIMITER_VL_GMINMOD = 4,
    LR_LIMITER_EXTPRE     = 5,
-   LR_LIMITER_CENTRAL    = 6;
+   LR_LIMITER_CENTRAL    = 6,
+   LR_LIMITER_ATHENA     = 7;
 
 
 // data output formats
@@ -407,6 +430,16 @@ const OptTimeStepLevel_t
 
 
 // AddField() options
+typedef int FixUpFlux_t;
+const FixUpFlux_t
+   FIXUP_FLUX_NO  = 0,
+   FIXUP_FLUX_YES = 1;
+
+typedef int FixUpRestrict_t;
+const FixUpRestrict_t
+   FIXUP_REST_NO  = 0,
+   FIXUP_REST_YES = 1;
+
 typedef int NormPassive_t;
 const NormPassive_t
    NORMALIZE_NO  = 0,
@@ -444,13 +477,20 @@ const SF_CreateStarScheme_t
 #endif
 
 
-// options in Aux_ComputeProfile()
+// options in Aux_ComputeProfile() and Aux_FindExtrema()
 typedef int PatchType_t;
 const PatchType_t
    PATCH_LEAF                 = 0,
    PATCH_NONLEAF              = 1,
    PATCH_BOTH                 = 2,
    PATCH_LEAF_PLUS_MAXNONLEAF = 3;
+
+
+// options in Aux_FindExtrema()
+typedef int ExtremaMode_t;
+const ExtremaMode_t
+   EXTREMA_MIN = 1,
+   EXTREMA_MAX = 2;
 
 
 // function pointers
@@ -475,6 +515,11 @@ typedef real (*EoS_DT2P_t)     ( const real Dens, const real Temp, const real Pa
 typedef real (*EoS_DE2S_t)     ( const real Dens, const real Eint, const real Passive[],
                                  const double AuxArray_Flt[], const int AuxArray_Int[],
                                  const real *const Table[EOS_NTABLE_MAX] );
+#ifdef COSMIC_RAY
+typedef real (*EoS_CRE2CRP_t)  ( const real E_CR,
+                                 const double AuxArray_Flt[], const int AuxArray_Int[],
+                                 const real *const Table[EOS_NTABLE_MAX] );
+#endif
 typedef void (*ExtAcc_t)       ( real Acc[], const double x, const double y, const double z, const double Time,
                                  const double UserArray[] );
 typedef real (*ExtPot_t)       ( const double x, const double y, const double z, const double Time,
