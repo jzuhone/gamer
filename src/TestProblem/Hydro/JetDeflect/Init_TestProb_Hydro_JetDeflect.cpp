@@ -291,7 +291,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
 //-------------------------------------------------------------------------------------------------------
 // Function    :  JetBC
-// Description :  Set the external boundary condition for the JetICMWall problem. On the -y
+// Description :  Set the external boundary condition for the JetDeflect problem. On the -y
 //                boundary, inside the jet region, the jet inflows with the jet density and a
 //                velocity profile that peaks in the jet center and linearly falls off to the
 //                edge of the jet. The jet passive scalar density is set to the jet density
@@ -382,7 +382,7 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
 
 
 //-------------------------------------------------------------------------------------------------------
-// Function    :  AddNewField_JetICMWall
+// Function    :  AddNewField_JetDeflect
 // Description :  Add the problem-specific fields
 //
 // Note        :  1. Ref: https://github.com/gamer-project/gamer/wiki/Adding-New-Simulations#v-add-problem-specific-grid-fields-and-particle-attributes
@@ -395,7 +395,7 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
 //
 // Return      :  None
 //-------------------------------------------------------------------------------------------------------
-void AddNewField_JetICMWall()
+void AddNewField_JetDeflect()
 {
 
   if ( JetFieldIdx == Idx_Undefined )
@@ -415,7 +415,7 @@ void AddNewField_JetICMWall()
 
 
 //-------------------------------------------------------------------------------------------------------
-// Function    :  Init_TestProb_Hydro_JetICMWall
+// Function    :  Init_TestProb_Hydro_JetDeflect
 // Description :  Test problem initializer
 //
 // Note        :  None
@@ -424,7 +424,7 @@ void AddNewField_JetICMWall()
 //
 // Return      :  None
 //-------------------------------------------------------------------------------------------------------
-void Init_TestProb_Hydro_JetICMWall()
+void Init_TestProb_Hydro_JetDeflect()
 {
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "%s ...\n", __FUNCTION__ );
@@ -440,7 +440,7 @@ void Init_TestProb_Hydro_JetICMWall()
 
 // get enclosed mass
    Init_Function_User_Ptr   = SetGridIC;
-   Init_Field_User_Ptr      = AddNewField_JetICMWall;
+   Init_Field_User_Ptr      = AddNewField_JetDeflect;
    Flag_User_Ptr            = NULL;
    Flag_Region_Ptr          = NULL;
    Mis_GetTimeStep_User_Ptr = NULL;
@@ -453,5 +453,6 @@ void Init_TestProb_Hydro_JetICMWall()
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "%s ... done\n", __FUNCTION__ );
 
-} // FUNCTION : Init_TestProb_SRHydro_JetICMWall
+} // FUNCTION : Init_TestProb_Hydro_JetDeflect
+
 #endif // #if ( MODEL == HYDRO )

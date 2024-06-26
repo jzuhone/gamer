@@ -62,7 +62,7 @@ const TestProbID_t
    TESTPROB_HYDRO_CR_SHOCKTUBE                 =   21,
    TESTPROB_HYDRO_CR_DIFFUSION                 =   23,
    TESTPROB_HYDRO_BARRED_POT                   =   51,
-   TESTPROB_HYDRO_JET_ICM_WALL                 =   52,
+   TESTPROB_HYDRO_JET_DEFLECT                  =   52,
    TESTPROB_HYDRO_CDM_LSS                      =  100,
    TESTPROB_HYDRO_ZELDOVICH                    =  101,
    TESTPROB_ELBDM_EXTPOT                       = 1000;
