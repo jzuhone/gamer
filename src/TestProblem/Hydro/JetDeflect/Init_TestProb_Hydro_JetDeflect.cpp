@@ -28,7 +28,8 @@ static double   Lobe_Density;            // lobe density
 
 // jet parameters
 static bool     Jet_Fire;                // [true/false]: jet on/off
-static double   Jet_Velocity;            // jet y-velocity (units of c)
+static bool     Jet_Axis;                // axis of jet
+static double   Jet_Velocity;            // jet velocity (units of c)
 static double   Jet_VelSlope;            // Slope of velocity gradient across jet
 static double   Jet_VelCenter;           // jet central velocity
 static double   Jet_Radius;              // radius of jet
@@ -37,13 +38,13 @@ static double   Jet_Lobe_Ratio;          // ratio of jet/lobe densities
 static double   Jet_Center[2];           // jet central coordinates
 static double   Jet_Density;             // jet density
 static double   Jet_Gamma;               // jet relativistic gamma
-static double   Jet_PrecessAngle;        // jet relativistic gamma
-static double   Jet_PrecessPeriod;       // jet relativistic gamma
-static double   Jet_PrecessOmega;        // jet relativistic gamma
-static double   Jet_Cosine;              // jet relativistic gamma
-static double   Jet_Sine;                // jet relativistic gamma
 static double   Jump_Sine;
 static double   Jump_Cosine;
+static double   Jet_PrecessAngle;        // jet precession angle
+static double   Jet_PrecessPeriod;       // jet precession period
+static double   Jet_PrecessOmega;        // jet precession omega
+static double   Jet_Cosine;              // jet cosine
+static double   Jet_Sine;                // jet sine
 
 // =======================================================================================
 
@@ -79,7 +80,7 @@ void Validate()
 #  endif
 
    if ( !OPT__UNIT )
-       Aux_Error( ERROR_INFO, "OPT__UNIT must be enabled !!\n" );
+      Aux_Error( ERROR_INFO, "OPT__UNIT must be enabled !!\n" );
 
 // warnings
    if ( MPI_Rank == 0 )
@@ -140,6 +141,7 @@ void SetParameter()
 
 // jet parameters
    ReadPara->Add( "Jet_Fire",           &Jet_Fire,          false,         Useless_bool,   Useless_bool );
+   ReadPara->Add( "Jet_Axis",           &Jet_Axis,          1,             0,              1            );
    ReadPara->Add( "Jet_Lobe_Ratio",     &Jet_Lobe_Ratio,    NoDef_double,  NoMin_double,   NoMax_double );
    ReadPara->Add( "Jet_Radius",         &Jet_Radius,        NoDef_double,  NoMin_double,   NoMax_double );
    ReadPara->Add( "Jet_Position",       &Jet_Position,      NoDef_double,  NoMin_double,   NoMax_double );
@@ -319,19 +321,34 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
             const int lv, const int TFluVarIdxList[], double AuxArray[] )
 {
 
-   int i, j, k;
-
+   int i, j, k, i_ref, j_ref, mom_axis, mom_x, mom_y;
+   
    i = idx[0];
    j = idx[1];
    k = idx[2];
-
+      
+   switch ( Jet_Axis ) {
+      case 0:
+	 mom_axis = MOMX;
+	 mom_x    = MOMY;
+	 mom_y    = MOMZ;
+	 i_ref = GhostSize;
+	 j_ref = j;
+         break;
+      case 1:
+	 mom_axis = MOMY;
+         mom_x    = MOMX;
+         mom_y    = MOMZ;
+	 i_ref = i;
+	 j_ref = GhostSize;
+	 break;
+   }
+   
    real PriReal[NCOMP_TOTAL];
-
-   const int j_ref = GhostSize;  // reference j index
 
    int TFluVarIdx;
 
-   double rad = sqrt( SQR(pos[0]-Jet_Center[0]) + SQR(pos[2]-Jet_Center[1]) );
+   double rad = sqrt( SQR(pos[mom_x]-Jet_Center[0]) + SQR(pos[mom_y]-Jet_Center[1]) );
 
 // 1D array -> 3D array
    typedef real (*vla)[ ArraySize[2] ][ ArraySize[1] ][ ArraySize[0] ];
@@ -341,20 +358,19 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
 
    if ( Jet_Fire  &&  x <= 1.0 )
    {
-      double u_jet    = Jet_Velocity*( Jet_VelSlope*x+Jet_VelCenter );
-      double cos_phi  = cos( Jet_PrecessOmega*Time );
-      double sin_phi  = sin( Jet_PrecessOmega*Time );
-      double LntzFact = sqrt( 1.0 + u_jet*u_jet );
-      double u_jet_x  = 0.0;
-      double u_jet_y  = u_jet;
-      double u_jet_z  = 0.0;
+      const double u_jet      = Jet_Velocity*( Jet_VelSlope*x+Jet_VelCenter );
+      const double cos_phi    = cos( Jet_PrecessOmega*Time );
+      const double sin_phi    = sin( Jet_PrecessOmega*Time );
+      const double LntzFact   = sqrt( 1.0 + u_jet*u_jet );
+      const double u_jet_perp = u_jet*Jet_Cosine;
+      const double u_jet_par  = u_jet*Jet_Sine;
 
 //    set fluid variable inside source
-      PriReal[0           ] = (real)Jet_Density;
-      PriReal[1           ] = (real)0.0;
-      PriReal[2           ] = (real)u_jet_y;
-      PriReal[3           ] = (real)0.0;
-      PriReal[4           ] = (real)Amb_Pressure;
+      PriReal[DENS        ] = (real)Jet_Density;
+      PriReal[mom_axis    ] = (real)u_jet_par;
+      PriReal[mom_x       ] = (real)u_jet_perp*cos_phi;
+      PriReal[mom_y       ] = (real)u_jet_perp*sin_phi;
+      PriReal[ENGY        ] = (real)Amb_Pressure;
       PriReal[JetFieldIdx ] = (real)Jet_Density;
       PriReal[ICMFieldIdx ] = (real)0.0;
       PriReal[LobeFieldIdx] = (real)0.0;
@@ -363,6 +379,7 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
       Hydro_Pri2Con( PriReal, BVal, false, PassiveNorm_NVar, PassiveNorm_VarIdx,
                      EoS_DensPres2Eint_CPUPtr, EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                      EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
+
    } // if ( Jet_Fire  &&  x <= 1.0 )
 
    else
@@ -370,10 +387,10 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
       for (int v=0; v<NVar_Flu; v++) {
          TFluVarIdx = TFluVarIdxList[v];
 
-         if ( TFluVarIdx == MOMY )
-            BVal[TFluVarIdx] = MIN( Array3D[v][k][j_ref][i], 0.0 );
+         if ( TFluVarIdx == mom_axis )
+             BVal[TFluVarIdx] = MIN( Array3D[v][k][j_ref][i_ref], 0.0 );
          else
-            BVal[TFluVarIdx] = Array3D[v][k][j_ref][i];
+	     BVal[TFluVarIdx] = Array3D[v][k][j_ref][i_ref];
      }
    } // if ( Jet_Fire  &&  x <= 1.0 ) ... else ...
 
