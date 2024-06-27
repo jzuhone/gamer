@@ -25,6 +25,15 @@ static double   Jump_Width;              // width of jump
 static double   Amb_Pressure;            // ambient pressure
 static double   Lobe_ICM_Ratio;          // ratio of lobe/ICM densities
 static double   Lobe_Density;            // lobe density
+static bool     Wall_Off;                // turn the ICM wall off
+static bool     ICM_Blob;                // turn the ICM blob on
+static double   Blob_PosX;               // x-position of blob
+static double	Blob_PosY;    	      	 // y-position of blob
+static double   Blob_PosZ;               // z-position of blob
+static double   Blob_Radius;             // radius of blob
+static double   Blob_VelY;               // y-velocity of blob
+static double   Jump_Sine;               // sine of jump angle
+static double   Jump_Cosine;             // cosine of jump angle
 
 // jet parameters
 static bool     Jet_Fire;                // [true/false]: jet on/off
@@ -38,8 +47,6 @@ static double   Jet_Lobe_Ratio;          // ratio of jet/lobe densities
 static double   Jet_Center[2];           // jet central coordinates
 static double   Jet_Density;             // jet density
 static double   Jet_Gamma;               // jet relativistic gamma
-static double   Jump_Sine;
-static double   Jump_Cosine;
 static double   Jet_PrecessAngle;        // jet precession angle
 static double   Jet_PrecessPeriod;       // jet precession period
 static double   Jet_PrecessOmega;        // jet precession omega
@@ -82,6 +89,9 @@ void Validate()
    if ( !OPT__UNIT )
       Aux_Error( ERROR_INFO, "OPT__UNIT must be enabled !!\n" );
 
+   if ( ICM_Blob && !Wall_Off )
+      Aux_Error( ERROR_INFO, "To use ICM_Blob, Wall_Off must be set !!\n");
+		
 // warnings
    if ( MPI_Rank == 0 )
    {
@@ -138,7 +148,13 @@ void SetParameter()
    ReadPara->Add( "Amb_Pressure",       &Amb_Pressure,      NoDef_double,  NoMin_double,   NoMax_double );
    ReadPara->Add( "Lobe_ICM_Ratio",     &Lobe_ICM_Ratio,    NoDef_double,  NoMin_double,   NoMax_double );
    ReadPara->Add( "Jump_Width",         &Jump_Width,        NoDef_double,  NoMin_double,   NoMax_double );
-
+   ReadPara->Add( "Wall_Off",           &Wall_Off           false,         Useless_bool,   Useless_bool );
+   ReadPara->Add( "ICM_Blob",           &ICM_Blob,          false,         Useless_bool,   Useless_bool );
+   ReadPara->Add( "Blob_PosX",          &Blob_PosX,         NoDef_double,  NoMin_double,   NoMax_double );
+   ReadPara->Add( "Blob_PosY",          &Blob_PosY,         NoDef_double,  NoMin_double,   NoMax_double );
+   ReadPara->Add( "Blob_Radius",        &Blob_Radius,       NoDef_double,  NoMin_double,   NoMax_double );
+   ReadPara->Add( "Blob_VelY",          &Blob_VelY,         NoDef_double,  NoMin_double,   NoMax_double );
+   
 // jet parameters
    ReadPara->Add( "Jet_Fire",           &Jet_Fire,          false,         Useless_bool,   Useless_bool );
    ReadPara->Add( "Jet_Axis",           &Jet_Axis,          1,             0,              1            );
@@ -161,6 +177,10 @@ void SetParameter()
    Jet_Velocity      *= Const_c   / UNIT_V;
    ICM_Density       *= 1.0       / UNIT_D;
    Jet_Radius        *= Const_kpc / UNIT_L;
+   Blob_PosX         *= Const_kpc / UNIT_L;
+   Blob_PosY  	     *=	Const_kpc / UNIT_L;
+   Blob_Radius       *= Const_kpc / UNIT_L;
+   Blob_VelY         *= Const_kms / UNIT_V;
    Jet_Position      *= Const_kpc / UNIT_L;
    Jump_Position_x   *= Const_kpc / UNIT_L;
    Jump_Position_y   *= Const_kpc / UNIT_L;
@@ -180,7 +200,8 @@ void SetParameter()
    Jet_PrecessOmega = 2.0*M_PI/Jet_PrecessPeriod;
    Jet_Cosine       = cos( Jet_PrecessAngle*M_PI/180.0 );
    Jet_Sine         = sin( Jet_PrecessAngle*M_PI/180.0 );
-
+   Blob_PosZ        = amr->BoxCenter[2];
+  
 // (3) reset other general-purpose parameters
 //     --> a helper macro PRINT_RESET_PARA is defined in TestProb.h
    const long   End_Step_Default = __INT_MAX__;
@@ -253,21 +274,41 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
                 const int lv, double AuxArray[] )
 {
 
-// variables for jet
+   double d, uy = 0.0;
+  
    real PriReal[NCOMP_TOTAL];
+   
+   if ( Wall_Off ) {
 
-   double xx = (x - Jump_Position_x)*Jump_Cosine - (y - Jump_Position_y)*Jump_Sine;
-   double d;
+      d = Lobe_Density;
+         
+      if ( ICM_Blob ) {
 
-   double xw = xx/Jump_Width;
-   if (xw > 200.0)
-     d = Lobe_Density;
-   else
-     d = (ICM_Density + Lobe_Density*exp(xw)) / (1.0 + exp(xw));
+	 double rr = sqrt( SQR(x-Blob_PosX) + SQR(y-Blob_PosY) + SQR(z-Blob_PosZ) );
 
+	 if ( rr <= Blob_Radius ) {
+
+	    d = ICM_Density;
+	    uy = Blob_VelY;
+	    
+	 }
+      }
+      
+   } else {
+     
+      double xx = (x - Jump_Position_x)*Jump_Cosine - (y - Jump_Position_y)*Jump_Sine;
+      double xw = xx/Jump_Width;
+      
+      if (xw > 200.0)
+         d = Lobe_Density;
+      else
+         d = (ICM_Density + Lobe_Density*exp(xw)) / (1.0 + exp(xw));
+
+   }
+   
    PriReal[0] = (real)d;
    PriReal[1] = 0.0;
-   PriReal[2] = 0.0;
+   PriReal[2] = (real)uy;
    PriReal[3] = 0.0;
    PriReal[4] = (real)Amb_Pressure;
 
@@ -275,13 +316,24 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
                   EoS_DensPres2Eint_CPUPtr, EoS_Temp2HTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                   EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table, NULL );
 
-   double ICM_x = (d-0.4*ICM_Density)/(0.4*ICM_Density);
-   double lobe_x = (2.5*Lobe_Density-d)/(1.25*Lobe_Density);
-   if ( ICM_x  < 0.0 ) ICM_x  = 0.0;
-   if ( lobe_x < 0.0 ) lobe_x = 0.0;
-   if ( ICM_x  > 1.0 ) ICM_x  = 1.0;
-   if ( lobe_x > 1.0 ) lobe_x = 1.0;
+   double ICM_x, lobe_x;
+   
+   if ( ICM_Off ) {
 
+     ICM_x = 0.0;
+     lobe_x = 1.0;
+     
+   } else {
+     
+     ICM_x = (d-0.4*ICM_Density)/(0.4*ICM_Density);
+     lobe_x = (2.5*Lobe_Density-d)/(1.25*Lobe_Density);
+     if ( ICM_x  < 0.0 ) ICM_x  = 0.0;
+     if ( lobe_x < 0.0 ) lobe_x = 0.0;
+     if ( ICM_x  > 1.0 ) ICM_x  = 1.0;
+     if ( lobe_x > 1.0 ) lobe_x = 1.0;
+
+   }
+   
    fluid[JetFieldIdx ] = 0.0;
    fluid[ICMFieldIdx ] = (real)(ICM_x*d);
    fluid[LobeFieldIdx] = (real)(lobe_x*d);
