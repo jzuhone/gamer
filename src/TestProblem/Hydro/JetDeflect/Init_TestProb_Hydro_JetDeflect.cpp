@@ -37,7 +37,7 @@ static double   Jump_Cosine;             // cosine of jump angle
 
 // jet parameters
 static bool     Jet_Fire;                // [true/false]: jet on/off
-static bool     Jet_Axis;                // axis of jet
+static int      Jet_Axis;                // axis of jet
 static double   Jet_Velocity;            // jet velocity (units of c)
 static double   Jet_VelSlope;            // Slope of velocity gradient across jet
 static double   Jet_VelCenter;           // jet central velocity
@@ -148,7 +148,7 @@ void SetParameter()
    ReadPara->Add( "Amb_Pressure",       &Amb_Pressure,      NoDef_double,  NoMin_double,   NoMax_double );
    ReadPara->Add( "Lobe_ICM_Ratio",     &Lobe_ICM_Ratio,    NoDef_double,  NoMin_double,   NoMax_double );
    ReadPara->Add( "Jump_Width",         &Jump_Width,        NoDef_double,  NoMin_double,   NoMax_double );
-   ReadPara->Add( "Wall_Off",           &Wall_Off           false,         Useless_bool,   Useless_bool );
+   ReadPara->Add( "Wall_Off",           &Wall_Off,          false,         Useless_bool,   Useless_bool );
    ReadPara->Add( "ICM_Blob",           &ICM_Blob,          false,         Useless_bool,   Useless_bool );
    ReadPara->Add( "Blob_PosX",          &Blob_PosX,         NoDef_double,  NoMin_double,   NoMax_double );
    ReadPara->Add( "Blob_PosY",          &Blob_PosY,         NoDef_double,  NoMin_double,   NoMax_double );
@@ -180,7 +180,7 @@ void SetParameter()
    Blob_PosX         *= Const_kpc / UNIT_L;
    Blob_PosY  	     *=	Const_kpc / UNIT_L;
    Blob_Radius       *= Const_kpc / UNIT_L;
-   Blob_VelY         *= Const_kms / UNIT_V;
+   Blob_VelY         *= Const_km  / UNIT_V;
    Jet_Position      *= Const_kpc / UNIT_L;
    Jump_Position_x   *= Const_kpc / UNIT_L;
    Jump_Position_y   *= Const_kpc / UNIT_L;
@@ -197,7 +197,7 @@ void SetParameter()
    Jet_Density      = Jet_Lobe_Ratio*Lobe_Density;
    Jet_Center[0]    = Jet_Position;
    Jet_Center[1]    = amr->BoxCenter[2];
-   Jet_PrecessOmega = 2.0*M_PI/Jet_PrecessPeriod;
+   Jet_PrecessOmega = Jet_PrecessPeriod > 0.0 ? 2.0*M_PI/Jet_PrecessPeriod : 0.0;
    Jet_Cosine       = cos( Jet_PrecessAngle*M_PI/180.0 );
    Jet_Sine         = sin( Jet_PrecessAngle*M_PI/180.0 );
    Blob_PosZ        = amr->BoxCenter[2];
@@ -318,7 +318,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    double ICM_x, lobe_x;
    
-   if ( ICM_Off ) {
+   if ( Wall_Off ) {
 
      ICM_x = 0.0;
      lobe_x = 1.0;
@@ -373,7 +373,7 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
             const int lv, const int TFluVarIdxList[], double AuxArray[] )
 {
 
-   int i, j, k, i_ref, j_ref, mom_axis, mom_x, mom_y;
+   int i, j, k, i_ref, j_ref, mom_axis, mom_x, mom_y, jet_x, jet_y;
    
    i = idx[0];
    j = idx[1];
@@ -384,6 +384,8 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
 	 mom_axis = MOMX;
 	 mom_x    = MOMY;
 	 mom_y    = MOMZ;
+	 jet_x = 1;
+	 jet_y = 2;
 	 i_ref = GhostSize;
 	 j_ref = j;
          break;
@@ -391,6 +393,8 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
 	 mom_axis = MOMY;
          mom_x    = MOMX;
          mom_y    = MOMZ;
+	 jet_x = 0;
+	 jet_y = 2;
 	 i_ref = i;
 	 j_ref = GhostSize;
 	 break;
@@ -400,7 +404,7 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
 
    int TFluVarIdx;
 
-   double rad = sqrt( SQR(pos[mom_x]-Jet_Center[0]) + SQR(pos[mom_y]-Jet_Center[1]) );
+   double rad = sqrt( SQR(pos[jet_x]-Jet_Center[0]) + SQR(pos[jet_y]-Jet_Center[1]) );
 
 // 1D array -> 3D array
    typedef real (*vla)[ ArraySize[2] ][ ArraySize[1] ][ ArraySize[0] ];
@@ -414,8 +418,8 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
       const double cos_phi    = cos( Jet_PrecessOmega*Time );
       const double sin_phi    = sin( Jet_PrecessOmega*Time );
       const double LntzFact   = sqrt( 1.0 + u_jet*u_jet );
-      const double u_jet_perp = u_jet*Jet_Cosine;
-      const double u_jet_par  = u_jet*Jet_Sine;
+      const double u_jet_perp = u_jet*Jet_Sine;
+      const double u_jet_par  = u_jet*Jet_Cosine;
 
 //    set fluid variable inside source
       PriReal[DENS        ] = (real)Jet_Density;
@@ -436,6 +440,7 @@ void JetBC( real Array[], const int ArraySize[], real BVal[], const int NVar_Flu
 
    else
    {
+
       for (int v=0; v<NVar_Flu; v++) {
          TFluVarIdx = TFluVarIdxList[v];
 
