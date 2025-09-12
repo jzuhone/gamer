@@ -487,4 +487,940 @@ void Read_Particles_ClusterMerger( std::string filename, long offset, long num,
 
 
 
+<<<<<<< HEAD
+||||||| 47a6ad0b4
+//-------------------------------------------------------------------------------------------------------
+// Function    :  Aux_Record_ClusterMerger
+// Description :  Record the cluster centers
+//
+// Note        :  1. Invoked by main() using the function pointer "Aux_Record_User_Ptr",
+//                   which must be set by a test problem initializer
+//                2. Enabled by the runtime option "OPT__RECORD_USER"
+//                3. This function will be called both during the program initialization and after each full update
+//                4. Must enable Merger_Coll_LabelCenter
+//
+// Parameter   :  None
+//-------------------------------------------------------------------------------------------------------
+void Aux_Record_ClusterMerger()
+{
+
+   const char FileName[] = "Record__Center";
+   static bool FirstTime = true;
+
+// header
+   if ( FirstTime )
+   {
+      if ( MPI_Rank == 0 )
+      {
+         if ( Aux_CheckFileExist(FileName) )
+            Aux_Message( stderr, "WARNING : file \"%s\" already exists !!\n", FileName );
+
+         FILE *File_User = fopen( FileName, "a" );
+         fprintf( File_User, "#%13s%14s",  "Time", "Step" );
+         for (int c=0; c<Merger_Coll_NumHalos; c++)
+         {
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "x",             c, "y",             c, "z",             c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "BHVel_x[km/s]", c, "BHVel_y",       c, "BHVel_z",       c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "GasVel_x",      c,"GasVel_y",       c,"GasVel_z",       c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "RelativeVel",   c, "SoundSpeed",    c, "GasDens(cgs)",  c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "mass_BH[Msun]", c, "Mdot(cgs)",     c, "NVoidCell",     c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "MomXInj(cgs)",  c, "MomYInj",       c,"MomZInj",        c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "MomXInjAbs",    c, "MomYInjAbs",    c, "MomZInjAbs",    c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "EInj_exp[erg]", c, "E_Inj[erg]",    c, "E_Inj_err",     c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "Ek_Inj[erg]",   c, "Et_Inj[erg]",   c, "PowerInj(cgs)", c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "MInjexp[Msun]", c, "MassInj[Msun]", c, "M_Inj_err",     c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "Mdot(cgs)",     c, "Pdot(cgs)",     c, "Edot(cgs)",     c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "Jet_Vec_x",     c, "Jet_Vec_y",     c, "Jet_Vec_z",     c );
+            fprintf( File_User, " %13s%1d %13s%1d", "num_par_sum", c, "ColdGasMass", c );
+         }
+         fprintf( File_User, "\n" );
+         fclose( File_User );
+      } // if ( MPI_Rank == 0 )
+
+      FirstTime = false;
+   } // if ( FirstTime )
+
+   double Bondi_MassBH[3] = { Bondi_MassBH1, Bondi_MassBH2, Bondi_MassBH3 };
+   double Mdot_BH[3] = { Mdot_BH1, Mdot_BH2, Mdot_BH3 };
+
+// sum over the variables and convert units
+   int SinkNCell_Sum[3];
+   double Mass_Sum[3], MomX_Sum[3], MomY_Sum[3], MomZ_Sum[3], MomXAbs_Sum[3], MomYAbs_Sum[3], MomZAbs_Sum[3], E_Sum[3], Ek_Sum[3], Et_Sum[3];
+
+   for (int c=0; c<Merger_Coll_NumHalos; c++)
+   {
+      MPI_Reduce( &CM_Bondi_SinkNCell[c],  &SinkNCell_Sum[c], 1, MPI_INT,    MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMass[c],    &Mass_Sum[c],     1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomX[c],    &MomX_Sum[c],     1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomY[c],    &MomY_Sum[c],     1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomZ[c],    &MomZ_Sum[c],     1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomXAbs[c], &MomXAbs_Sum[c],  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomYAbs[c], &MomYAbs_Sum[c],  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomZAbs[c], &MomZAbs_Sum[c],  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkE[c],       &E_Sum[c],        1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkEk[c],      &Ek_Sum[c],       1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkEt[c],      &Et_Sum[c],       1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+
+      Mass_Sum[c]    *= UNIT_M/Const_Msun;
+      MomX_Sum[c]    *= UNIT_M*UNIT_V;
+      MomY_Sum[c]    *= UNIT_M*UNIT_V;
+      MomZ_Sum[c]    *= UNIT_M*UNIT_V;
+      MomXAbs_Sum[c] *= UNIT_M*UNIT_V;
+      MomYAbs_Sum[c] *= UNIT_M*UNIT_V;
+      MomZAbs_Sum[c] *= UNIT_M*UNIT_V;
+      E_Sum[c]       *= UNIT_E;
+      Ek_Sum[c]      *= UNIT_E;
+      Et_Sum[c]      *= UNIT_E;
+      E_inj_exp[c]   *= UNIT_E;
+      M_inj_exp[c]   *= UNIT_M/Const_Msun;
+   } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+
+   for (int c=0; c<Merger_Coll_NumHalos; c++)   E_power_inj[c] = E_Sum[c]/(dt_base*UNIT_T);
+
+// output the properties of the cluster centers
+   if ( MPI_Rank == 0 )
+   {
+      FILE *File_User = fopen( FileName, "a" );
+      fprintf( File_User, "%14.7e%14ld", Time[0], Step );
+      for (int c=0; c<Merger_Coll_NumHalos; c++)
+      {
+         fprintf( File_User, " %14.7e %14.7e %14.7e", ClusterCen[c][0], ClusterCen[c][1], ClusterCen[c][2] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", BH_Vel[c][0]*UNIT_V/(Const_km/Const_s), BH_Vel[c][1]*UNIT_V/(Const_km/Const_s), BH_Vel[c][2]*UNIT_V/(Const_km/Const_s) );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", GasVel[c][0]*UNIT_V/(Const_km/Const_s), GasVel[c][1]*UNIT_V/(Const_km/Const_s), GasVel[c][2]*UNIT_V/(Const_km/Const_s) );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", RelativeVel[c]*UNIT_V/(Const_km/Const_s), SoundSpeed[c]*UNIT_V/(Const_km/Const_s), GasDens[c]*UNIT_D );
+         fprintf( File_User, " %14.7e %14.7e %14d",   Bondi_MassBH[c]*UNIT_M/Const_Msun, Mdot_BH[c]*UNIT_M/UNIT_T, SinkNCell_Sum[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", MomX_Sum[c], MomY_Sum[c], MomZ_Sum[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", MomXAbs_Sum[c], MomYAbs_Sum[c], MomZAbs_Sum[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", E_inj_exp[c], E_Sum[c], (E_Sum[c]-E_inj_exp[c])/E_inj_exp[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", Ek_Sum[c], Et_Sum[c], E_power_inj[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", M_inj_exp[c], Mass_Sum[c], (Mass_Sum[c]-M_inj_exp[c])/M_inj_exp[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", Mdot[c]*UNIT_M/UNIT_T, Pdot[c]*UNIT_M*UNIT_V/UNIT_T, Edot[c]*UNIT_E/UNIT_T );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", Jet_Vec[c][0], Jet_Vec[c][1], Jet_Vec[c][2] );
+         fprintf( File_User, " %14d %14.7e",          num_par_sum[c], ColdGasMass[c]*UNIT_M/Const_Msun );
+      }
+      fprintf( File_User, "\n" );
+      fclose( File_User );
+   } // if ( MPI_Rank == 0 )
+
+// reset the cumulative variables to zero
+   for (int c=0; c<Merger_Coll_NumHalos; c++)
+   {
+      CM_Bondi_SinkMass[c]    = 0.0;
+      CM_Bondi_SinkMomX[c]    = 0.0;
+      CM_Bondi_SinkMomY[c]    = 0.0;
+      CM_Bondi_SinkMomZ[c]    = 0.0;
+      CM_Bondi_SinkMomXAbs[c] = 0.0;
+      CM_Bondi_SinkMomYAbs[c] = 0.0;
+      CM_Bondi_SinkMomZAbs[c] = 0.0;
+      CM_Bondi_SinkE[c]       = 0.0;
+      CM_Bondi_SinkEk[c]      = 0.0;
+      CM_Bondi_SinkEt[c]      = 0.0;
+      E_inj_exp[c]            = 0.0;
+      M_inj_exp[c]            = 0.0;
+   }
+
+} // FUNCTION : Aux_Record_ClusterMerger
+
+
+
+//-------------------------------------------------------------------------------------------------------
+// Function    :  GetClusterCenter
+// Description :  Get the cluster centers
+//
+// Note        :  1. Must enable Merger_Coll_LabelCenter
+//
+// Parameter   :  Cen : Cluster centers
+//
+// Return      :  Cen[]
+//-------------------------------------------------------------------------------------------------------
+void GetClusterCenter( int lv, bool AdjustPos, bool AdjustVel, double Cen_old[][3], double Cen_new[][3], double Cen_Vel[][3] )
+{
+
+   if ( fixBH == false )
+   {
+      double min_pos[3][3], DM_Vel[3][3];   // the updated BH position and velocity
+      const bool CurrentMaxLv = (  NPatchTotal[lv] > 0  &&  ( lv == MAX_LEVEL  ||  NPatchTotal[lv+1] == 0 )  );
+
+//    initialize min_pos to be the old center
+      for (int c=0; c<Merger_Coll_NumHalos; c++)   for (int d=0; d<3; d++)   min_pos[c][d] = Cen_old[c][d];
+
+      if ( (CurrentMaxLv  &&  AdjustPos == true)  ||  (CurrentMaxLv  &&  AdjustVel == true) )
+      {
+//       do not support periodic BC
+         for (int f=0; f<6; f++)
+            if ( OPT__BC_FLU[f] == BC_FLU_PERIODIC )   Aux_Error( ERROR_INFO, "do not support periodic BC (OPT__BC_FLU* = 1)!\n" );
+
+#        ifdef GRAVITY
+         if ( OPT__BC_POT == BC_POT_PERIODIC )  Aux_Error( ERROR_INFO, "do not support periodic BC (OPT__BC_POT = 1)!\n" );
+#        endif
+
+
+         double dis_exp    = 1e-6;  // to check if the output BH positions of each calculaiton are close enough
+         bool   IfConverge = false; // if the BH positions are close enough, then complete the calculation
+         int    count      = 0;     // how many times the calculation is performed (minimum: 2, maximum: 10)
+         double Cen_new_pre[3][3];
+
+         while ( IfConverge == false  &&  count <= 10 )
+         {
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+               for (int d=0; d<3; d++)  Cen_new_pre[c][d] = min_pos[c][d];
+
+            int N_max[Merger_Coll_NumHalos]; // maximum particle numbers (to allocate the array size)
+            for (int c=0; c<Merger_Coll_NumHalos; c++)   N_max[c] = 10000;
+
+            int      num_par[3] = {0, 0, 0};   // (each rank) number of particles inside the target region of each cluster
+            double **ParX       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **ParY       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **ParZ       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **ParM       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **VelX       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **VelY       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **VelZ       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               ParX[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               ParY[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               ParZ[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               ParM[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               VelX[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               VelY[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               VelZ[c] = (double*)malloc( N_max[c]*sizeof(double) );
+            }
+
+//          find the particles within the arrection radius
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               num_par_sum[c] = 0;
+               for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+               {
+                  const double *EdgeL        = amr->patch[0][lv][PID]->EdgeL;
+                  const double *EdgeR        = amr->patch[0][lv][PID]->EdgeR;
+                  const double  patch_pos[3] = { (EdgeL[0]+EdgeR[0])*0.5, (EdgeL[1]+EdgeR[1])*0.5, (EdgeL[2]+EdgeR[2])*0.5 };
+                  const double  patch_d      = DIST_3D_DBL( EdgeL, EdgeR ) * 0.5;
+
+                  if ( DIST_SQR_3D( patch_pos, Cen_new_pre[c] ) <= SQR(20*R_acc+patch_d) )
+                  {
+                     for (int p=0; p<amr->patch[0][lv][PID]->NPar; p++)
+                     {
+                        const long ParID         = amr->patch[0][lv][PID]->ParList[p];
+                        const real ParX_tmp      = amr->Par->PosX[ParID];
+                        const real ParY_tmp      = amr->Par->PosY[ParID];
+                        const real ParZ_tmp      = amr->Par->PosZ[ParID];
+                        const real ParM_tmp      = amr->Par->Mass[ParID];
+                        const real VelX_tmp      = amr->Par->VelX[ParID];
+                        const real VelY_tmp      = amr->Par->VelY[ParID];
+                        const real VelZ_tmp      = amr->Par->VelZ[ParID];
+                        const real ParPos_tmp[3] = { ParX_tmp, ParY_tmp, ParZ_tmp };
+                        bool if_cluster = false;
+                        if ( amr->Par->Type[ParID] == real(PTYPE_CLUSTER+c)  ||  amr->Par->Type[ParID] == real(PTYPE_CEN+c) )   if_cluster = true;
+
+                        if ( if_cluster  &&  DIST_SQR_3D( ParPos_tmp, Cen_new_pre[c] ) <= SQR(10*R_acc) )
+                        {
+//                         record the mass, position and velocity of this particle
+                           ParX[c][num_par[c]] = ParX_tmp;
+                           ParY[c][num_par[c]] = ParY_tmp;
+                           ParZ[c][num_par[c]] = ParZ_tmp;
+                           ParM[c][num_par[c]] = ParM_tmp;
+                           VelX[c][num_par[c]] = VelX_tmp;
+                           VelY[c][num_par[c]] = VelY_tmp;
+                           VelZ[c][num_par[c]] = VelZ_tmp;
+                           num_par[c] += 1;
+                        }
+
+                        if ( num_par[c] >= N_max[c] )
+                        {
+                            N_max[c] = num_par[c] + 1;  // increase the new maximum size if needed
+                            ParX[c]  = (double*)realloc( ParX[c], N_max[c]*sizeof(double) );
+                            ParY[c]  = (double*)realloc( ParY[c], N_max[c]*sizeof(double) );
+                            ParZ[c]  = (double*)realloc( ParZ[c], N_max[c]*sizeof(double) );
+                            ParM[c]  = (double*)realloc( ParM[c], N_max[c]*sizeof(double) );
+                            VelX[c]  = (double*)realloc( VelX[c], N_max[c]*sizeof(double) );
+                            VelY[c]  = (double*)realloc( VelY[c], N_max[c]*sizeof(double) );
+                            VelZ[c]  = (double*)realloc( VelZ[c], N_max[c]*sizeof(double) );
+                        }
+                     } // for (int p=0; p<amr->patch[0][lv][PID]->NPar; p++)
+                  }  // if ( DIST_SQR_3D( patch_pos, Cen_new_pre[c] ) <= SQR(20*R_acc+patch_d) )
+               } // for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+            } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+
+//          collect the number of target particles from each rank
+            MPI_Allreduce( num_par, num_par_sum, 3, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
+
+            int num_par_eachRank[3][MPI_NRank];
+            int displs[3][MPI_NRank];
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               MPI_Allgather( &num_par[c], 1, MPI_INT, num_par_eachRank[c], 1, MPI_INT, MPI_COMM_WORLD );
+               displs[c][0] = 0;
+               for (int i=1; i<MPI_NRank; i++)  displs[c][i] = displs[c][i-1] + num_par_eachRank[c][i-1];
+            }
+
+//          collect the mass, position and velocity of target particles to the root rank
+            double **ParX_sum = new double* [Merger_Coll_NumHalos];
+            double **ParY_sum = new double* [Merger_Coll_NumHalos];
+            double **ParZ_sum = new double* [Merger_Coll_NumHalos];
+            double **ParM_sum = new double* [Merger_Coll_NumHalos];
+            double **VelX_sum = new double* [Merger_Coll_NumHalos];
+            double **VelY_sum = new double* [Merger_Coll_NumHalos];
+            double **VelZ_sum = new double* [Merger_Coll_NumHalos];
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               ParX_sum[c] = new double [num_par_sum[c]];
+               ParY_sum[c] = new double [num_par_sum[c]];
+               ParZ_sum[c] = new double [num_par_sum[c]];
+               ParM_sum[c] = new double [num_par_sum[c]];
+               VelX_sum[c] = new double [num_par_sum[c]];
+               VelY_sum[c] = new double [num_par_sum[c]];
+               VelZ_sum[c] = new double [num_par_sum[c]];
+            }
+
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               MPI_Allgatherv( ParX[c], num_par[c], MPI_DOUBLE, ParX_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( ParY[c], num_par[c], MPI_DOUBLE, ParY_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( ParZ[c], num_par[c], MPI_DOUBLE, ParZ_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( ParM[c], num_par[c], MPI_DOUBLE, ParM_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( VelX[c], num_par[c], MPI_DOUBLE, VelX_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( VelY[c], num_par[c], MPI_DOUBLE, VelY_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( VelZ[c], num_par[c], MPI_DOUBLE, VelZ_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+            }
+
+//          compute potential and find the minimum position, and calculate the average DM velocity on the root rank
+            if ( AdjustPos == true )
+            {
+               double soften = amr->dh[MAX_LEVEL];
+               for (int c=0; c<Merger_Coll_NumHalos; c++)
+               {
+                  double *pote = new double [num_par_sum[c]];
+
+//                distribute MPI jobs
+                  int     par_per_rank = num_par_sum[c] / MPI_NRank;
+                  int     remainder    = num_par_sum[c] % MPI_NRank;
+                  int     start        = MPI_Rank*par_per_rank + MIN( MPI_Rank, remainder );
+                  int     end          = start + par_per_rank + (MPI_Rank < remainder ? 1 : 0);
+                  double *pote_local   = new double [end-start];
+
+#                 pragma omp parallel for schedule( static )
+                  for (int i=start; i<end; i++)
+                  {
+                     pote_local[i-start] = 0.0;
+                     for (int j=0; j<num_par_sum[c]; j++)
+                     {
+                        double rel_pos = sqrt( SQR(ParX_sum[c][i]-ParX_sum[c][j]) + SQR(ParY_sum[c][i]-ParY_sum[c][j]) +
+                                               SQR(ParZ_sum[c][i]-ParZ_sum[c][j]) );
+                        if       ( rel_pos > soften )                pote_local[i-start] += ParM_sum[c][j] / rel_pos;
+                        else if  ( rel_pos <= soften  &&  i != j )   pote_local[i-start] += ParM_sum[c][j] / soften;
+                     }
+                     pote_local[i-start] *= -NEWTON_G;
+                  }
+
+                  int recvcounts[MPI_NRank], displs[MPI_NRank];
+                  for (int i=0; i<MPI_NRank; i++)  recvcounts[i] = (i < remainder ? par_per_rank+1 : par_per_rank);
+                  displs[0] = 0;
+                  for (int i=1; i<MPI_NRank; i++)  displs[i] = displs[i-1] + recvcounts[i-1];
+                  MPI_Allgatherv( pote_local, end-start, MPI_DOUBLE, pote, recvcounts, displs, MPI_DOUBLE, MPI_COMM_WORLD );
+
+                  double Pote_min = 0.0;
+                  for (int i=0; i<num_par_sum[c]; i++)
+                  {
+                     if ( pote[i] < Pote_min )
+                     {
+                        Pote_min      = pote[i];
+                        min_pos[c][0] = ParX_sum[c][i];
+                        min_pos[c][1] = ParY_sum[c][i];
+                        min_pos[c][2] = ParZ_sum[c][i];
+                     }
+                  }
+                  delete[] pote;
+                  delete[] pote_local;
+               } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+            } // if ( AdjustPos == true )
+
+//          calculate the average DM velocity
+            if ( AdjustVel == true )
+            {
+               for (int c=0; c<Merger_Coll_NumHalos; c++)
+               {
+                  for (int d=0; d<3; d++)   DM_Vel[c][d] = 0.0;
+                  for (int i=0; i<num_par_sum[c]; i++)
+                  {
+                     DM_Vel[c][0] += VelX_sum[c][i];
+                     DM_Vel[c][1] += VelY_sum[c][i];
+                     DM_Vel[c][2] += VelZ_sum[c][i];
+                  }
+                  for (int d=0; d<3; d++)   DM_Vel[c][d] /= num_par_sum[c];
+               }
+            } // if ( AdjustVel == true )
+
+//          iterate the above calculation until the output BH positions become close enough
+            count += 1;
+            double dis[3] = {0.0, 0.0, 0.0};
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+               for (int d=0; d<3; d++)   dis[c] += SQR( min_pos[c][d] - Cen_new_pre[c][d] );
+
+            if ( count > 1  &&  sqrt(dis[0]) < dis_exp  &&  sqrt(dis[1]) < dis_exp )   IfConverge = true;
+
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               delete [] ParX_sum[c];
+               delete [] ParY_sum[c];
+               delete [] ParZ_sum[c];
+               delete [] ParM_sum[c];
+               delete [] VelX_sum[c];
+               delete [] VelY_sum[c];
+               delete [] VelZ_sum[c];
+            }
+            delete [] ParX_sum;
+            delete [] ParY_sum;
+            delete [] ParZ_sum;
+            delete [] ParM_sum;
+            delete [] VelX_sum;
+            delete [] VelY_sum;
+            delete [] VelZ_sum;
+
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               free( ParX[c] );
+               free( ParY[c] );
+               free( ParZ[c] );
+               free( ParM[c] );
+               free( VelX[c] );
+               free( VelY[c] );
+               free( VelZ[c] );
+            }
+            free( ParX );
+            free( ParY );
+            free( ParZ );
+            free( ParM );
+            free( VelX );
+            free( VelY );
+            free( VelZ );
+         } // while ( IfConverge == false )
+      } // if ( ( CurrentMaxLv  &&  AdjustPos == true )  ||  ( CurrentMaxLv  &&  AdjustVel == true ) )
+
+
+//    find the BH particles and adjust their position and velocity
+      for (int c=0; c<Merger_Coll_NumHalos; c++)
+      {
+         double Cen_Tmp[3] = { -__FLT_MAX__, -__FLT_MAX__, -__FLT_MAX__ }; // set to -inf
+         double Vel_Tmp[3] = { -__FLT_MAX__, -__FLT_MAX__, -__FLT_MAX__ };
+         for (long p=0; p<amr->Par->NPar_AcPlusInac; p++)
+         {
+            if ( amr->Par->Mass[p] >= (real)0.0  &&  amr->Par->Type[p] == real(PTYPE_CEN+c) )
+            {
+               if ( CurrentMaxLv  &&  AdjustPos == true )
+               {
+                  amr->Par->PosX[p] = min_pos[c][0];
+                  amr->Par->PosY[p] = min_pos[c][1];
+                  amr->Par->PosZ[p] = min_pos[c][2];
+               }
+               if ( CurrentMaxLv  &&  AdjustVel == true )
+               {
+                  amr->Par->VelX[p] = DM_Vel[c][0];
+                  amr->Par->VelY[p] = DM_Vel[c][1];
+                  amr->Par->VelZ[p] = DM_Vel[c][2];
+               }
+               Cen_Tmp[0] = amr->Par->PosX[p];
+               Cen_Tmp[1] = amr->Par->PosY[p];
+               Cen_Tmp[2] = amr->Par->PosZ[p];
+               Vel_Tmp[0] = amr->Par->VelX[p];
+               Vel_Tmp[1] = amr->Par->VelY[p];
+               Vel_Tmp[2] = amr->Par->VelZ[p];
+               break;
+            } // if ( amr->Par->Mass[p] >= (real)0.0  &&  amr->Par->Type[p] == real(PTYPE_CEN+c) )
+         } // for (long p=0; p<amr->Par->NPar_AcPlusInac; p++)
+
+//       use MPI_MAX since Cen_Tmp[] is initialized as -inf
+         MPI_Allreduce( Cen_Tmp, Cen_new[c], 3, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
+         MPI_Allreduce( Vel_Tmp, Cen_Vel[c], 3, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
+      } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+
+      if ( CurrentMaxLv  &&  AdjustPos == true )
+      {
+         const bool TimingSendPar_No = false;
+         Par_PassParticle2Sibling( lv, TimingSendPar_No );
+         Par_PassParticle2Son_MultiPatch( lv, PAR_PASS2SON_EVOLVE, TimingSendPar_No, NULL_INT, NULL );
+      }
+   }
+   else // if ( fixBH == true )
+   {
+      for (int d=0; d<3; d++)   Cen_new[0][d] = 7.5;
+      for (int d=0; d<3; d++)   Cen_Vel[0][d] = 0.0;
+   } // if ( fixBH == true ) ... else ...
+
+   for (int c=0; c<Merger_Coll_NumHalos; c++)
+      for (int d=0; d<3; d++)  Cen_old[c][d] = Cen_new[c][d];
+
+} // FUNCTION : GetClusterCenter
+
+
+
+=======
+//-------------------------------------------------------------------------------------------------------
+// Function    :  Aux_Record_ClusterMerger
+// Description :  Record the cluster centers
+//
+// Note        :  1. Invoked by main() using the function pointer "Aux_Record_User_Ptr",
+//                   which must be set by a test problem initializer
+//                2. Enabled by the runtime option "OPT__RECORD_USER"
+//                3. This function will be called both during the program initialization and after each full update
+//                4. Must enable Merger_Coll_LabelCenter
+//
+// Parameter   :  None
+//-------------------------------------------------------------------------------------------------------
+void Aux_Record_ClusterMerger()
+{
+
+   const char FileName[] = "Record__Center";
+   static bool FirstTime = true;
+
+// header
+   if ( FirstTime )
+   {
+      if ( MPI_Rank == 0 )
+      {
+         if ( Aux_CheckFileExist(FileName) )
+            Aux_Message( stderr, "WARNING : file \"%s\" already exists !!\n", FileName );
+
+         FILE *File_User = fopen( FileName, "a" );
+         fprintf( File_User, "#%13s%14s",  "Time", "Step" );
+         for (int c=0; c<Merger_Coll_NumHalos; c++)
+         {
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "x",             c, "y",             c, "z",             c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "BHVel_x[km/s]", c, "BHVel_y",       c, "BHVel_z",       c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "GasVel_x",      c,"GasVel_y",       c,"GasVel_z",       c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "RelativeVel",   c, "SoundSpeed",    c, "GasDens(cgs)",  c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "mass_BH[Msun]", c, "Mdot(cgs)",     c, "NVoidCell",     c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "MomXInj(cgs)",  c, "MomYInj",       c,"MomZInj",        c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "MomXInjAbs",    c, "MomYInjAbs",    c, "MomZInjAbs",    c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "EInj_exp[erg]", c, "E_Inj[erg]",    c, "E_Inj_err",     c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "Ek_Inj[erg]",   c, "Et_Inj[erg]",   c, "PowerInj(cgs)", c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "MInjexp[Msun]", c, "MassInj[Msun]", c, "M_Inj_err",     c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "Mdot(cgs)",     c, "Pdot(cgs)",     c, "Edot(cgs)",     c );
+            fprintf( File_User, " %13s%1d %13s%1d %13s%1d", "Jet_Vec_x",     c, "Jet_Vec_y",     c, "Jet_Vec_z",     c );
+            fprintf( File_User, " %13s%1d %13s%1d", "num_par_sum", c, "ColdGasMass", c );
+         }
+         fprintf( File_User, "\n" );
+         fclose( File_User );
+      } // if ( MPI_Rank == 0 )
+
+      FirstTime = false;
+   } // if ( FirstTime )
+
+   double Bondi_MassBH[3] = { Bondi_MassBH1, Bondi_MassBH2, Bondi_MassBH3 };
+   double Mdot_BH[3] = { Mdot_BH1, Mdot_BH2, Mdot_BH3 };
+
+// sum over the variables and convert units
+   int SinkNCell_Sum[3];
+   double Mass_Sum[3], MomX_Sum[3], MomY_Sum[3], MomZ_Sum[3], MomXAbs_Sum[3], MomYAbs_Sum[3], MomZAbs_Sum[3], E_Sum[3], Ek_Sum[3], Et_Sum[3];
+
+   for (int c=0; c<Merger_Coll_NumHalos; c++)
+   {
+      MPI_Reduce( &CM_Bondi_SinkNCell[c],  &SinkNCell_Sum[c], 1, MPI_INT,    MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMass[c],    &Mass_Sum[c],     1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomX[c],    &MomX_Sum[c],     1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomY[c],    &MomY_Sum[c],     1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomZ[c],    &MomZ_Sum[c],     1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomXAbs[c], &MomXAbs_Sum[c],  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomYAbs[c], &MomYAbs_Sum[c],  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkMomZAbs[c], &MomZAbs_Sum[c],  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkE[c],       &E_Sum[c],        1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkEk[c],      &Ek_Sum[c],       1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+      MPI_Reduce( &CM_Bondi_SinkEt[c],      &Et_Sum[c],       1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD );
+
+      Mass_Sum[c]    *= UNIT_M/Const_Msun;
+      MomX_Sum[c]    *= UNIT_M*UNIT_V;
+      MomY_Sum[c]    *= UNIT_M*UNIT_V;
+      MomZ_Sum[c]    *= UNIT_M*UNIT_V;
+      MomXAbs_Sum[c] *= UNIT_M*UNIT_V;
+      MomYAbs_Sum[c] *= UNIT_M*UNIT_V;
+      MomZAbs_Sum[c] *= UNIT_M*UNIT_V;
+      E_Sum[c]       *= UNIT_E;
+      Ek_Sum[c]      *= UNIT_E;
+      Et_Sum[c]      *= UNIT_E;
+      E_inj_exp[c]   *= UNIT_E;
+      M_inj_exp[c]   *= UNIT_M/Const_Msun;
+   } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+
+   for (int c=0; c<Merger_Coll_NumHalos; c++)   E_power_inj[c] = E_Sum[c]/(dt_base*UNIT_T);
+
+// output the properties of the cluster centers
+   if ( MPI_Rank == 0 )
+   {
+      FILE *File_User = fopen( FileName, "a" );
+      fprintf( File_User, "%14.7e%14ld", Time[0], Step );
+      for (int c=0; c<Merger_Coll_NumHalos; c++)
+      {
+         fprintf( File_User, " %14.7e %14.7e %14.7e", ClusterCen[c][0], ClusterCen[c][1], ClusterCen[c][2] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", BH_Vel[c][0]*UNIT_V/(Const_km/Const_s), BH_Vel[c][1]*UNIT_V/(Const_km/Const_s), BH_Vel[c][2]*UNIT_V/(Const_km/Const_s) );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", GasVel[c][0]*UNIT_V/(Const_km/Const_s), GasVel[c][1]*UNIT_V/(Const_km/Const_s), GasVel[c][2]*UNIT_V/(Const_km/Const_s) );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", RelativeVel[c]*UNIT_V/(Const_km/Const_s), SoundSpeed[c]*UNIT_V/(Const_km/Const_s), GasDens[c]*UNIT_D );
+         fprintf( File_User, " %14.7e %14.7e %14d",   Bondi_MassBH[c]*UNIT_M/Const_Msun, Mdot_BH[c]*UNIT_M/UNIT_T, SinkNCell_Sum[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", MomX_Sum[c], MomY_Sum[c], MomZ_Sum[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", MomXAbs_Sum[c], MomYAbs_Sum[c], MomZAbs_Sum[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", E_inj_exp[c], E_Sum[c], (E_Sum[c]-E_inj_exp[c])/E_inj_exp[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", Ek_Sum[c], Et_Sum[c], E_power_inj[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", M_inj_exp[c], Mass_Sum[c], (Mass_Sum[c]-M_inj_exp[c])/M_inj_exp[c] );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", Mdot[c]*UNIT_M/UNIT_T, Pdot[c]*UNIT_M*UNIT_V/UNIT_T, Edot[c]*UNIT_E/UNIT_T );
+         fprintf( File_User, " %14.7e %14.7e %14.7e", Jet_Vec[c][0], Jet_Vec[c][1], Jet_Vec[c][2] );
+         fprintf( File_User, " %14d %14.7e",          num_par_sum[c], ColdGasMass[c]*UNIT_M/Const_Msun );
+      }
+      fprintf( File_User, "\n" );
+      fclose( File_User );
+   } // if ( MPI_Rank == 0 )
+
+// reset the cumulative variables to zero
+   for (int c=0; c<Merger_Coll_NumHalos; c++)
+   {
+      CM_Bondi_SinkMass[c]    = 0.0;
+      CM_Bondi_SinkMomX[c]    = 0.0;
+      CM_Bondi_SinkMomY[c]    = 0.0;
+      CM_Bondi_SinkMomZ[c]    = 0.0;
+      CM_Bondi_SinkMomXAbs[c] = 0.0;
+      CM_Bondi_SinkMomYAbs[c] = 0.0;
+      CM_Bondi_SinkMomZAbs[c] = 0.0;
+      CM_Bondi_SinkE[c]       = 0.0;
+      CM_Bondi_SinkEk[c]      = 0.0;
+      CM_Bondi_SinkEt[c]      = 0.0;
+      E_inj_exp[c]            = 0.0;
+      M_inj_exp[c]            = 0.0;
+   }
+
+} // FUNCTION : Aux_Record_ClusterMerger
+
+
+
+//-------------------------------------------------------------------------------------------------------
+// Function    :  GetClusterCenter
+// Description :  Get the cluster centers
+//
+// Note        :  1. Must enable Merger_Coll_LabelCenter
+//
+// Parameter   :  Cen : Cluster centers
+//
+// Return      :  Cen[]
+//-------------------------------------------------------------------------------------------------------
+void GetClusterCenter( int lv, bool AdjustPos, bool AdjustVel, double Cen_old[][3], double Cen_new[][3], double Cen_Vel[][3] )
+{
+
+   if ( fixBH == false )
+   {
+      double min_pos[3][3], DM_Vel[3][3];   // the updated BH position and velocity
+      const bool CurrentMaxLv = (  NPatchTotal[lv] > 0  &&  ( lv == MAX_LEVEL  ||  NPatchTotal[lv+1] == 0 )  );
+
+//    initialize min_pos to be the old center
+      for (int c=0; c<Merger_Coll_NumHalos; c++)   for (int d=0; d<3; d++)   min_pos[c][d] = Cen_old[c][d];
+
+      if ( (CurrentMaxLv  &&  AdjustPos == true)  ||  (CurrentMaxLv  &&  AdjustVel == true) )
+      {
+//       do not support periodic BC
+         for (int f=0; f<6; f++)
+            if ( OPT__BC_FLU[f] == BC_FLU_PERIODIC )   Aux_Error( ERROR_INFO, "do not support periodic BC (OPT__BC_FLU* = 1)!\n" );
+
+#        ifdef GRAVITY
+         if ( OPT__BC_POT == BC_POT_PERIODIC )  Aux_Error( ERROR_INFO, "do not support periodic BC (OPT__BC_POT = 1)!\n" );
+#        endif
+
+
+         double dis_exp    = 1e-6;  // to check if the output BH positions of each calculaiton are close enough
+         bool   IfConverge = false; // if the BH positions are close enough, then complete the calculation
+         int    count      = 0;     // how many times the calculation is performed (minimum: 2, maximum: 10)
+         double Cen_new_pre[3][3];
+
+         while ( IfConverge == false  &&  count <= 10 )
+         {
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+               for (int d=0; d<3; d++)  Cen_new_pre[c][d] = min_pos[c][d];
+
+            int N_max[Merger_Coll_NumHalos]; // maximum particle numbers (to allocate the array size)
+            for (int c=0; c<Merger_Coll_NumHalos; c++)   N_max[c] = 10000;
+
+            int      num_par[3] = {0, 0, 0};   // (each rank) number of particles inside the target region of each cluster
+            double **ParX       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **ParY       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **ParZ       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **ParM       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **VelX       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **VelY       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            double **VelZ       = (double**)malloc( Merger_Coll_NumHalos*sizeof(double*) );
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               ParX[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               ParY[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               ParZ[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               ParM[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               VelX[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               VelY[c] = (double*)malloc( N_max[c]*sizeof(double) );
+               VelZ[c] = (double*)malloc( N_max[c]*sizeof(double) );
+            }
+
+//          find the particles within the arrection radius
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               num_par_sum[c] = 0;
+               for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+               {
+                  const double *EdgeL        = amr->patch[0][lv][PID]->EdgeL;
+                  const double *EdgeR        = amr->patch[0][lv][PID]->EdgeR;
+                  const double  patch_pos[3] = { (EdgeL[0]+EdgeR[0])*0.5, (EdgeL[1]+EdgeR[1])*0.5, (EdgeL[2]+EdgeR[2])*0.5 };
+                  const double  patch_d      = DIST_3D_DBL( EdgeL, EdgeR ) * 0.5;
+
+                  if ( DIST_SQR_3D( patch_pos, Cen_new_pre[c] ) <= SQR(20*R_acc+patch_d) )
+                  {
+                     for (int p=0; p<amr->patch[0][lv][PID]->NPar; p++)
+                     {
+                        const long ParID         = amr->patch[0][lv][PID]->ParList[p];
+                        const real ParX_tmp      = amr->Par->PosX[ParID];
+                        const real ParY_tmp      = amr->Par->PosY[ParID];
+                        const real ParZ_tmp      = amr->Par->PosZ[ParID];
+                        const real ParM_tmp      = amr->Par->Mass[ParID];
+                        const real VelX_tmp      = amr->Par->VelX[ParID];
+                        const real VelY_tmp      = amr->Par->VelY[ParID];
+                        const real VelZ_tmp      = amr->Par->VelZ[ParID];
+                        const real ParPos_tmp[3] = { ParX_tmp, ParY_tmp, ParZ_tmp };
+                        bool if_cluster = false;
+                        if ( amr->Par->Type[ParID] == real(PTYPE_CLUSTER+c)  ||  amr->Par->Type[ParID] == real(PTYPE_CEN+c) )   if_cluster = true;
+
+                        if ( if_cluster  &&  DIST_SQR_3D( ParPos_tmp, Cen_new_pre[c] ) <= SQR(10*R_acc) )
+                        {
+//                         record the mass, position and velocity of this particle
+                           ParX[c][num_par[c]] = ParX_tmp;
+                           ParY[c][num_par[c]] = ParY_tmp;
+                           ParZ[c][num_par[c]] = ParZ_tmp;
+                           ParM[c][num_par[c]] = ParM_tmp;
+                           VelX[c][num_par[c]] = VelX_tmp;
+                           VelY[c][num_par[c]] = VelY_tmp;
+                           VelZ[c][num_par[c]] = VelZ_tmp;
+                           num_par[c] += 1;
+                        }
+
+                        if ( num_par[c] >= N_max[c] )
+                        {
+                            N_max[c] = num_par[c] + 1;  // increase the new maximum size if needed
+                            ParX[c]  = (double*)realloc( ParX[c], N_max[c]*sizeof(double) );
+                            ParY[c]  = (double*)realloc( ParY[c], N_max[c]*sizeof(double) );
+                            ParZ[c]  = (double*)realloc( ParZ[c], N_max[c]*sizeof(double) );
+                            ParM[c]  = (double*)realloc( ParM[c], N_max[c]*sizeof(double) );
+                            VelX[c]  = (double*)realloc( VelX[c], N_max[c]*sizeof(double) );
+                            VelY[c]  = (double*)realloc( VelY[c], N_max[c]*sizeof(double) );
+                            VelZ[c]  = (double*)realloc( VelZ[c], N_max[c]*sizeof(double) );
+                        }
+                     } // for (int p=0; p<amr->patch[0][lv][PID]->NPar; p++)
+                  }  // if ( DIST_SQR_3D( patch_pos, Cen_new_pre[c] ) <= SQR(20*R_acc+patch_d) )
+               } // for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+            } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+
+//          collect the number of target particles from each rank
+            MPI_Allreduce( num_par, num_par_sum, 3, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
+
+            int num_par_eachRank[3][MPI_NRank];
+            int displs[3][MPI_NRank];
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               MPI_Allgather( &num_par[c], 1, MPI_INT, num_par_eachRank[c], 1, MPI_INT, MPI_COMM_WORLD );
+               displs[c][0] = 0;
+               for (int i=1; i<MPI_NRank; i++)  displs[c][i] = displs[c][i-1] + num_par_eachRank[c][i-1];
+            }
+
+//          collect the mass, position and velocity of target particles to the root rank
+            double **ParX_sum = new double* [Merger_Coll_NumHalos];
+            double **ParY_sum = new double* [Merger_Coll_NumHalos];
+            double **ParZ_sum = new double* [Merger_Coll_NumHalos];
+            double **ParM_sum = new double* [Merger_Coll_NumHalos];
+            double **VelX_sum = new double* [Merger_Coll_NumHalos];
+            double **VelY_sum = new double* [Merger_Coll_NumHalos];
+            double **VelZ_sum = new double* [Merger_Coll_NumHalos];
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               ParX_sum[c] = new double [num_par_sum[c]];
+               ParY_sum[c] = new double [num_par_sum[c]];
+               ParZ_sum[c] = new double [num_par_sum[c]];
+               ParM_sum[c] = new double [num_par_sum[c]];
+               VelX_sum[c] = new double [num_par_sum[c]];
+               VelY_sum[c] = new double [num_par_sum[c]];
+               VelZ_sum[c] = new double [num_par_sum[c]];
+            }
+
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               MPI_Allgatherv( ParX[c], num_par[c], MPI_DOUBLE, ParX_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( ParY[c], num_par[c], MPI_DOUBLE, ParY_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( ParZ[c], num_par[c], MPI_DOUBLE, ParZ_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( ParM[c], num_par[c], MPI_DOUBLE, ParM_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( VelX[c], num_par[c], MPI_DOUBLE, VelX_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( VelY[c], num_par[c], MPI_DOUBLE, VelY_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+               MPI_Allgatherv( VelZ[c], num_par[c], MPI_DOUBLE, VelZ_sum[c], num_par_eachRank[c], displs[c], MPI_DOUBLE, MPI_COMM_WORLD );
+            }
+
+//          compute potential and find the minimum position, and calculate the average DM velocity on the root rank
+            if ( AdjustPos == true )
+            {
+               double soften = amr->dh[MAX_LEVEL];
+               for (int c=0; c<Merger_Coll_NumHalos; c++)
+               {
+                  double *pote = new double [num_par_sum[c]];
+
+//                distribute MPI jobs
+                  int     par_per_rank = num_par_sum[c] / MPI_NRank;
+                  int     remainder    = num_par_sum[c] % MPI_NRank;
+                  int     start        = MPI_Rank*par_per_rank + MIN( MPI_Rank, remainder );
+                  int     end          = start + par_per_rank + (MPI_Rank < remainder ? 1 : 0);
+                  double *pote_local   = new double [end-start];
+
+#                 pragma omp parallel for schedule( static )
+                  for (int i=start; i<end; i++)
+                  {
+                     pote_local[i-start] = 0.0;
+                     for (int j=0; j<num_par_sum[c]; j++)
+                     {
+                        double rel_pos = sqrt( SQR(ParX_sum[c][i]-ParX_sum[c][j]) + SQR(ParY_sum[c][i]-ParY_sum[c][j]) +
+                                               SQR(ParZ_sum[c][i]-ParZ_sum[c][j]) );
+                        if       ( rel_pos > soften )                pote_local[i-start] += ParM_sum[c][j] / rel_pos;
+                        else if  ( rel_pos <= soften  &&  i != j )   pote_local[i-start] += ParM_sum[c][j] / soften;
+                     }
+                     pote_local[i-start] *= -NEWTON_G;
+                  }
+
+                  int recvcounts[MPI_NRank], displs[MPI_NRank];
+                  for (int i=0; i<MPI_NRank; i++)  recvcounts[i] = (i < remainder ? par_per_rank+1 : par_per_rank);
+                  displs[0] = 0;
+                  for (int i=1; i<MPI_NRank; i++)  displs[i] = displs[i-1] + recvcounts[i-1];
+                  MPI_Allgatherv( pote_local, end-start, MPI_DOUBLE, pote, recvcounts, displs, MPI_DOUBLE, MPI_COMM_WORLD );
+
+                  double Pote_min = 0.0;
+                  for (int i=0; i<num_par_sum[c]; i++)
+                  {
+                     if ( pote[i] < Pote_min )
+                     {
+                        Pote_min      = pote[i];
+                        min_pos[c][0] = ParX_sum[c][i];
+                        min_pos[c][1] = ParY_sum[c][i];
+                        min_pos[c][2] = ParZ_sum[c][i];
+                     }
+                  }
+                  delete[] pote;
+                  delete[] pote_local;
+               } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+            } // if ( AdjustPos == true )
+
+//          calculate the average DM velocity
+            if ( AdjustVel == true )
+            {
+               for (int c=0; c<Merger_Coll_NumHalos; c++)
+               {
+                  for (int d=0; d<3; d++)   DM_Vel[c][d] = 0.0;
+                  for (int i=0; i<num_par_sum[c]; i++)
+                  {
+                     DM_Vel[c][0] += VelX_sum[c][i];
+                     DM_Vel[c][1] += VelY_sum[c][i];
+                     DM_Vel[c][2] += VelZ_sum[c][i];
+                  }
+                  for (int d=0; d<3; d++)   DM_Vel[c][d] /= num_par_sum[c];
+               }
+            } // if ( AdjustVel == true )
+
+//          iterate the above calculation until the output BH positions become close enough
+            count += 1;
+            double dis[3] = {0.0, 0.0, 0.0};
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+               for (int d=0; d<3; d++)   dis[c] += SQR( min_pos[c][d] - Cen_new_pre[c][d] );
+
+            if ( count > 1  &&  sqrt(dis[0]) < dis_exp  &&  sqrt(dis[1]) < dis_exp )   IfConverge = true;
+
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               delete [] ParX_sum[c];
+               delete [] ParY_sum[c];
+               delete [] ParZ_sum[c];
+               delete [] ParM_sum[c];
+               delete [] VelX_sum[c];
+               delete [] VelY_sum[c];
+               delete [] VelZ_sum[c];
+            }
+            delete [] ParX_sum;
+            delete [] ParY_sum;
+            delete [] ParZ_sum;
+            delete [] ParM_sum;
+            delete [] VelX_sum;
+            delete [] VelY_sum;
+            delete [] VelZ_sum;
+
+            for (int c=0; c<Merger_Coll_NumHalos; c++)
+            {
+               free( ParX[c] );
+               free( ParY[c] );
+               free( ParZ[c] );
+               free( ParM[c] );
+               free( VelX[c] );
+               free( VelY[c] );
+               free( VelZ[c] );
+            }
+            free( ParX );
+            free( ParY );
+            free( ParZ );
+            free( ParM );
+            free( VelX );
+            free( VelY );
+            free( VelZ );
+         } // while ( IfConverge == false )
+      } // if ( ( CurrentMaxLv  &&  AdjustPos == true )  ||  ( CurrentMaxLv  &&  AdjustVel == true ) )
+
+
+//    find the BH particles and adjust their position and velocity
+      for (int c=0; c<Merger_Coll_NumHalos; c++)
+      {
+         double Cen_Tmp[3] = { -__FLT_MAX__, -__FLT_MAX__, -__FLT_MAX__ }; // set to -inf
+         double Vel_Tmp[3] = { -__FLT_MAX__, -__FLT_MAX__, -__FLT_MAX__ };
+         for (long p=0; p<amr->Par->NPar_AcPlusInac; p++)
+         {
+            if ( amr->Par->Mass[p] >= (real)0.0  &&  amr->Par->Type[p] == real(PTYPE_CEN+c) )
+            {
+               if ( CurrentMaxLv  &&  AdjustPos == true )
+               {
+                  amr->Par->PosX[p] = min_pos[c][0];
+                  amr->Par->PosY[p] = min_pos[c][1];
+                  amr->Par->PosZ[p] = min_pos[c][2];
+               }
+               if ( CurrentMaxLv  &&  AdjustVel == true )
+               {
+                  amr->Par->VelX[p] = DM_Vel[c][0];
+                  amr->Par->VelY[p] = DM_Vel[c][1];
+                  amr->Par->VelZ[p] = DM_Vel[c][2];
+               }
+               Cen_Tmp[0] = amr->Par->PosX[p];
+               Cen_Tmp[1] = amr->Par->PosY[p];
+               Cen_Tmp[2] = amr->Par->PosZ[p];
+               Vel_Tmp[0] = amr->Par->VelX[p];
+               Vel_Tmp[1] = amr->Par->VelY[p];
+               Vel_Tmp[2] = amr->Par->VelZ[p];
+               break;
+            } // if ( amr->Par->Mass[p] >= (real)0.0  &&  amr->Par->Type[p] == real(PTYPE_CEN+c) )
+         } // for (long p=0; p<amr->Par->NPar_AcPlusInac; p++)
+
+//       use MPI_MAX since Cen_Tmp[] is initialized as -inf
+         MPI_Allreduce( Cen_Tmp, Cen_new[c], 3, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
+         MPI_Allreduce( Vel_Tmp, Cen_Vel[c], 3, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
+      } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+
+      if ( CurrentMaxLv  &&  AdjustPos == true )
+      {
+         const bool TimingSendPar_No = false;
+         Par_PassParticle2Sibling( lv, TimingSendPar_No );
+         Par_PassParticle2Son_MultiPatch( lv, PAR_PASS2SON_EVOLVE, TimingSendPar_No, NULL_INT, NULL );
+      }
+   }
+   else // if ( fixBH == true )
+   {
+      for (int d=0; d<3; d++)   Cen_new[0][d] = amr->BoxCenter[d];
+      for (int d=0; d<3; d++)   Cen_Vel[0][d] = 0.0;
+   } // if ( fixBH == true ) ... else ...
+
+   for (int c=0; c<Merger_Coll_NumHalos; c++)
+      for (int d=0; d<3; d++)  Cen_old[c][d] = Cen_new[c][d];
+
+} // FUNCTION : GetClusterCenter
+
+
+
+>>>>>>> exact-cooling
 #endif // #ifdef MASSIVE_PARTICLES

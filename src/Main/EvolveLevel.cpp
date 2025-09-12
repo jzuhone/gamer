@@ -742,6 +742,8 @@ void EvolveLevel( const int lv, const double dTime_FaLv )
             }
 #           endif // # if ( defined( LOAD_BALANCE ) && ELBDM_SCHEME == ELBDM_HYBRID )
 
+            const long ResVar = _TOTAL - _TCOOL;
+
             TIMING_FUNC(   Flu_FixUp_Restrict( lv, amr->FluSg[lv+1], amr->FluSg[lv], amr->MagSg[lv+1], amr->MagSg[lv],
                                                NULL_INT, NULL_INT, FixUpVar_Restrict, _MAG ),
                            Timer_FixUp[lv],   TIMER_ON   );
