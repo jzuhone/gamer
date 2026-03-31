@@ -31,6 +31,7 @@ static char    Merger_File_Prof3[1000];   // profile table of cluster 3
        double  Merger_Coll_VelY2;         // y-velocity of the second cluster
        double  Merger_Coll_VelX3;         // x-velocity of the third cluster
        double  Merger_Coll_VelY3;         // y-velocity of the third cluster
+       double  Merger_Coll_BkgDensity;    // background gas density
        long    NPar_EachCluster[3];       // Number of particles in each cluster
        long    NPar_AllCluster;           // Number of particles in all clusters
 
@@ -195,17 +196,24 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
    LOAD_PARA( load_mode, "Merger_File_Par3",        Merger_File_Par3,       NoDef_str,        Useless_str,   Useless_str    );
    LOAD_PARA( load_mode, "Merger_Coll_PosX1",      &Merger_Coll_PosX1,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_PosY1",      &Merger_Coll_PosY1,     -1.0,              NoMin_double,  NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_PosZ1",      &Merger_Coll_PosZ1,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_PosX2",      &Merger_Coll_PosX2,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_PosY2",      &Merger_Coll_PosY2,     -1.0,              NoMin_double,  NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_PosZ2",      &Merger_Coll_PosZ2,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_PosX3",      &Merger_Coll_PosX3,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_PosY3",      &Merger_Coll_PosY3,     -1.0,              NoMin_double,  NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_PosZ3",      &Merger_Coll_PosZ3,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_VelX1",      &Merger_Coll_VelX1,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_VelY1",      &Merger_Coll_VelY1,     -1.0,              NoMin_double,  NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_VelZ1",      &Merger_Coll_VelZ1,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_VelX2",      &Merger_Coll_VelX2,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_VelY2",      &Merger_Coll_VelY2,     -1.0,              NoMin_double,  NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_VelZ2",      &Merger_Coll_VelZ2,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_VelX3",      &Merger_Coll_VelX3,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_VelY3",      &Merger_Coll_VelY3,     -1.0,              NoMin_double,  NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_VelZ3",      &Merger_Coll_VelZ3,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_UseMetals",  &Merger_Coll_UseMetals,  true,             Useless_bool,  Useless_bool   );
+   LOAD_PARA( load_mode, "Merger_Coll_BkgDensity", &Merger_Coll_BkgDensity, 0.0,              0.0,           NoMax_double   );
 
 } // FUNCTION : LoadInputTestProb
 
@@ -253,16 +261,36 @@ void SetParameter()
 // convert to code units
    Merger_Coll_PosX1 *= Const_kpc / UNIT_L;
    Merger_Coll_PosY1 *= Const_kpc / UNIT_L;
+   Merger_Coll_PosZ1 *= Const_kpc / UNIT_L;
    Merger_Coll_PosX2 *= Const_kpc / UNIT_L;
    Merger_Coll_PosY2 *= Const_kpc / UNIT_L;
+   Merger_Coll_PosZ2 *= Const_kpc / UNIT_L;
    Merger_Coll_PosX3 *= Const_kpc / UNIT_L;
    Merger_Coll_PosY3 *= Const_kpc / UNIT_L;
+   Merger_Coll_PosZ3 *= Const_kpc / UNIT_L;
    Merger_Coll_VelX1 *= (Const_km/Const_s) / UNIT_V;
    Merger_Coll_VelY1 *= (Const_km/Const_s) / UNIT_V;
+   Merger_Coll_VelZ1 *= (Const_km/Const_s) / UNIT_V;
    Merger_Coll_VelX2 *= (Const_km/Const_s) / UNIT_V;
    Merger_Coll_VelY2 *= (Const_km/Const_s) / UNIT_V;
+   Merger_Coll_VelZ2 *= (Const_km/Const_s) / UNIT_V;
    Merger_Coll_VelX3 *= (Const_km/Const_s) / UNIT_V;
    Merger_Coll_VelY3 *= (Const_km/Const_s) / UNIT_V;
+   Merger_Coll_VelZ3 *= (Const_km/Const_s) / UNIT_V;
+   Merger_Coll_BkgDensity /= UNIT_D;
+
+   if ( Merger_Coll_PosZ1 < 0.0 ) {
+      Merger_Coll_PosZ1 = amr->BoxCenter[2];
+      Merger_Coll_VelZ1 = 0.0;
+   }
+   if ( Merger_Coll_PosZ2 < 0.0 ) {
+      Merger_Coll_PosZ2 = amr->BoxCenter[2];
+      Merger_Coll_VelZ2 = 0.0;
+   }
+   if ( Merger_Coll_PosZ3 < 0.0 ) {
+      Merger_Coll_PosZ3 = amr->BoxCenter[2];
+      Merger_Coll_VelZ3 = 0.0;
+   }
 
    if ( OPT__INIT != INIT_BY_RESTART ) {
 
@@ -493,6 +521,7 @@ void SetParameter()
       Aux_Message( stdout, "  cluster 3 y-velocity   = %g\n",           Merger_Coll_VelY3 );
       }
       Aux_Message( stdout, "  use metals             = %s\n",          (Merger_Coll_UseMetals)? "yes":"no" );
+      Aux_Message( stdout, "  background gas density = %g\n"            Merger_Coll_BkgDensity );
       Aux_Message( stdout, "=============================================================================\n" );
    }
 
@@ -530,9 +559,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    if ( !( Merger_Coll_IsGas1 || Merger_Coll_IsGas2 || Merger_Coll_IsGas3 ))
       return;
 
-   const double ClusterCenter1[3] = { Merger_Coll_PosX1, Merger_Coll_PosY1, amr->BoxCenter[2] };
-   const double ClusterCenter2[3] = { Merger_Coll_PosX2, Merger_Coll_PosY2, amr->BoxCenter[2] };
-   const double ClusterCenter3[3] = { Merger_Coll_PosX3, Merger_Coll_PosY3, amr->BoxCenter[2] };
+   const double ClusterCenter1[3] = { Merger_Coll_PosX1, Merger_Coll_PosY1, Merger_Coll_PosZ1 };
+   const double ClusterCenter2[3] = { Merger_Coll_PosX2, Merger_Coll_PosY2, Merger_Coll_PosZ2 };
+   const double ClusterCenter3[3] = { Merger_Coll_PosX3, Merger_Coll_PosY3, Merger_Coll_PosZ3 };
 
    double r1, r2, r3, Dens1, Dens2, Dens3, Pres1, Pres2, Pres3;
    double Metl1, Metl2, Metl3, rmax1, rmax2, rmax3;
@@ -603,7 +632,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    if ( Metl3 == NULL_REAL )
       Metl3 = Table_M3[Merger_NBin3-1];
 
-   Dens = Dens1 + Dens2 + Dens3;
+   Dens = MAX( Dens1 + Dens2 + Dens3, Merger_Coll_BkgDensity );
    Pres = Pres1 + Pres2 + Pres3;
 
    MomX = 0.0;
@@ -611,16 +640,18 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    if ( r1 <= rmax1 ) {
       MomX += Merger_Coll_VelX1*Dens1;
       MomY += Merger_Coll_VelY1*Dens1;
+      MomZ += Merger_Coll_VelZ1*Dens1;
    }
    if ( r2 <= rmax2 ) {
      MomX += Merger_Coll_VelX2*Dens2;
      MomY += Merger_Coll_VelY2*Dens2;
+     MomZ += Merger_Coll_VelZ2*Dens2;
    }
    if ( r3 <= rmax3 ) {
      MomX += Merger_Coll_VelX3*Dens3;
      MomY += Merger_Coll_VelY3*Dens3;
+     MomZ += Merger_Coll_VelZ3*Dens3;
    }
-   MomZ = 0.0;
 
    // compute the total gas energy
    Eint = EoS_DensPres2Eint_CPUPtr( Dens, Pres, NULL, EoS_AuxArray_Flt,

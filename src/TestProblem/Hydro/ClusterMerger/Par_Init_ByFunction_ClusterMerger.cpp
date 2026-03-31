@@ -16,16 +16,22 @@ extern char    Merger_File_Par3[1000];
 extern int     Merger_Coll_NumHalos;
 extern double  Merger_Coll_PosX1;
 extern double  Merger_Coll_PosY1;
+extern double  Merger_Coll_PosZ1;
 extern double  Merger_Coll_PosX2;
 extern double  Merger_Coll_PosY2;
+extern double  Merger_Coll_PosZ2;
 extern double  Merger_Coll_PosX3;
 extern double  Merger_Coll_PosY3;
+extern double  Merger_Coll_PosZ3;
 extern double  Merger_Coll_VelX1;
 extern double  Merger_Coll_VelY1;
+extern double  Merger_Coll_VelZ1;
 extern double  Merger_Coll_VelX2;
 extern double  Merger_Coll_VelY2;
+extern double  Merger_Coll_VelZ2;
 extern double  Merger_Coll_VelX3;
 extern double  Merger_Coll_VelY3;
+extern double  Merger_Coll_VelZ3;
 extern long    NPar_EachCluster[3];
 extern long    NPar_AllCluster;
 
@@ -248,16 +254,17 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
    real_par *ParPos[3] = { ParPosX, ParPosY, ParPosZ };
 
    const double ClusterCenter1[3]
-      = { Merger_Coll_PosX1, Merger_Coll_PosY1, amr->BoxCenter[2] };
+      = { Merger_Coll_PosX1, Merger_Coll_PosY1, Merger_Coll_PosZ1 };
    const double ClusterCenter2[3]
-      = { Merger_Coll_PosX2, Merger_Coll_PosY2, amr->BoxCenter[2] };
+      = { Merger_Coll_PosX2, Merger_Coll_PosY2, Merger_Coll_PosZ2 };
    const double ClusterCenter3[3]
-      = { Merger_Coll_PosX3, Merger_Coll_PosY3, amr->BoxCenter[2] };
+      = { Merger_Coll_PosX3, Merger_Coll_PosY3, Merger_Coll_PosZ3 };
 
    for (long p=0; p<NPar_ThisRank_EachCluster[0]; p++) {
       if ( ParType[p] != PTYPE_TRACER ) {
          ParVelX[p] += Merger_Coll_VelX1;
          ParVelY[p] += Merger_Coll_VelY1;
+         ParVelZ[p] += Merger_Coll_VelZ1;
       }
       for (int d=0; d<3; d++)
          ParPos[d][p] += ClusterCenter1[d];
@@ -267,6 +274,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       if ( ParType[p] != PTYPE_TRACER ) {
          ParVelX[p] += Merger_Coll_VelX2;
          ParVelY[p] += Merger_Coll_VelY2;
+         ParVelZ[p] += Merger_Coll_VelZ2;
       }
       for (int d=0; d<3; d++)
          ParPos[d][p] += ClusterCenter2[d];
@@ -276,6 +284,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       if ( ParType[p] != PTYPE_TRACER ) {
          ParVelX[p] += Merger_Coll_VelX3;
          ParVelY[p] += Merger_Coll_VelY3;
+         ParVelZ[p] += Merger_Coll_VelZ3;
       }
       for (int d=0; d<3; d++)
          ParPos[d][p] += ClusterCenter3[d];
