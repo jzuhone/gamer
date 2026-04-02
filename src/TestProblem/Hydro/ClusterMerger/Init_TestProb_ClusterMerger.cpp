@@ -21,16 +21,22 @@ static char    Merger_File_Prof3[1000];   // profile table of cluster 3
        bool    Merger_Coll_UseMetals;     // (true/false) --> do the clusters have a metal field
        double  Merger_Coll_PosX1;         // x-position of the first cluster
        double  Merger_Coll_PosY1;         // y-position of the first cluster
+       double  Merger_Coll_PosZ1;         // z-position of the first cluster
        double  Merger_Coll_PosX2;         // x-position of the second cluster
        double  Merger_Coll_PosY2;         // y-position of the second cluster
+       double  Merger_Coll_PosZ2;         // z-position of the second cluster
        double  Merger_Coll_PosX3;         // x-position of the third cluster
        double  Merger_Coll_PosY3;         // y-position of the third cluster
+       double  Merger_Coll_PosZ3;         // z-position of the third cluster
        double  Merger_Coll_VelX1;         // x-velocity of the first cluster
        double  Merger_Coll_VelY1;         // y-velocity of the first cluster
+       double  Merger_Coll_VelZ1;         // z-velocity of the first cluster
        double  Merger_Coll_VelX2;         // x-velocity of the second cluster
        double  Merger_Coll_VelY2;         // y-velocity of the second cluster
+       double  Merger_Coll_VelZ2;         // z-velocity of the second cluster
        double  Merger_Coll_VelX3;         // x-velocity of the third cluster
        double  Merger_Coll_VelY3;         // y-velocity of the third cluster
+       double  Merger_Coll_VelZ3;         // z-velocity of the third cluster
        double  Merger_Coll_BkgDensity;    // background gas density
        long    NPar_EachCluster[3];       // Number of particles in each cluster
        long    NPar_AllCluster;           // Number of particles in all clusters
@@ -213,7 +219,7 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
    LOAD_PARA( load_mode, "Merger_Coll_VelY3",      &Merger_Coll_VelY3,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_VelZ3",      &Merger_Coll_VelZ3,     -1.0,              NoMin_double,  NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_UseMetals",  &Merger_Coll_UseMetals,  true,             Useless_bool,  Useless_bool   );
-   LOAD_PARA( load_mode, "Merger_Coll_BkgDensity", &Merger_Coll_BkgDensity, 0.0,              0.0,           NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_BkgDensity", &Merger_Coll_BkgDensity, 5.0e-30,          0.0,           NoMax_double   );
 
 } // FUNCTION : LoadInputTestProb
 
@@ -493,35 +499,38 @@ void SetParameter()
       Aux_Message( stdout, "  profile file 1         = %s\n",           Merger_File_Prof1 );
       Aux_Message( stdout, "  particle file 1        = %s\n",           Merger_File_Par1 );
       Aux_Message( stdout, "  cluster 1 w/ gas       = %s\n",          (Merger_Coll_IsGas1)? "yes":"no" );
-      if ( Merger_Coll_IsGas1 )
       Aux_Message( stdout, "  cluster 1 x-position   = %g\n",           Merger_Coll_PosX1 );
       Aux_Message( stdout, "  cluster 1 y-position   = %g\n",           Merger_Coll_PosY1 );
+      Aux_Message( stdout, "  cluster 1 z-position   = %g\n",           Merger_Coll_PosZ1 );	
       Aux_Message( stdout, "  cluster 1 x-velocity   = %g\n",           Merger_Coll_VelX1 );
       Aux_Message( stdout, "  cluster 1 y-velocity   = %g\n",           Merger_Coll_VelY1 );
+      Aux_Message( stdout, "  cluster 1 z-velocity   = %g\n",           Merger_Coll_VelZ1 );
       if ( Merger_Coll_NumHalos > 1 ) {
       if ( Merger_Coll_IsGas2 )
       Aux_Message( stdout, "  profile file 2         = %s\n",           Merger_File_Prof2 );
       Aux_Message( stdout, "  particle file 2        = %s\n",           Merger_File_Par2 );
       Aux_Message( stdout, "  cluster 2 w/ gas       = %s\n",          (Merger_Coll_IsGas2)? "yes":"no" );
-      if ( Merger_Coll_IsGas2 )
       Aux_Message( stdout, "  cluster 2 x-position   = %g\n",           Merger_Coll_PosX2 );
       Aux_Message( stdout, "  cluster 2 y-position   = %g\n",           Merger_Coll_PosY2 );
+      Aux_Message( stdout, "  cluster 2 z-position   = %g\n",           Merger_Coll_PosZ2 );
       Aux_Message( stdout, "  cluster 2 x-velocity   = %g\n",           Merger_Coll_VelX2 );
       Aux_Message( stdout, "  cluster 2 y-velocity   = %g\n",           Merger_Coll_VelY2 );
+      Aux_Message( stdout, "  cluster 2 z-velocity   = %g\n",           Merger_Coll_VelZ2 );
       }
       if ( Merger_Coll_NumHalos > 2 ) {
       if ( Merger_Coll_IsGas3 )
       Aux_Message( stdout, "  profile file 3         = %s\n",           Merger_File_Prof3 );
       Aux_Message( stdout, "  particle file 3        = %s\n",           Merger_File_Par3 );
       Aux_Message( stdout, "  cluster 3 w/ gas       = %s\n",          (Merger_Coll_IsGas3)? "yes":"no" );
-      if ( Merger_Coll_IsGas3 )
       Aux_Message( stdout, "  cluster 3 x-position   = %g\n",           Merger_Coll_PosX3 );
       Aux_Message( stdout, "  cluster 3 y-position   = %g\n",           Merger_Coll_PosY3 );
+      Aux_Message( stdout, "  cluster 3 z-position   = %g\n",           Merger_Coll_PosZ3 );
       Aux_Message( stdout, "  cluster 3 x-velocity   = %g\n",           Merger_Coll_VelX3 );
       Aux_Message( stdout, "  cluster 3 y-velocity   = %g\n",           Merger_Coll_VelY3 );
+      Aux_Message( stdout, "  cluster 3 z-velocity   = %g\n",           Merger_Coll_VelZ3 );
       }
       Aux_Message( stdout, "  use metals             = %s\n",          (Merger_Coll_UseMetals)? "yes":"no" );
-      Aux_Message( stdout, "  background gas density = %g\n"            Merger_Coll_BkgDensity );
+      Aux_Message( stdout, "  background gas density = %g\n",           Merger_Coll_BkgDensity );
       Aux_Message( stdout, "=============================================================================\n" );
    }
 
@@ -635,19 +644,16 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    Dens = MAX( Dens1 + Dens2 + Dens3, Merger_Coll_BkgDensity );
    Pres = Pres1 + Pres2 + Pres3;
 
-   MomX = 0.0;
-   MomY = 0.0;
-   if ( r1 <= rmax1 ) {
-      MomX += Merger_Coll_VelX1*Dens1;
-      MomY += Merger_Coll_VelY1*Dens1;
-      MomZ += Merger_Coll_VelZ1*Dens1;
-   }
-   if ( r2 <= rmax2 ) {
+   MomX = Merger_Coll_VelX1*Dens1;
+   MomY = Merger_Coll_VelY1*Dens1;
+   MomZ = Merger_Coll_VelZ1*Dens1;
+   
+   if ( Merger_Coll_NumHalos > 1 && Merger_Coll_IsGas2 ) {
      MomX += Merger_Coll_VelX2*Dens2;
      MomY += Merger_Coll_VelY2*Dens2;
      MomZ += Merger_Coll_VelZ2*Dens2;
    }
-   if ( r3 <= rmax3 ) {
+   if ( Merger_Coll_NumHalos > 2 && Merger_Coll_IsGas3 ) {
      MomX += Merger_Coll_VelX3*Dens3;
      MomY += Merger_Coll_VelY3*Dens3;
      MomZ += Merger_Coll_VelZ3*Dens3;
@@ -667,7 +673,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    if ( Merger_Coll_UseMetals ) {
       Metl = Metl1*Dens1 + Metl2*Dens2 + Metl3*Dens3;
-      fluid[Idx_Metal] = Metl;
+      fluid[Idx_Metal] = MAX( Metl, 0.3*Merger_Coll_BkgDensity );
    }
 
    if ( Merger_Coll_IsGas1 ) {
