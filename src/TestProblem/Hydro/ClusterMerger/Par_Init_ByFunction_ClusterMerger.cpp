@@ -1,30 +1,31 @@
 #include "GAMER.h"
 #include <string>
 
+#ifdef MASSIVE_PARTICLES
 
 
 // floating-point type in the input particle file
+// this is defined as double because we use H5T_NATIVE_DOUBLE
+// to read in the particle data from the input files which is a
+// always in double-precision
 typedef double real_par_in;
 //typedef float  real_par_in;
 
 
 // problem-specific global variables
 // =======================================================================================
-extern char       (*Merger_File_Par)[1000];
+extern char       (*Merger_File_Par)[ MAX_STRING ];
 extern int          Merger_Coll_NumHalos;
 extern double     (*Merger_Coll_Pos)[3];
 extern double     (*Merger_Coll_Vel)[3];
 extern bool         Merger_Coll_LabelCenter;
 extern long        *NPar_EachCluster;
-#ifdef MASSIVE_PARTICLES
 extern FieldIdx_t   Idx_ParHalo;
-#endif
 // =======================================================================================
 
 
 // problem-specific function prototypes
 // =======================================================================================
-#ifdef MASSIVE_PARTICLES
 #ifdef SUPPORT_HDF5
 static void Read_Particles_ClusterMerger( std::string filename, long offset, long num,
                                           real_par_in xpos[], real_par_in ypos[],
@@ -32,12 +33,10 @@ static void Read_Particles_ClusterMerger( std::string filename, long offset, lon
                                           real_par_in yvel[], real_par_in zvel[],
                                           real_par_in mass[], real_par_in ptype[] );
 #endif
-#endif
 // =======================================================================================
 
 
 
-#ifdef MASSIVE_PARTICLES
 //-------------------------------------------------------------------------------------------------------
 // Function    :  Par_Init_ByFunction_ClusterMerger
 // Description :  Initialize all particle attributes for the merging cluster test
@@ -45,7 +44,7 @@ static void Read_Particles_ClusterMerger( std::string filename, long offset, lon
 //
 // Note        :  1. Invoked by Init_GAMER() using the function pointer "Par_Init_ByFunction_Ptr"
 //                   --> This function pointer may be reset by various test problem initializers, in which case
-//                       this funtion will become useless
+//                       this function will become useless
 //                2. Periodicity should be taken care of in this function
 //                   --> No particles should lie outside the simulation box when the periodic BC is adopted
 //                   --> However, if the non-periodic BC is adopted, particles are allowed to lie outside the box
@@ -56,7 +55,9 @@ static void Read_Particles_ClusterMerger( std::string filename, long offset, lon
 //                   --> They will later be redistributed when calling Par_FindHomePatch_UniformGrid()
 //                       and LB_Init_LoadBalance()
 //                   --> Therefore, there is no constraint on which particles should be set by this function
-//                4. File format: plain C binary in the format [Number of particles][Particle attributes]
+//                4. The initialization of the PUID routine has been separated into amr->Par->InitRepo()
+//                   --> If needed, you can still modify PUID through the AllAttributeInt array
+//                5. File format: plain C binary in the format [Number of particles][Particle attributes]
 //                   --> [Particle 0][Attribute 0], [Particle 0][Attribute 1], ...
 //                   --> Note that it's different from the internal data format in the particle repository,
 //                       which is [Particle attributes][Number of particles]
@@ -83,7 +84,8 @@ static void Read_Particles_ClusterMerger( std::string filename, long offset, lon
 void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPar_AllRank,
                                         real_par *ParMass, real_par *ParPosX, real_par *ParPosY, real_par *ParPosZ,
                                         real_par *ParVelX, real_par *ParVelY, real_par *ParVelZ, real_par *ParTime,
-                                        long_par *ParType, real_par *AllAttributeFlt[PAR_NATT_FLT_TOTAL],
+                                        long_par *ParType,
+                                        real_par *AllAttributeFlt[PAR_NATT_FLT_TOTAL],
                                         long_par *AllAttributeInt[PAR_NATT_INT_TOTAL] )
 {
 
@@ -108,7 +110,10 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       switch (c)
       {
          case 0:
-            NPar_ThisRank_EachCluster[0] = NPar_EachCluster[0] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[0]%MPI_NRank)?1:0 );
+            if ( NCluster == 1 )
+               NPar_ThisRank_EachCluster[0] = NPar_ThisRank;
+            else
+               NPar_ThisRank_EachCluster[0] = NPar_EachCluster[0] / MPI_NRank + ( (MPI_Rank<NPar_EachCluster[0]%MPI_NRank)?1:0 );
             break;
          case 1:
             if ( NCluster == 2 )
@@ -128,7 +133,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       for (int r=0; r<MPI_NRank; r++)   NPar_Check += NPar_ThisCluster_EachRank[r];
       if ( NPar_Check != NPar_EachCluster[c] )
          Aux_Error( ERROR_INFO, "total number of particles in cluster %d: found (%ld) != expect (%ld) !!\n",
-                    c, NPar_Check, NPar_EachCluster[c] );
+                    c+1, NPar_Check, NPar_EachCluster[c] );
 
 //    set the file offset for this rank
       Offset[c] = 0;
@@ -160,7 +165,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       for (long p=0; p<NPar_ThisRank_EachCluster[c]; p++)
       {
          if ( (long_par)ptype[p] == PTYPE_TRACER )
-            Aux_Error( ERROR_INFO, "Tracer particles were found in the input data for cluster %d, but TRACER is not defined!\n", c );
+            Aux_Error( ERROR_INFO, "Tracer particles were found in the input data for cluster %d, but TRACER is not defined!\n", c+1 );
       }
 #     endif
 
@@ -171,7 +176,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
          Aux_Message( stdout, "   Storing cluster %d to the particle repository ... \n", c+1 );
 
 //    compute offsets for assigning particles
-      double coffset;
+      long coffset = 0L;
       for (int cc=0; cc<c; cc++)   coffset += NPar_ThisRank_EachCluster[cc];
 
       for (long p=0; p<NPar_ThisRank_EachCluster[c]; p++)
@@ -256,9 +261,9 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
 
       for (int c=0; c<NCluster; c++)
       {
-         long   pidx_min       = -1;
-         real   pos_min[3]     = { NULL_REAL, NULL_REAL, NULL_REAL };
-         double r_min_ThisRank = __DBL_MAX__;
+         long     pidx_min       = -1;
+         real_par pos_min[3]     = { NULL_REAL, NULL_REAL, NULL_REAL };
+         double   r_min_ThisRank = __DBL_MAX__;
 
 //       get the particle in this rank closest to the cluster center
          for (long p=pidx_offset; p<pidx_offset+NPar_ThisRank_EachCluster[c]; p++)
@@ -289,7 +294,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
 //       check if one and only one particle is labeled
          MPI_Allreduce( &NFound_ThisRank, &NFound_AllRank, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
          if ( NFound_AllRank != 1 )
-            Aux_Error( ERROR_INFO, "NFound_AllRank (%d) != 1 for cluster %d !!\n", NFound_AllRank, c );
+            Aux_Error( ERROR_INFO, "NFound_AllRank (%d) != 1 for cluster %d !!\n", NFound_AllRank, c+1 );
 
 //       update the particle index offset for the next cluster
          pidx_offset += NPar_ThisRank_EachCluster[c];

@@ -6,29 +6,30 @@
 // problem-specific global variables
 // =======================================================================================
 // (1) read from Input__TestProb
-       int      Merger_Coll_NumHalos;     // number of clusters
-static char   (*Merger_File_Prof)[1000];  // profile table of clusters
-       char   (*Merger_File_Par) [1000];  // particle file of clusters
-static bool    *Merger_Coll_IsGas;        // (true/false) --> does cluster have gas
-       double (*Merger_Coll_Pos)[3];      // position of clusters
-       double (*Merger_Coll_Vel)[3];      // velocity of clusters
-       double  *CM_BH_Mass;               // black hole mass of clusters
-       double  *Jet_HalfHeight;           // half height of the cylinder-shape jet source of clusters
-       double  *Jet_Radius;               // radius of the cylinder-shape jet source of clusters
+       int      Merger_Coll_NumHalos;                   // number of clusters
+static char   (*Merger_File_Prof)[ MAX_STRING ] = NULL; // profile table of clusters
+       char   (*Merger_File_Par) [ MAX_STRING ] = NULL; // particle file of clusters
+static bool    *Merger_Coll_IsGas = NULL;               // (true/false) --> does cluster have gas
+       double (*Merger_Coll_Pos)[3] = NULL;             // initial position of clusters
+       double (*Merger_Coll_Vel)[3] = NULL;             // initial velocity of clusters
+       double  *CM_BH_Mass = NULL;                      // initial black hole mass of clusters
+       double  *Jet_HalfHeight = NULL;                  // half height of the cylinder-shape jet source of clusters
+       double  *Jet_Radius = NULL;                      // radius of the cylinder-shape jet source of clusters
 
        bool     AGN_feedback;             // turn on/off (1/0) AGN feedback
-       int      Accretion_Mode;           // 1: hot mode; 2: code mode; 3: combine (hot + cold)
+       int      Accretion_Mode;           // 1: hot mode; 2: cold mode; 3: combine (hot + cold)
        double   eta;                      // mass loading factor in jet feedback
        double   eps_f;                    // the radiative efficiency in jet feedback
        double   eps_m;                    // the fraction of total energy that goes into the thermal energy in jet feedback
-       double   R_acc;                    // accretion radius: compute the accretion rate
+       double   R_acc;                    // accretion radius: compute the accretion rate, and determine if two black holes
+                                          // should be merged
        double   R_dep;                    // radius to deplete the accreted gas
        int      JetDirection_case;        // methods for choosing the jet direction
                                           //    1: fixed at x-axis;
                                           //    2: import from table (generate JetDirection.txt)
                                           //    3: align with angular momentum
 
-static char     JetDirection_file[1000];  // jet direction file
+static char     JetDirection_file[ MAX_STRING ];  // jet direction file
 
        bool     Merger_Coll_UseMetals;    // (true/false) --> do the clusters have a metal field
        bool     Merger_Coll_LabelCenter;  // (true/false) --> label the particle closest to the center of each cluster
@@ -38,69 +39,69 @@ static char     JetDirection_file[1000];  // jet direction file
        bool     fixBH;                    // fix the BH at the simulation box center and set its velocity to be zero (1 cluster only)
 // ---------------------------------------------------------------------------------------
 // (2) read from files
-static int     *Merger_NBin;              // number of radial bins of clusters
+static int     *Merger_NBin = NULL;       // number of radial bins of clusters
 static double **Table_R = NULL;           // radius      of clusters
 static double **Table_D = NULL;           // density     of clusters
 static double **Table_P = NULL;           // pressure    of clusters
 static double **Table_M = NULL;           // metallicity of clusters
 
-       long    *NPar_EachCluster;         // number of particles in each cluster
+       long    *NPar_EachCluster = NULL;  // number of particles in each cluster
        long     NPar_AllCluster = 0L;     // number of particles in all  clusters
 
-       int      JetDirection_NBin;        // number of bins of the jet direction table
-static double  *JetDirection = NULL;      // jet direction[time/theta_1/phi_1/theta_2/phi_2/theta_3/phi_3]
-       double  *CM_Jet_Time_table;        // the time  table of jet direction
-       double **CM_Jet_Theta_table;       // the theta table of jet direction for clusters
-       double **CM_Jet_Phi_table;         // the phi   table of jet direction for clusters
+       int      JetDirection_NBin;         // number of bins of the jet direction table
+static double  *JetDirection = NULL;       // jet direction[time/theta_1/phi_1/theta_2/phi_2/theta_3/phi_3]
+       double  *CM_Jet_Time_table = NULL;  // the time  table of jet direction
+       double **CM_Jet_Theta_table = NULL; // the theta table of jet direction for clusters
+       double **CM_Jet_Phi_table = NULL;   // the phi   table of jet direction for clusters
 // ---------------------------------------------------------------------------------------
 // (3) variables to record
-       double (*CM_ClusterCen)[3];        // the center  of each cluster
-       double (*CM_BH_Pos)[3];            // BH position of each cluster
-       double (*CM_BH_Vel)[3];            // BH velocity of each cluster
-       double  *CM_BH_Mdot_tot;           // the total accretion rate of BHs
-       double  *CM_BH_Mdot_hot;           // the hot   accretion rate of BHs
-       double  *CM_BH_Mdot_cold;          // the cold  accretion rate of BHs
-       double  *CM_Jet_Mdot;              // the feedback injeciton rate of mass
-       double  *CM_Jet_Pdot;              // the feedback injeciton rate of momentum
-       double  *CM_Jet_Edot;              // the feedback injeciton rate of total energy
-       double (*CM_Jet_Vec)[3];           // jet direction
-       double (*CM_RAcc_GasVel)[3];       // average gas velocity inside the accretion radius
-       double  *CM_RAcc_SoundSpeed;       // average sound speed  inside the accreiton radius
-       double  *CM_RAcc_GasDens;          // average gas density  inside the accreiton radius
-       double  *CM_RAcc_RelativeVel;      // relative velocity between BH and gas for each cluster inside the accretion radius
-       double  *CM_RAcc_ColdGasMass;      // cold gas mass        inside the accretion radius
-       double  *CM_RAcc_GasMass;          // total gas mass       inside the accretion radius
-       double  *CM_RAcc_ParMass;          // total DM mass        inside the accretion radius
-       int     *CM_Cluster_NPar_close;    // total number of particles inside the 10 times the accrection radius of each cluster
-       double  *CM_Bondi_SinkMass;        // total mass change             in the feedback region in one global time-step
-       double  *CM_Bondi_SinkMomX;        // total x-momentum change       ...
-       double  *CM_Bondi_SinkMomY;        // total y-momentum change       ...
-       double  *CM_Bondi_SinkMomZ;        // total z-momentum change       ...
-       double  *CM_Bondi_SinkMomXAbs;     // total |x-momentum| change     ...
-       double  *CM_Bondi_SinkMomYAbs;     // total |y-momentum| change     ...
-       double  *CM_Bondi_SinkMomZAbs;     // total |z-momentum| change     ...
-       double  *CM_Bondi_SinkE;           // total injected energy         ...
-       double  *CM_Bondi_SinkEk;          // total injected kinetic energy ...
-       double  *CM_Bondi_SinkEt;          // total injected thermal energy ...
-       int     *CM_Bondi_SinkNCell;       // total number of finest cells within the feedback region
+       double (*CM_ClusterCen)[3] = NULL;     // variable to store the center of each cluster (potential minimum)
+                                              // in the current implementation, this will always be equal to CM_BH_Pos
+       double (*CM_BH_Pos)[3] = NULL;         // current BH position of each cluster
+       double (*CM_BH_Vel)[3] = NULL;         // current BH velocity of each cluster
+       double  *CM_BH_Mdot_tot = NULL;        // the total accretion rate of BHs
+       double  *CM_BH_Mdot_hot = NULL;        // the hot   accretion rate of BHs
+       double  *CM_BH_Mdot_cold = NULL;       // the cold  accretion rate of BHs
+       double  *CM_Jet_Mdot = NULL;           // the feedback injection rate of mass
+       double  *CM_Jet_Pdot = NULL;           // the feedback injection rate of momentum
+       double  *CM_Jet_Edot = NULL;           // the feedback injection rate of total energy
+       double (*CM_Jet_Vec)[3] = NULL;        // jet direction
+       double (*CM_RAcc_GasVel)[3] = NULL;    // average gas velocity inside the accretion radius
+       double  *CM_RAcc_SoundSpeed = NULL;    // average sound speed  inside the accretion radius
+       double  *CM_RAcc_GasDens = NULL;       // average gas density  inside the accretion radius
+       double  *CM_RAcc_RelativeVel = NULL;   // relative velocity between BH and gas for each cluster inside the accretion radius
+       double  *CM_RAcc_ColdGasMass = NULL;   // cold gas mass  inside the accretion radius
+       double  *CM_RAcc_GasMass = NULL;       // total gas mass inside the accretion radius
+       double  *CM_RAcc_ParMass = NULL;       // total DM mass  inside the accretion radius
+       int     *CM_Cluster_NPar_close = NULL; // total number of particles inside the 10 times the accrection radius of each cluster
+       double  *CM_Bondi_SinkMass = NULL;     // total mass change             in the feedback region in one global time-step
+       double  *CM_Bondi_SinkMomX = NULL;     // total x-momentum change       ...
+       double  *CM_Bondi_SinkMomY = NULL;     // total y-momentum change       ...
+       double  *CM_Bondi_SinkMomZ = NULL;     // total z-momentum change       ...
+       double  *CM_Bondi_SinkMomXAbs = NULL;  // total |x-momentum| change     ...
+       double  *CM_Bondi_SinkMomYAbs = NULL;  // total |y-momentum| change     ...
+       double  *CM_Bondi_SinkMomZAbs = NULL;  // total |z-momentum| change     ...
+       double  *CM_Bondi_SinkE = NULL;        // total injected energy         ...
+       double  *CM_Bondi_SinkEk = NULL;       // total injected kinetic energy ...
+       double  *CM_Bondi_SinkEt = NULL;       // total injected thermal energy ...
+       int     *CM_Bondi_SinkNCell = NULL;    // total number of finest cells within the feedback region
 // ---------------------------------------------------------------------------------------
 // (4) other variables
        int      AdjustCount = 0;          // count the number of adjustments
        int      Merger_Coll_NumBHs;       // number of BHs in the simulation
 
-       double  *E_inj_exp;                // the expected amount of injected energy
-       double  *M_inj_exp;                // the expected amount of injected gas mass
-       double (*ang_mom_sum)[3];
+       double  *E_inj_exp = NULL;         // the expected amount of injected energy
+       double  *M_inj_exp = NULL;         // the expected amount of injected gas mass
 
-       double  *Jet_WaveK;                // jet wavenumber used in the sin() function to have smooth bidirectional jets
-       double  *V_cyl;                    // the volume of jet source
-       double  *M_inj;                    // the injected density
-       double  *P_inj;                    // the injected momentum
-       double  *E_inj;                    // the injected energy
-       double  *normalize_const;          // the exact normalization constant
+       double  *Jet_WaveK = NULL;         // jet wavenumber used in the sin() function to have smooth bidirectional jets
+       double  *V_cyl = NULL;             // the volume of jet source
+       double  *M_inj = NULL;             // the injected density
+       double  *P_inj = NULL;             // the injected momentum (currently not used)
+       double  *E_inj = NULL;             // the injected energy
+       double  *normalize_const = NULL;   // the exact normalization constant
 
 #ifdef MASSIVE_PARTICLES
-       long_par *CM_ClusterIdx_Cur;       // the current cluster index
+       long_par *CM_ClusterIdx_Cur = NULL; // the current cluster index for the BHs
 #endif
 
 static FieldIdx_t *ColorFieldsIdx;
@@ -115,11 +116,14 @@ static FieldIdx_t *ColorFieldsIdx;
 // (1) external functions
 #ifdef MASSIVE_PARTICLES
 void AddNewParticleAttribute_ClusterMerger();
-void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPar_AllRank,
-                                        real_par *ParMass, real_par *ParPosX, real_par *ParPosY, real_par *ParPosZ,
-                                        real_par *ParVelX, real_par *ParVelY, real_par *ParVelZ, real_par *ParTime,
-                                        long_par *ParType, real_par *AllAttributeFlt[PAR_NATT_FLT_TOTAL],
-                                        long_par *AllAttributeInt[PAR_NATT_INT_TOTAL] );
+long Read_Particle_Number_ClusterMerger(std::string filename);
+void Par_Init_ByFunction_ClusterMerger(const long NPar_ThisRank,
+                                       const long NPar_AllRank,
+                                       real_par *ParMass, real_par *ParPosX, real_par *ParPosY, real_par *ParPosZ,
+                                       real_par *ParVelX, real_par *ParVelY, real_par *ParVelZ, real_par *ParTime,
+                                       long_par *ParType,
+                                       real_par *AllAttributeFlt[PAR_NATT_FLT_TOTAL],
+                                       long_par *AllAttributeInt[PAR_NATT_INT_TOTAL] );
 #endif
 
 void Aux_Record_ClusterMerger();
@@ -301,7 +305,7 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
    LOAD_PARA( load_mode, "JetDirection_file",        JetDirection_file,        "JetDirection.txt", Useless_str,   Useless_str    );
    LOAD_PARA( load_mode, "fixBH",                   &fixBH,                    false,              Useless_bool,  Useless_bool   );
 
-} // FUNCITON : LoadInputTestProb
+} // FUNCTION : LoadInputTestProb
 
 
 
@@ -338,8 +342,8 @@ void SetParameter()
    delete ReadPara;
 
 // (1-1-2) allocate runtime parameter memories
-   Merger_File_Prof  = new char   [ Merger_Coll_NumHalos ][ 1000 ];
-   Merger_File_Par   = new char   [ Merger_Coll_NumHalos ][ 1000 ];
+   Merger_File_Prof  = new char   [ Merger_Coll_NumHalos ][ MAX_STRING ];
+   Merger_File_Par   = new char   [ Merger_Coll_NumHalos ][ MAX_STRING ];
    Merger_Coll_IsGas = new bool   [ Merger_Coll_NumHalos ];
    Merger_Coll_Pos   = new double [ Merger_Coll_NumHalos ][ 3 ];
    Merger_Coll_Vel   = new double [ Merger_Coll_NumHalos ][ 3 ];
@@ -366,7 +370,7 @@ void SetParameter()
    if ( Merger_Coll_NumHalos != 1  &&  fixBH )
    {
       fixBH = false;
-      Aux_Message( stdout, "WARNING! Reset fixBH to be false for multiple clusters!\n" );
+      if ( MPI_Rank == 0 )   Aux_Message( stdout, "WARNING : resetting fixBH to false for multiple clusters !!\n" );
    }
 
    if ( fixBH )
@@ -393,6 +397,8 @@ void SetParameter()
    ColorFieldsIdx = new FieldIdx_t [ Merger_Coll_NumHalos ];
    for (int c=0; c<Merger_Coll_NumHalos; c++)   ColorFieldsIdx[c] = Idx_Undefined;
 
+// Assign each BH the index of the halo it belongs to. This index will
+// change if the BHs merge
    CM_ClusterIdx_Cur = new long_par [ Merger_Coll_NumHalos ];
    for (int c=0; c<Merger_Coll_NumHalos; c++)   CM_ClusterIdx_Cur[c] = c;
 
@@ -466,30 +472,11 @@ void SetParameter()
       }
 
 //    set the number of black holes to be the same as the number of clusters initially
+//    the number of black holes will decrease if they merge
       Merger_Coll_NumBHs = Merger_Coll_NumHalos;
 
-//    allocate BH related memories
+//    allocate BH-related arrays
       AllocateBHVarArray();
-
-//    set initial values
-      for (int c=0; c<Merger_Coll_NumBHs; c++)
-      {
-         CM_BH_Mdot_tot [c] = 0.0;
-         CM_BH_Mdot_hot [c] = 0.0;
-         CM_BH_Mdot_cold[c] = 0.0;
-
-         CM_Cluster_NPar_close[c] = 0;
-
-         for (int d=0; d<3; d++)   CM_ClusterCen[c][d] = Merger_Coll_Pos[c][d];
-         for (int d=0; d<3; d++)   CM_BH_Pos    [c][d] = CM_ClusterCen  [c][d];
-         for (int d=0; d<3; d++)   CM_BH_Vel    [c][d] = Merger_Coll_Vel[c][d];
-
-         E_inj_exp[c] = 0.0;
-         M_inj_exp[c] = 0.0;
-         ang_mom_sum[c][0] = 1.0;
-         ang_mom_sum[c][1] = 0.0;
-         ang_mom_sum[c][2] = 0.0;
-      }
 
 //    (3) determine particle number
       NPar_EachCluster = new long [ Merger_Coll_NumHalos ];
@@ -765,12 +752,14 @@ void Output_HDF5_User_ClusterMerger( HDF5_Output_t *HDF5_OutUser )
    }
    HDF5_OutUser->Add( "AdjustCount", &AdjustCount );
 
+#  ifdef MASSIVE_PARTICLES
    for (int c=0; c<Merger_Coll_NumHalos; c++)
    {
       char CM_ClusterIdx_Cur_name[50];
       sprintf( CM_ClusterIdx_Cur_name, "CM_ClusterIdx_Cur_%d", c );
       HDF5_OutUser->Add( CM_ClusterIdx_Cur_name, &CM_ClusterIdx_Cur[c] );
    }
+#  endif
 
 } // FUNCTION : Output_HDF5_User_ClusterMerger
 #endif // #ifdef SUPPORT_HDF5
@@ -788,6 +777,26 @@ void Output_HDF5_User_ClusterMerger( HDF5_Output_t *HDF5_OutUser )
 void End_ClusterMerger()
 {
 
+#  ifdef SUPPORT_HDF5
+   if ( OPT__INIT != INIT_BY_RESTART )
+   {
+      delete [] NPar_EachCluster;
+      delete [] Merger_NBin;
+      for (int c=0; c<Merger_Coll_NumHalos; c++)
+      {
+         if ( ! Merger_Coll_IsGas[c] )   continue;
+         delete [] Table_R[c];
+         delete [] Table_D[c];
+         delete [] Table_P[c];
+         delete [] Table_M[c];
+      }
+      delete [] Table_R;
+      delete [] Table_D;
+      delete [] Table_P;
+      delete [] Table_M;
+   }
+#  endif
+
    delete [] Merger_File_Prof;
    delete [] Merger_File_Par;
    delete [] Merger_Coll_IsGas;
@@ -797,7 +806,9 @@ void End_ClusterMerger()
    delete [] Jet_HalfHeight;
    delete [] Jet_Radius;
 
+#  ifdef MASSIVE_PARTICLES
    delete [] CM_ClusterIdx_Cur;
+#  endif
    delete [] CM_Cluster_NPar_close;
    delete [] CM_ClusterCen;
    delete [] CM_BH_Pos;
@@ -831,30 +842,11 @@ void End_ClusterMerger()
 
    delete [] ColorFieldsIdx;
 
-#  ifdef SUPPORT_HDF5
-   if ( OPT__INIT != INIT_BY_RESTART )
-   {
-      delete [] NPar_EachCluster;
-      delete [] Merger_NBin;
-      for (int c=0; c<Merger_Coll_NumHalos; c++)
-      {
-         if ( ! Merger_Coll_IsGas[c] )   continue;
-         delete [] Table_R[c];
-         delete [] Table_D[c];
-         delete [] Table_P[c];
-         delete [] Table_M[c];
-      }
-      delete [] Table_R;
-      delete [] Table_D;
-      delete [] Table_P;
-      delete [] Table_M;
-   }
-#  endif
-
    if ( AGN_feedback  &&  JetDirection_case == 2 )
    {
       delete [] CM_Jet_Theta_table;
       delete [] CM_Jet_Phi_table;
+      delete [] JetDirection;
    }
 
    delete [] Jet_WaveK;
@@ -866,7 +858,6 @@ void End_ClusterMerger()
 
    delete [] E_inj_exp;
    delete [] M_inj_exp;
-   delete [] ang_mom_sum;
 
 } // FUNCTION : End_ClusterMerger
 
@@ -1055,7 +1046,7 @@ void AddNewField_ClusterMerger()
 {
 
    if ( Merger_Coll_UseMetals )
-      Idx_Metal = AddField( "Metal", FIXUP_FLUX_YES, FIXUP_REST_YES, NORMALIZE_NO, INTERP_FRAC_NO );
+      Idx_Metal = AddField( "Metal", FIXUP_FLUX_YES, FIXUP_REST_YES, FLOOR_YES, NORMALIZE_NO, INTERP_FRAC_NO );
 
    for (int c=0; c<Merger_Coll_NumHalos; c++)
    {
@@ -1063,7 +1054,7 @@ void AddNewField_ClusterMerger()
       {
          char ColorField_name[MAX_STRING];
          sprintf( ColorField_name, "ColorField%d", c );
-         ColorFieldsIdx[c] = AddField( ColorField_name, FIXUP_FLUX_YES, FIXUP_REST_YES, NORMALIZE_NO, INTERP_FRAC_NO );
+         ColorFieldsIdx[c] = AddField( ColorField_name, FIXUP_FLUX_YES, FIXUP_REST_YES, FLOOR_YES, NORMALIZE_NO, INTERP_FRAC_NO );
       }
    }
 
@@ -1091,7 +1082,6 @@ void AddNewParticleAttribute_ClusterMerger()
       Idx_ParHalo = AddParticleAttributeInt( "ParHalo" );
 
 } // FUNCTION : AddNewParticleAttribute_ClusterMerger
-#endif // #ifdef MASSIVE_PARTICLES
 
 
 
@@ -1127,7 +1117,7 @@ void Init_User_ClusterMerger()
 #  ifdef SUPPORT_HDF5
    const char FileName[] = "RESTART";
 
-   hid_t  H5_FileID, H5_SetID_OutputUser, H5_TypeID_OutputUser;
+   hid_t  H5_FileID, H5_SetID_UserPara, H5_TypeID_UserPara;
    herr_t H5_Status;
 
    H5_FileID = H5Fopen( FileName, H5F_ACC_RDONLY, H5P_DEFAULT );
@@ -1136,7 +1126,7 @@ void Init_User_ClusterMerger()
 
    H5_SetID_OutputUser  = H5Dopen( H5_FileID, "User/UserPara", H5P_DEFAULT );
    if ( H5_SetID_OutputUser < 0 )
-      Aux_Error( ERROR_INFO, "failed to open the dataset \"%s\" !!\n", "User/OutputUser" );
+      Aux_Error( ERROR_INFO, "failed to open the dataset \"%s\" !!\n", "User/UserPara" );
 
    H5_TypeID_OutputUser = H5Dget_type( H5_SetID_OutputUser );
    if ( H5_TypeID_OutputUser < 0 )
@@ -1197,7 +1187,7 @@ void Init_User_ClusterMerger()
 void AllocateBHVarArray()
 {
 
-   if ( Merger_Coll_NumBHs < 1 )   Aux_Error( ERROR_INFO, "Merger_Coll_NumBHs < 1 !!\n" );
+   if ( Merger_Coll_NumBHs < 1 )   Aux_Error( ERROR_INFO, "Merger_Coll_NumBHs (%d) < 1 !!\n", Merger_Coll_NumBHs );
 
    CM_Cluster_NPar_close = new int    [ Merger_Coll_NumBHs ];
    CM_ClusterCen         = new double [ Merger_Coll_NumBHs ][ 3 ];
@@ -1238,7 +1228,6 @@ void AllocateBHVarArray()
 
    E_inj_exp             = new double [ Merger_Coll_NumBHs ];
    M_inj_exp             = new double [ Merger_Coll_NumBHs ];
-   ang_mom_sum           = new double [ Merger_Coll_NumBHs ][ 3 ];
 
    for (int c=0; c<Merger_Coll_NumBHs; c++)
    {
@@ -1281,10 +1270,10 @@ void AllocateBHVarArray()
 
       E_inj_exp            [c] = 0.0;
       M_inj_exp            [c] = 0.0;
-      for (int d=0; d<3; d++)   ang_mom_sum   [c][d] = 0.0;
    }
 
 } // FUNCITON : AllocateBHVarArray
+#endif // #ifdef MASSIVE_PARTICLES
 
 
 

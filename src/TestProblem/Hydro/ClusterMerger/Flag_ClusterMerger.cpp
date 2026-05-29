@@ -4,7 +4,7 @@
 
 // problem-specific global variables
 // =======================================================================================
-extern int      Merger_Coll_NumHalos;
+extern int      Merger_Coll_NumBHs;
 extern double   R_acc;                // the radius to compute the accretion rate
 extern double (*CM_ClusterCen)[3];
 // =======================================================================================
@@ -40,20 +40,20 @@ bool Flag_ClusterMerger( const int i, const int j, const int k, const int lv, co
    bool Flag = false;
 
 // flag cells within the target radius, and if the radius is not resolved with a specific number (Threshold[0]) of cells
-   for (int c=0; c<Merger_Coll_NumHalos; c++)
+   for (int c=0; c<Merger_Coll_NumBHs; c++)
    {
       if ( DIST_SQR_3D( Pos, CM_ClusterCen[c] ) <= SQR(25*R_acc)  &&  R_acc/dh <= Threshold[0] )
       {
          Flag = true;
          return Flag;
       } // if ( R_SQR <= SQR(25*R_acc)  &&  R_acc/dh <= Threshold[0] )
-   } // for (int c=0; c<Merger_Coll_NumHalos; c++)
+   } // for (int c=0; c<Merger_Coll_NumBHs; c++)
 
    if ( FirstTime )
    {
       const double dh_max = amr->dh[MAX_LEVEL];
-      if ( R_acc/dh_max <= Threshold[0] )
-         Aux_Message( stderr, "WARNING : MAX_LEVEL is less than the desired refinement level set in Input__Flag_User!! dh_max = %13.7e\n", dh_max );
+      if ( R_acc/dh_max <= Threshold[0]  &&  MPI_Rank == 0 )
+         Aux_Message( stderr, "WARNING : MAX_LEVEL (%d) is less than the desired refinement level set in Input__Flag_User (R_acc = %13.7e, dh_max = %13.7e, Threshold[0] = %13.7e) !!\n", MAX_LEVEL, R_acc, dh_max, Threshold[0] );
 
       FirstTime = false;
    } // if ( FirstTime )
