@@ -472,8 +472,8 @@ void Flu_ResetByUser_API_ClusterMerger( const int lv, const int FluSg, const int
                   {
                      rho_hot[c] += fluid_acc[DENS]*dv;
                      // NOTE: currently, the average sound speed is computed without applying any weighting.
-                     Cs[c] += sqrt( EoS_DensPres2CSqr_CPUPtr( fluid_acc[DENS], Pres, NULL, EoS_AuxArray_Flt,
-                                    EoS_AuxArray_Int, h_EoS_Table ) );
+                     Cs_hot[c] += sqrt( EoS_DensPres2CSqr_CPUPtr( fluid_acc[DENS], Pres, NULL, EoS_AuxArray_Flt,
+                                        EoS_AuxArray_Int, h_EoS_Table ) );
                      for (int d=0; d<3; d++)   gas_mom_hot[c][d] += fluid_acc[d+MOMX]*dv;
                      num_hot[c] += 1;
                   } // if ( Temp <= cold_temp_thresh )
@@ -1079,9 +1079,6 @@ void GetClusterCenter( const int lv, const bool AdjustPos, const bool AdjustVel,
 void SetJetDirection( const double TimeNew, const int lv, const int FluSg )
 {
 
-   // angular momentum inside the accretion radius, per rank and total
-   double ang_mom[Merger_Coll_NumBHs][3], ang_mom_sum[Merger_Coll_NumBHs][3];
-
    switch ( JetDirection_case )
    {
       case 1: // fixed at x-axis
@@ -1093,57 +1090,64 @@ void SetJetDirection( const double TimeNew, const int lv, const int FluSg )
          }
          break;
       case 2: // import from table
-         const double Time_period      = CM_Jet_Time_table[JetDirection_NBin-1];
-         const double Time_interpolate = fmod( TimeNew, Time_period );
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-         {
-            const double theta = Mis_InterpolateFromTable( JetDirection_NBin, CM_Jet_Time_table, CM_Jet_Theta_table[c], Time_interpolate );
-            const double phi   = Mis_InterpolateFromTable( JetDirection_NBin, CM_Jet_Time_table, CM_Jet_Phi_table[c],   Time_interpolate );
+	 {
+	     const double Time_period      = CM_Jet_Time_table[JetDirection_NBin-1];
+             const double Time_interpolate = fmod( TimeNew, Time_period );
+             for (int c=0; c<Merger_Coll_NumBHs; c++)
+             {
+                const double theta = Mis_InterpolateFromTable( JetDirection_NBin, CM_Jet_Time_table, CM_Jet_Theta_table[c], Time_interpolate );
+                const double phi   = Mis_InterpolateFromTable( JetDirection_NBin, CM_Jet_Time_table, CM_Jet_Phi_table[c],   Time_interpolate );
 
-            CM_Jet_Vec[c][0] = cos(theta);
-            CM_Jet_Vec[c][1] = sin(theta)*cos(phi);
-            CM_Jet_Vec[c][2] = sin(theta)*sin(phi);
-         }
+                CM_Jet_Vec[c][0] = cos(theta);
+                CM_Jet_Vec[c][1] = sin(theta)*cos(phi);
+                CM_Jet_Vec[c][2] = sin(theta)*sin(phi);
+             }
+	 }
          break;
       case 3: // align with angular momentum
-         const double dh = amr->dh[lv];
-         const double dv = CUBE(dh);
+	 {
+	    // angular momentum inside the accretion radius, per rank and total
+            double ang_mom[Merger_Coll_NumBHs][3];
+            double ang_mom_sum[Merger_Coll_NumBHs][3];
+	    const double dh = amr->dh[lv];
+            const double dv = CUBE(dh);
 
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-            for (int d=0; d<3; d++)
-               ang_mom[c][d] = 0.0;
+            for (int c=0; c<Merger_Coll_NumBHs; c++)
+               for (int d=0; d<3; d++)
+                  ang_mom[c][d] = 0.0;
 
-         for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
-         {
-            for (int k=0; k<PS1; k++)
-            for (int j=0; j<PS1; j++)
-            for (int i=0; i<PS1; i++)
+            for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
             {
-               const double pos[3] = { amr->patch[0][lv][PID]->EdgeL[0] + (0.5+i)*dh,
-                                       amr->patch[0][lv][PID]->EdgeL[1] + (0.5+j)*dh,
-                                       amr->patch[0][lv][PID]->EdgeL[2] + (0.5+k)*dh };
-
-               for (int c=0; c<Merger_Coll_NumBHs; c++)
+               for (int k=0; k<PS1; k++)
+               for (int j=0; j<PS1; j++)
+               for (int i=0; i<PS1; i++)
                {
-                  if ( DIST_SQR_3D( pos, CM_ClusterCen[c] ) <= SQR(R_acc) )
+                  const double pos[3] = { amr->patch[0][lv][PID]->EdgeL[0] + (0.5+i)*dh,
+                                          amr->patch[0][lv][PID]->EdgeL[1] + (0.5+j)*dh,
+                                          amr->patch[0][lv][PID]->EdgeL[2] + (0.5+k)*dh };
+
+                  for (int c=0; c<Merger_Coll_NumBHs; c++)
                   {
-                     double dr[3] = { pos[0]-CM_ClusterCen[c][0], pos[1]-CM_ClusterCen[c][1], pos[2]-CM_ClusterCen[c][2] };
-                     ang_mom[c][0] += dv * ( dr[1]*amr->patch[FluSg][lv][PID]->fluid[MOMZ][k][j][i] - dr[2]*amr->patch[FluSg][lv][PID]->fluid[MOMY][k][j][i] );
-                     ang_mom[c][1] += dv * ( dr[2]*amr->patch[FluSg][lv][PID]->fluid[MOMX][k][j][i] - dr[0]*amr->patch[FluSg][lv][PID]->fluid[MOMZ][k][j][i] );
-                     ang_mom[c][2] += dv * ( dr[0]*amr->patch[FluSg][lv][PID]->fluid[MOMY][k][j][i] - dr[1]*amr->patch[FluSg][lv][PID]->fluid[MOMX][k][j][i] );
-                  }
-               } // for (int c=0; c<Merger_Coll_NumBHs; c++)
-            } // for (int k=0; k<PS1; k++); for (int j=0; j<PS1; j++); for (int i=0; i<PS1; i++)
-         } // for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
+                     if ( DIST_SQR_3D( pos, CM_ClusterCen[c] ) <= SQR(R_acc) )
+                     {
+                        double dr[3] = { pos[0]-CM_ClusterCen[c][0], pos[1]-CM_ClusterCen[c][1], pos[2]-CM_ClusterCen[c][2] };
+                        ang_mom[c][0] += dv * ( dr[1]*amr->patch[FluSg][lv][PID]->fluid[MOMZ][k][j][i] - dr[2]*amr->patch[FluSg][lv][PID]->fluid[MOMY][k][j][i] );
+                        ang_mom[c][1] += dv * ( dr[2]*amr->patch[FluSg][lv][PID]->fluid[MOMX][k][j][i] - dr[0]*amr->patch[FluSg][lv][PID]->fluid[MOMZ][k][j][i] );
+                        ang_mom[c][2] += dv * ( dr[0]*amr->patch[FluSg][lv][PID]->fluid[MOMY][k][j][i] - dr[1]*amr->patch[FluSg][lv][PID]->fluid[MOMX][k][j][i] );
+                     }
+                  } // for (int c=0; c<Merger_Coll_NumBHs; c++)
+               } // for (int k=0; k<PS1; k++); for (int j=0; j<PS1; j++); for (int i=0; i<PS1; i++)
+            } // for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
 
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-         {
-            MPI_Allreduce( ang_mom[c], ang_mom_sum[c], 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+            for (int c=0; c<Merger_Coll_NumBHs; c++)
+            {
+               MPI_Allreduce( ang_mom[c], ang_mom_sum[c], 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
 
-            const double ang_mom_norm = sqrt( SQR(ang_mom_sum[c][0]) + SQR(ang_mom_sum[c][1]) + SQR(ang_mom_sum[c][2]) );
+               const double ang_mom_norm = sqrt( SQR(ang_mom_sum[c][0]) + SQR(ang_mom_sum[c][1]) + SQR(ang_mom_sum[c][2]) );
 
-            for (int d=0; d<3; d++)   CM_Jet_Vec[c][d] = ang_mom_sum[c][d] / ang_mom_norm;
-         } // for (int c=0; c<Merger_Coll_NumBHs; c++)
+               for (int d=0; d<3; d++)   CM_Jet_Vec[c][d] = ang_mom_sum[c][d] / ang_mom_norm;
+            } // for (int c=0; c<Merger_Coll_NumBHs; c++)
+	 }
          break;
       default:
          Aux_Error( ERROR_INFO, "Unsupported JetDirection_case %d [1/2/3] !!\n", JetDirection_case );

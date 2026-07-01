@@ -116,7 +116,6 @@ static FieldIdx_t *ColorFieldsIdx;
 // (1) external functions
 #ifdef MASSIVE_PARTICLES
 void AddNewParticleAttribute_ClusterMerger();
-long Read_Particle_Number_ClusterMerger(std::string filename);
 void Par_Init_ByFunction_ClusterMerger(const long NPar_ThisRank,
                                        const long NPar_AllRank,
                                        real_par *ParMass, real_par *ParPosX, real_par *ParPosY, real_par *ParPosZ,
@@ -1124,15 +1123,15 @@ void Init_User_ClusterMerger()
    if ( H5_FileID < 0 )
       Aux_Error( ERROR_INFO, "failed to open the restart HDF5 file \"%s\" !!\n", FileName );
 
-   H5_SetID_OutputUser  = H5Dopen( H5_FileID, "User/UserPara", H5P_DEFAULT );
-   if ( H5_SetID_OutputUser < 0 )
+   H5_SetID_UserPara  = H5Dopen( H5_FileID, "User/UserPara", H5P_DEFAULT );
+   if ( H5_SetID_UserPara < 0 )
       Aux_Error( ERROR_INFO, "failed to open the dataset \"%s\" !!\n", "User/UserPara" );
 
-   H5_TypeID_OutputUser = H5Dget_type( H5_SetID_OutputUser );
-   if ( H5_TypeID_OutputUser < 0 )
-      Aux_Error( ERROR_INFO, "failed to open the datatype of \"%s\" !!\n", "User/OutputUser" );
+   H5_TypeID_UserPara = H5Dget_type( H5_SetID_UserPara );
+   if ( H5_TypeID_UserPara < 0 )
+      Aux_Error( ERROR_INFO, "failed to open the datatype of \"%s\" !!\n", "User/UserPara" );
 
-   LoadField( "Merger_Coll_NumBHs", &Merger_Coll_NumBHs, H5_SetID_OutputUser, H5_TypeID_OutputUser );
+   LoadField( "Merger_Coll_NumBHs", &Merger_Coll_NumBHs, H5_SetID_UserPara, H5_TypeID_UserPara );
 
 // allocate BH related memories
    AllocateBHVarArray();
@@ -1145,30 +1144,30 @@ void Init_User_ClusterMerger()
          sprintf( BH_Pos_name,     "BH_Pos_%d_%d",     c, d );
          sprintf( ClusterCen_name, "ClusterCen_%d_%d", c, d );
          sprintf( BH_Vel_name,     "BH_Vel_%d_%d",     c, d );
-         LoadField( BH_Pos_name,     &CM_BH_Pos[c][d],     H5_SetID_OutputUser, H5_TypeID_OutputUser );
-         LoadField( ClusterCen_name, &CM_ClusterCen[c][d], H5_SetID_OutputUser, H5_TypeID_OutputUser );
-         LoadField( BH_Vel_name,     &CM_BH_Vel[c][d],     H5_SetID_OutputUser, H5_TypeID_OutputUser );
+         LoadField( BH_Pos_name,     &CM_BH_Pos[c][d],     H5_SetID_UserPara, H5_TypeID_UserPara );
+         LoadField( ClusterCen_name, &CM_ClusterCen[c][d], H5_SetID_UserPara, H5_TypeID_UserPara );
+         LoadField( BH_Vel_name,     &CM_BH_Vel[c][d],     H5_SetID_UserPara, H5_TypeID_UserPara );
       }
       char BH_Mass_name[50], BH_Mdot_tot_name[50], BH_Mdot_hot_name[50], BH_Mdot_cold_name[50];
       sprintf( BH_Mass_name,      "BH_Mass_%d",      c );
       sprintf( BH_Mdot_tot_name,  "BH_Mdot_tot_%d",  c );
       sprintf( BH_Mdot_hot_name,  "BH_Mdot_hot_%d",  c );
       sprintf( BH_Mdot_cold_name, "BH_Mdot_cold_%d", c );
-      LoadField( BH_Mass_name,      &CM_BH_Mass     [c], H5_SetID_OutputUser, H5_TypeID_OutputUser );
-      LoadField( BH_Mdot_tot_name,  &CM_BH_Mdot_tot [c], H5_SetID_OutputUser, H5_TypeID_OutputUser );
-      LoadField( BH_Mdot_hot_name,  &CM_BH_Mdot_hot [c], H5_SetID_OutputUser, H5_TypeID_OutputUser );
-      LoadField( BH_Mdot_cold_name, &CM_BH_Mdot_cold[c], H5_SetID_OutputUser, H5_TypeID_OutputUser );
+      LoadField( BH_Mass_name,      &CM_BH_Mass     [c], H5_SetID_UserPara, H5_TypeID_UserPara );
+      LoadField( BH_Mdot_tot_name,  &CM_BH_Mdot_tot [c], H5_SetID_UserPara, H5_TypeID_UserPara );
+      LoadField( BH_Mdot_hot_name,  &CM_BH_Mdot_hot [c], H5_SetID_UserPara, H5_TypeID_UserPara );
+      LoadField( BH_Mdot_cold_name, &CM_BH_Mdot_cold[c], H5_SetID_UserPara, H5_TypeID_UserPara );
    }
-   LoadField( "AdjustCount", &AdjustCount, H5_SetID_OutputUser, H5_TypeID_OutputUser );
+   LoadField( "AdjustCount", &AdjustCount, H5_SetID_UserPara, H5_TypeID_UserPara );
    for (int c=0; c<Merger_Coll_NumHalos; c++)
    {
       char CM_ClusterIdx_Cur_name[50];
       sprintf( CM_ClusterIdx_Cur_name, "CM_ClusterIdx_Cur_%d", c );
-      LoadField( CM_ClusterIdx_Cur_name, &CM_ClusterIdx_Cur[c], H5_SetID_OutputUser, H5_TypeID_OutputUser );
+      LoadField( CM_ClusterIdx_Cur_name, &CM_ClusterIdx_Cur[c], H5_SetID_UserPara, H5_TypeID_UserPara );
    }
 
-   H5_Status = H5Tclose( H5_TypeID_OutputUser );
-   H5_Status = H5Dclose( H5_SetID_OutputUser );
+   H5_Status = H5Tclose( H5_TypeID_UserPara );
+   H5_Status = H5Dclose( H5_SetID_UserPara );
    H5_Status = H5Fclose( H5_FileID );
 
 #  endif // #ifdef SUPPORT_HDF5
