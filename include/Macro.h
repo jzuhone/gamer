@@ -528,9 +528,9 @@
 
 // number of built-in particle attributes
 // floating-point: mass, position*3, velocity*3, and time
-// integer: type and uid
+// integer: type, uid, and flag
 #  define PAR_NATT_FLT_BUILTIN0   8
-#  define PAR_NATT_INT_BUILTIN0   2
+#  define PAR_NATT_INT_BUILTIN0   3
 
 // acceleration*3 when STORE_PAR_ACC is adopted
 # if ( defined STORE_PAR_ACC  &&  defined GRAVITY )
@@ -586,6 +586,7 @@
 // --> must NOT modify their values
 #  define  PAR_TYPE           0
 #  define  PAR_PUID           1
+#  define  PAR_FLAG           2
 
 // always put acceleration and time at the END of the particle attribute list
 // --> make it easier to discard them when storing data on disk (see Output_DumpData_Total(_HDF5).cpp)
@@ -621,6 +622,7 @@
 
 #  define _PAR_TYPE           ( 1L << PAR_TYPE )
 #  define _PAR_PUID           ( 1L << PAR_PUID )
+#  define _PAR_FLAG           ( 1L << PAR_FLAG )
 #  define _PAR_INT_TOTAL      (  ( 1L << PAR_NATT_INT_TOTAL ) - 1L )
 
 // grid fields related to particles
@@ -638,7 +640,8 @@
 // number of particle types (default: 5)
 #  define  PAR_NTYPE                5
 
-// particle type indices (must be in the range 0<=index<PAR_NTYPE)
+// particle type indices (must be in the range 0<=index<PAR_NTYPE except for PTYPE_TBA)
+#  define  PTYPE_TBA                (long_par)-1
 #  define  PTYPE_TRACER             (long_par)0
 #  define  PTYPE_GENERIC_MASSIVE    (long_par)1
 #  define  PTYPE_DARK_MATTER        (long_par)2
@@ -647,6 +650,11 @@
 
 // particle uid to be assigned
 #  define  PUID_TBA                 (long_par)-1
+
+// particle refinement flags
+#  define  PFLAG_NO                 (long_par)0
+#  define  PFLAG_MANUAL             (long_par)9999
+#  define  PFLAG_TBA                (long_par)1234
 
 # ifdef GRAVITY
 #  define MASSIVE_PARTICLES

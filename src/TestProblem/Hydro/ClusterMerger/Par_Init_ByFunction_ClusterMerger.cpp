@@ -19,6 +19,7 @@ extern int          Merger_Coll_NumHalos;
 extern double     (*Merger_Coll_Pos)[3];
 extern double     (*Merger_Coll_Vel)[3];
 extern bool         Merger_Coll_LabelCenter;
+extern bool         AGN_feedback;
 extern long        *NPar_EachCluster;
 extern FieldIdx_t   Idx_ParHalo;
 // =======================================================================================
@@ -57,12 +58,6 @@ static void Read_Particles_ClusterMerger( std::string filename, long offset, lon
 //                   --> Therefore, there is no constraint on which particles should be set by this function
 //                4. The initialization of the PUID routine has been separated into amr->Par->InitRepo()
 //                   --> If needed, you can still modify PUID through the AllAttributeInt array
-//                5. File format: plain C binary in the format [Number of particles][Particle attributes]
-//                   --> [Particle 0][Attribute 0], [Particle 0][Attribute 1], ...
-//                   --> Note that it's different from the internal data format in the particle repository,
-//                       which is [Particle attributes][Number of particles]
-//                   --> Currently it only loads particle mass, position x/y/z, and velocity x/y/z
-//                       (and exactly in this order)
 //
 // Parameter   :  NPar_ThisRank   : Number of particles to be set by this MPI rank
 //                NPar_AllRank    : Total Number of particles in all MPI ranks
@@ -253,7 +248,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
 
 
 // label cluster centers
-   if ( Merger_Coll_LabelCenter )
+   if ( AGN_feedback && Merger_Coll_LabelCenter )
    {
       if ( MPI_Rank == 0 )    Aux_Message( stdout, "   Labeling cluster centers ... " );
 
@@ -301,7 +296,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       } // for (int c=0; c<NCluster; c++)
 
       if ( MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
-   } // if ( Merger_Coll_LabelCenter )
+   } // if ( AGN_feedback && Merger_Coll_LabelCenter )
 
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "%s ... done\n", __FUNCTION__ );
