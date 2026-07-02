@@ -209,14 +209,14 @@ static void Src_ExactCooling( real fluid[], const real B[], const SrcTerms_t *Sr
 #  endif
 #  ifdef __CUDACC__
    Eint = Hydro_Con2Eint( fluid[DENS], fluid[MOMX], fluid[MOMY], fluid[MOMZ], fluid[ENGY],
-                          CheckMinEint_No, NULL_REAL, Emag, EoS->GuessHTilde_FuncPtr, EoS->HTilde2Temp_FuncPtr,
+                          CheckMinEint_No, NULL_REAL, PassiveFloor, Emag, EoS->GuessHTilde_FuncPtr, EoS->HTilde2Temp_FuncPtr,
                           EoS->AuxArrayDevPtr_Flt, EoS->AuxArrayDevPtr_Int, EoS->Table);
 #  else
    Eint = Hydro_Con2Eint( fluid[DENS], fluid[MOMX], fluid[MOMY], fluid[MOMZ], fluid[ENGY],
-                          CheckMinEint_No, NULL_REAL, Emag, EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
+                          CheckMinEint_No, NULL_REAL, PassiveFloor, Emag, EoS_GuessHTilde_CPUPtr, EoS_HTilde2Temp_CPUPtr,
                           EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table );
 #  endif
-#  endif
+#  endif // ifdef DUAL_ENERGY
    Enth = fluid[ENGY] - Eint;
 #  ifdef __CUDACC__
    Temp = EoS->DensEint2Temp_FuncPtr( fluid[DENS], Eint, NULL, EoS->AuxArrayDevPtr_Flt, EoS->AuxArrayDevPtr_Int, EoS->Table );
@@ -529,7 +529,7 @@ void Src_SetConstMemory_ExactCooling( const double AuxArray_Flt[], const int Aux
 void Src_Init_ExactCooling()
 {
 
-   Aux_Error( ERROR_INFO, "SRC_EXACTCOOLING is not supported !!\n" );
+  //Aux_Error( ERROR_INFO, "SRC_EXACTCOOLING is not supported !!\n" );
 
 // set the auxiliary arrays
    Src_SetAuxArray_ExactCooling( Src_EC_AuxArray_Flt, Src_EC_AuxArray_Int );
@@ -569,7 +569,7 @@ void Src_Init_ExactCooling()
    SrcTerms.EC_TEF_lambda_DevPtr = h_SrcEC_TEF_lambda;
    SrcTerms.EC_TEF_alpha_DevPtr  = h_SrcEC_TEF_alpha;
    SrcTerms.EC_TEFc_DevPtr       = h_SrcEC_TEFc;
-
+#  endif
 
 // Initialize the cooling function (h_SrcEC_TEF_lambda / h_SrcEC_TEF_alpha / h_SrcEC_TEFc arrays)
    const int    TEF_N        = Src_EC_AuxArray_Int[0];   // number of points for lambda(T) sampling in LOG

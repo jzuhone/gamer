@@ -1879,8 +1879,8 @@ void Aux_Check_Parameter()
       Aux_Error( ERROR_INFO, "SRC_DELEPTONIZATION is only supported in HYDRO !!\n" );
 #  endif
 
-   if ( SrcTerms.ExactCooling )
-      Aux_Error( ERROR_INFO, "SRC_EXACTCOOLING is not supported yet !!\n" );
+   //if ( SrcTerms.ExactCooling )
+   //   Aux_Error( ERROR_INFO, "SRC_EXACTCOOLING is not supported yet !!\n" );
 
 #  ifndef EXACT_COOLING
    if ( SrcTerms.ExactCooling )

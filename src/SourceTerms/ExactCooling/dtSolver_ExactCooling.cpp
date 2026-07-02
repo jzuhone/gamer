@@ -38,7 +38,7 @@ double Mis_GetTimeStep_ExactCooling( const int lv, const double dTime_dt )
 
    double  dt_EC     = HUGE_NUMBER;
    double *OMP_dt_EC;
-
+   OMP_dt_EC = new double [NT];
 
 #  pragma omp parallel
    {
@@ -85,7 +85,7 @@ double Mis_GetTimeStep_ExactCooling( const int lv, const double dTime_dt )
                real fluid[FLU_NIN_S];
                for (int v=0; v<FLU_NIN_S; v++)  fluid[v] = amr->patch[ amr->FluSg[lv] ][lv][PID]->fluid[v][k][j][i];
                SrcTerms.EC_CPUPtr( fluid, B, &SrcTerms, 0.0, NULL_REAL, x, y, z, NULL_REAL, NULL_REAL,
-                                   MIN_DENS, MIN_PRES, MIN_EINT, NULL,
+                                   MIN_DENS, MIN_PRES, MIN_EINT, NULL_INT, NULL,
                                    Src_EC_AuxArray_Flt, Src_EC_AuxArray_Int );
 #              ifdef TCOOL
                tcool_Code = fluid[TCOOL];
