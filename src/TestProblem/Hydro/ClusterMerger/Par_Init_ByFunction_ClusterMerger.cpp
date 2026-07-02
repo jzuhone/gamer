@@ -19,6 +19,7 @@ extern int          Merger_Coll_NumHalos;
 extern double     (*Merger_Coll_Pos)[3];
 extern double     (*Merger_Coll_Vel)[3];
 extern bool         Merger_Coll_LabelCenter;
+extern bool         AGN_feedback;
 extern long        *NPar_EachCluster;
 extern FieldIdx_t   Idx_ParHalo;
 // =======================================================================================
@@ -253,7 +254,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
 
 
 // label cluster centers
-   if ( Merger_Coll_LabelCenter )
+   if ( AGN_feedback && Merger_Coll_LabelCenter )
    {
       if ( MPI_Rank == 0 )    Aux_Message( stdout, "   Labeling cluster centers ... " );
 
@@ -301,7 +302,7 @@ void Par_Init_ByFunction_ClusterMerger( const long NPar_ThisRank, const long NPa
       } // for (int c=0; c<NCluster; c++)
 
       if ( MPI_Rank == 0 )    Aux_Message( stdout, "done\n" );
-   } // if ( Merger_Coll_LabelCenter )
+   } // if ( AGN_feedback && Merger_Coll_LabelCenter )
 
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "%s ... done\n", __FUNCTION__ );

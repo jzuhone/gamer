@@ -252,8 +252,9 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
 // ********************************************************************************************************************************
 // LOAD_PARA( load_mode, "KEY_IN_THE_FILE",         &VARIABLE,                 DEFAULT,            MIN,           MAX            );
 // ********************************************************************************************************************************
+   LOAD_PARA( load_mode, "AGN_feedback",            &AGN_feedback,             false,              Useless_bool,  Useless_bool   );
    LOAD_PARA( load_mode, "Merger_Coll_NumHalos",    &Merger_Coll_NumHalos,     2,                  1,             3              );
-   for (int c=0; c<Merger_Coll_NumHalos; c++)
+   for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    {
       char Merger_File_Prof_name [MAX_STRING];
       char Merger_File_Par_name  [MAX_STRING];
@@ -273,10 +274,12 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       sprintf( Merger_Coll_PosY_name,  "Merger_Coll_PosY%d",  c+1 );
       sprintf( Merger_Coll_VelX_name,  "Merger_Coll_VelX%d",  c+1 );
       sprintf( Merger_Coll_VelY_name,  "Merger_Coll_VelY%d",  c+1 );
-      sprintf( CM_BH_Mass_name,        "Bondi_MassBH%d",      c+1 );
-      sprintf( Jet_HalfHeight_name,    "Jet_HalfHeight%d",    c+1 );
-      sprintf( Jet_Radius_name,        "Jet_Radius%d",        c+1 );
-
+      if ( AGN_feedback )
+      {
+         sprintf( CM_BH_Mass_name,        "Bondi_MassBH%d",      c+1 );
+         sprintf( Jet_HalfHeight_name,    "Jet_HalfHeight%d",    c+1 );
+         sprintf( Jet_Radius_name,        "Jet_Radius%d",        c+1 );
+      }
       LOAD_PARA( load_mode, Merger_File_Prof_name,   Merger_File_Prof[c],      NoDef_str,          Useless_str,   Useless_str    );
       LOAD_PARA( load_mode, Merger_File_Par_name,    Merger_File_Par[c],       NoDef_str,          Useless_str,   Useless_str    );
       LOAD_PARA( load_mode, Merger_Coll_IsGas_name, &Merger_Coll_IsGas[c],     true,               Useless_bool,  Useless_bool   );
@@ -284,26 +287,32 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       LOAD_PARA( load_mode, Merger_Coll_PosY_name,  &Merger_Coll_Pos[c][1],   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, Merger_Coll_VelX_name,  &Merger_Coll_Vel[c][0],   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, Merger_Coll_VelY_name,  &Merger_Coll_Vel[c][1],   -1.0,                NoMin_double,  NoMax_double   );
-      LOAD_PARA( load_mode, CM_BH_Mass_name,        &CM_BH_Mass[c],           -1.0,                Eps_double,    NoMax_double   );
-      LOAD_PARA( load_mode, Jet_HalfHeight_name,    &Jet_HalfHeight[c],       -1.0,                Eps_double,    NoMax_double   );
-      LOAD_PARA( load_mode, Jet_Radius_name,        &Jet_Radius[c],           -1.0,                Eps_double,    NoMax_double   );
+      if ( AGN_feedback )
+      {	
+         LOAD_PARA( load_mode, CM_BH_Mass_name,        &CM_BH_Mass[c],           -1.0,                Eps_double,    NoMax_double   );
+         LOAD_PARA( load_mode, Jet_HalfHeight_name,    &Jet_HalfHeight[c],       -1.0,                Eps_double,    NoMax_double   );
+         LOAD_PARA( load_mode, Jet_Radius_name,        &Jet_Radius[c],           -1.0,                Eps_double,    NoMax_double   );
+      }
    }
    LOAD_PARA( load_mode, "Merger_Coll_UseMetals",   &Merger_Coll_UseMetals,    true,               Useless_bool,  Useless_bool   );
-   LOAD_PARA( load_mode, "Merger_Coll_LabelCenter", &Merger_Coll_LabelCenter,  true,               Useless_bool,  Useless_bool   );
-   LOAD_PARA( load_mode, "R_acc",                   &R_acc,                   -1.0,                NoMin_double,  NoMax_double   );
-   LOAD_PARA( load_mode, "R_dep",                   &R_dep,                   -1.0,                NoMin_double,  NoMax_double   );
-   LOAD_PARA( load_mode, "AGN_feedback",            &AGN_feedback,             false,              Useless_bool,  Useless_bool   );
-   LOAD_PARA( load_mode, "Accretion_Mode",          &Accretion_Mode,           1,                  1,             3              );
-   LOAD_PARA( load_mode, "eta",                     &eta,                     -1.0,                NoMin_double,  NoMax_double   );
-   LOAD_PARA( load_mode, "eps_f",                   &eps_f,                   -1.0,                NoMin_double,  NoMax_double   );
-   LOAD_PARA( load_mode, "eps_m",                   &eps_m,                   -1.0,                NoMin_double,  NoMax_double   );
-   LOAD_PARA( load_mode, "AdjustBHPos",             &AdjustBHPos,              false,              Useless_bool,  Useless_bool   );
-   LOAD_PARA( load_mode, "AdjustBHVel",             &AdjustBHVel,              false,              Useless_bool,  Useless_bool   );
-   LOAD_PARA( load_mode, "AdjustPeriod",            &AdjustPeriod,            -1.0,                NoMin_double,  NoMax_double   );
-   LOAD_PARA( load_mode, "JetDirection_case",       &JetDirection_case,        1,                  1,             3              );
-   LOAD_PARA( load_mode, "JetDirection_file",        JetDirection_file,        "JetDirection.txt", Useless_str,   Useless_str    );
-   LOAD_PARA( load_mode, "fixBH",                   &fixBH,                    false,              Useless_bool,  Useless_bool   );
-
+   if ( AGN_feedback )
+   {  
+      LOAD_PARA( load_mode, "Merger_Coll_LabelCenter", &Merger_Coll_LabelCenter,  true,               Useless_bool,  Useless_bool   );
+      LOAD_PARA( load_mode, "R_acc",                   &R_acc,                   -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, "R_dep",                   &R_dep,                   -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, "AGN_feedback",            &AGN_feedback,             false,              Useless_bool,  Useless_bool   );
+      LOAD_PARA( load_mode, "Accretion_Mode",          &Accretion_Mode,           1,                  1,             3              );
+      LOAD_PARA( load_mode, "eta",                     &eta,                     -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, "eps_f",                   &eps_f,                   -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, "eps_m",                   &eps_m,                   -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, "AdjustBHPos",             &AdjustBHPos,              false,              Useless_bool,  Useless_bool   );
+      LOAD_PARA( load_mode, "AdjustBHVel",             &AdjustBHVel,              false,              Useless_bool,  Useless_bool   );
+      LOAD_PARA( load_mode, "AdjustPeriod",            &AdjustPeriod,            -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, "JetDirection_case",       &JetDirection_case,        1,                  1,             3              );
+      LOAD_PARA( load_mode, "JetDirection_file",        JetDirection_file,        "JetDirection.txt", Useless_str,   Useless_str    );
+      LOAD_PARA( load_mode, "fixBH",                   &fixBH,                    false,              Useless_bool,  Useless_bool   );
+   }
+   
 } // FUNCTION : LoadInputTestProb
 
 
@@ -346,12 +355,14 @@ void SetParameter()
    Merger_Coll_IsGas = new bool   [ Merger_Coll_NumHalos ];
    Merger_Coll_Pos   = new double [ Merger_Coll_NumHalos ][ 3 ];
    Merger_Coll_Vel   = new double [ Merger_Coll_NumHalos ][ 3 ];
-   Jet_HalfHeight    = new double [ Merger_Coll_NumHalos ];
-   Jet_Radius        = new double [ Merger_Coll_NumHalos ];
-
-   CM_BH_Mass        = new double [ Merger_Coll_NumHalos ];
-
-// (1-1-3) load the rest cluster parameters
+   if ( AGN_feedback )
+   {  
+      Jet_HalfHeight    = new double [ Merger_Coll_NumHalos ];
+      Jet_Radius        = new double [ Merger_Coll_NumHalos ];
+      CM_BH_Mass        = new double [ Merger_Coll_NumHalos ];
+   }
+   
+// (1-1-3) load the rest of the cluster parameters
    ReadPara = new ReadPara_t;
 
    LoadInputTestProb( LOAD_READPARA, ReadPara, NULL );
@@ -365,42 +376,52 @@ void SetParameter()
       Aux_Error( ERROR_INFO, "please set NCOMP_PASSIVE_USER (currently %d) == Merger_Coll_NumHalos + Merger_Coll_UseMetals (currently %d) in the Makefile !!\n",
                  NCOMP_PASSIVE_USER, Merger_Coll_NumHalos + (int)Merger_Coll_UseMetals );
 
-// set the correct parameters when fixing the BH
-   if ( Merger_Coll_NumHalos != 1  &&  fixBH )
-   {
-      fixBH = false;
-      if ( MPI_Rank == 0 )   Aux_Message( stdout, "WARNING : resetting fixBH to false for multiple clusters !!\n" );
-   }
-
-   if ( fixBH )
-   {
-      AdjustBHPos = false;
-      AdjustBHVel = false;
-   }
-
 // convert to code units
-   R_acc             *= Const_kpc / UNIT_L;
-   R_dep             *= Const_kpc / UNIT_L;
-   for (int c=0; c<Merger_Coll_NumHalos; c++)
+   for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    {
       Merger_Coll_Pos[c][0] *= Const_kpc / UNIT_L;
       Merger_Coll_Pos[c][1] *= Const_kpc / UNIT_L;
       Merger_Coll_Vel[c][0] *= (Const_km/Const_s) / UNIT_V;
       Merger_Coll_Vel[c][1] *= (Const_km/Const_s) / UNIT_V;
-      CM_BH_Mass     [c]    *= Const_Msun / UNIT_M;
-      Jet_HalfHeight [c]    *= Const_kpc / UNIT_L;
-      Jet_Radius     [c]    *= Const_kpc / UNIT_L;
    }
-   AdjustPeriod      *= Const_Myr / UNIT_T;
 
+// setup color fields   
    ColorFieldsIdx = new FieldIdx_t [ Merger_Coll_NumHalos ];
    for (int c=0; c<Merger_Coll_NumHalos; c++)   ColorFieldsIdx[c] = Idx_Undefined;
+   
+   if ( AGN_feedback )
+   {  
+//    set the correct parameters when fixing the BH
+      if ( Merger_Coll_NumHalos != 1  &&  fixBH )
+      {
+         fixBH = false;
+         if ( MPI_Rank == 0 )   Aux_Message( stdout, "WARNING : resetting fixBH to false for multiple clusters !!\n" );
+      }
 
-// Assign each BH the index of the halo it belongs to. This index will
-// change if the BHs merge
-   CM_ClusterIdx_Cur = new long_par [ Merger_Coll_NumHalos ];
-   for (int c=0; c<Merger_Coll_NumHalos; c++)   CM_ClusterIdx_Cur[c] = c;
+      if ( fixBH )
+      {
+         AdjustBHPos = false;
+         AdjustBHVel = false;
+      }
 
+//    convert to code units
+      R_acc             *= Const_kpc / UNIT_L;
+      R_dep             *= Const_kpc / UNIT_L;
+      AdjustPeriod      *= Const_Myr / UNIT_T;
+      for ( int c=0; c<Merger_Coll_NumHalos; c++ )
+      {
+         CM_BH_Mass    [c]    *= Const_Msun / UNIT_M;
+         Jet_HalfHeight[c]    *= Const_kpc / UNIT_L;
+         Jet_Radius    [c]    *= Const_kpc / UNIT_L;
+      }
+      
+//    Assign each BH the index of the halo it belongs to. This index will
+//    change if the BHs merge
+      CM_ClusterIdx_Cur = new long_par [ Merger_Coll_NumHalos ];
+      for (int c=0; c<Merger_Coll_NumHalos; c++)   CM_ClusterIdx_Cur[c] = c;
+      
+   } // if ( AGN_feedback )
+	 
    if ( OPT__INIT != INIT_BY_RESTART )
    {
       Table_R     = new double* [ Merger_Coll_NumHalos ];
@@ -457,7 +478,7 @@ void SetParameter()
       } // for (int c=0; c<Merger_Coll_NumHalos; c++)
 
 //    (2-2) initialize the BH/Halo position and velocity
-      if ( fixBH )
+      if ( AGN_feedback && fixBH )
       {
          Merger_Coll_Pos[0][0] = amr->BoxCenter[0];
          Merger_Coll_Pos[0][1] = amr->BoxCenter[1];
@@ -470,13 +491,16 @@ void SetParameter()
          Merger_Coll_Vel[c][2] = 0.0;
       }
 
-//    set the number of black holes to be the same as the number of clusters initially
-//    the number of black holes will decrease if they merge
-      Merger_Coll_NumBHs = Merger_Coll_NumHalos;
+      if ( AGN_feedback )
+      {	
+//       set the number of black holes to be the same as the number of clusters initially
+//       the number of black holes will decrease if they merge
+         Merger_Coll_NumBHs = Merger_Coll_NumHalos;
 
-//    allocate BH-related arrays
-      AllocateBHVarArray();
-
+//       allocate BH-related arrays
+         AllocateBHVarArray();
+      }
+      
 //    (3) determine particle number
       NPar_EachCluster = new long [ Merger_Coll_NumHalos ];
       for (int c=0; c<Merger_Coll_NumHalos; c++)
@@ -532,7 +556,7 @@ void SetParameter()
       }
 
       for (int b=0; b<JetDirection_NBin; b++)   CM_Jet_Time_table[b] *= Const_Myr/UNIT_T;
-   }
+   } // if ( AGN_feedback  &&  JetDirection_case == 2 )
 
 
 // (5) reset other general-purpose parameters
@@ -552,7 +576,7 @@ void SetParameter()
       PRINT_RESET_PARA( END_T, FORMAT_REAL, "" );
    }
 
-   if ( Merger_Coll_LabelCenter  &&  !OPT__RECORD_USER )
+   if ( AGN_feedback  &&  Merger_Coll_LabelCenter  &&  !OPT__RECORD_USER )
    {
       OPT__RECORD_USER = true;
       PRINT_RESET_PARA( OPT__RECORD_USER, FORMAT_BOOL, "" );
@@ -581,8 +605,8 @@ void SetParameter()
       } // for (int c=0; c<Merger_Coll_NumHalos; c++)
 
       Aux_Message( stdout, "  use metals                = %s\n",          (Merger_Coll_UseMetals)? "yes":"no" );
-      Aux_Message( stdout, "  label cluster centers     = %s\n",          (Merger_Coll_LabelCenter)? "yes":"no" );
       if ( AGN_feedback ) {
+      Aux_Message( stdout, "  label cluster centers     = %s\n",          (Merger_Coll_LabelCenter)? "yes":"no" );
       Aux_Message( stdout, "  BH fixed                  = %s\n",          (fixBH)? "yes":"no" );
       Aux_Message( stdout, "  accretion mode            = %d\n",          Accretion_Mode      );
       Aux_Message( stdout, "  eta                       = %g\n",          eta                 );
@@ -602,11 +626,15 @@ void SetParameter()
       Aux_Message( stdout, "=============================================================================\n" );
 
 //    check if the accretion region is larger than the jet cylinder
-      for (int c=0; c<Merger_Coll_NumHalos; c++)
-      {
-         if ( R_acc < Jet_HalfHeight[c] )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_HalfHeight%d (%14.8e) !!\n", R_acc, c+1, Jet_HalfHeight[c] );
-         if ( R_acc < Jet_Radius    [c] )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_Radius%d (%14.8e) !!\n",     R_acc, c+1, Jet_Radius[c] );
+      if ( AGN_feedback )
+      {	
+         for (int c=0; c<Merger_Coll_NumHalos; c++)
+         {
+            if ( R_acc < Jet_HalfHeight[c] )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_HalfHeight%d (%14.8e) !!\n", R_acc, c+1, Jet_HalfHeight[c] );
+            if ( R_acc < Jet_Radius    [c] )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_Radius%d (%14.8e) !!\n",     R_acc, c+1, Jet_Radius[c] );
+         }
       }
+      
    } // if ( MPI_Rank == 0 )
 
    if ( MPI_Rank == 0 )    Aux_Message( stdout, "   Setting runtime parameters ... done\n" );
@@ -726,6 +754,8 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 void Output_HDF5_User_ClusterMerger( HDF5_Output_t *HDF5_OutUser )
 {
 
+   if ( !AGN_feedback ) return;
+  
    HDF5_OutUser->Add( "Merger_Coll_NumBHs", &Merger_Coll_NumBHs );
    for (int c=0; c<Merger_Coll_NumBHs; c++)
    {
@@ -802,62 +832,66 @@ void End_ClusterMerger()
    delete [] Merger_Coll_Pos;
    delete [] Merger_Coll_Vel;
 
-   delete [] Jet_HalfHeight;
-   delete [] Jet_Radius;
+   delete [] ColorFieldsIdx;
+   
+   if ( AGN_feedback )
+   {  
+      delete [] Jet_HalfHeight;
+      delete [] Jet_Radius;
 
 #  ifdef MASSIVE_PARTICLES
-   delete [] CM_ClusterIdx_Cur;
+      delete [] CM_ClusterIdx_Cur;
 #  endif
-   delete [] CM_Cluster_NPar_close;
-   delete [] CM_ClusterCen;
-   delete [] CM_BH_Pos;
-   delete [] CM_BH_Vel;
-   delete [] CM_BH_Mass;
-   delete [] CM_BH_Mdot_tot;
-   delete [] CM_BH_Mdot_hot;
-   delete [] CM_BH_Mdot_cold;
-   delete [] CM_Jet_Mdot;
-   delete [] CM_Jet_Pdot;
-   delete [] CM_Jet_Edot;
-   delete [] CM_Jet_Vec;
-   delete [] CM_RAcc_GasVel;
-   delete [] CM_RAcc_SoundSpeed;
-   delete [] CM_RAcc_GasDens;
-   delete [] CM_RAcc_RelativeVel;
-   delete [] CM_RAcc_ColdGasMass;
-   delete [] CM_RAcc_GasMass;
-   delete [] CM_RAcc_ParMass;
-   delete [] CM_Bondi_SinkMass;
-   delete [] CM_Bondi_SinkMomX;
-   delete [] CM_Bondi_SinkMomY;
-   delete [] CM_Bondi_SinkMomZ;
-   delete [] CM_Bondi_SinkMomXAbs;
-   delete [] CM_Bondi_SinkMomYAbs;
-   delete [] CM_Bondi_SinkMomZAbs;
-   delete [] CM_Bondi_SinkE;
-   delete [] CM_Bondi_SinkEk;
-   delete [] CM_Bondi_SinkEt;
-   delete [] CM_Bondi_SinkNCell;
+      delete [] CM_Cluster_NPar_close;
+      delete [] CM_ClusterCen;
+      delete [] CM_BH_Pos;
+      delete [] CM_BH_Vel;
+      delete [] CM_BH_Mass;
+      delete [] CM_BH_Mdot_tot;
+      delete [] CM_BH_Mdot_hot;
+      delete [] CM_BH_Mdot_cold;
+      delete [] CM_Jet_Mdot;
+      delete [] CM_Jet_Pdot;
+      delete [] CM_Jet_Edot;
+      delete [] CM_Jet_Vec;
+      delete [] CM_RAcc_GasVel;
+      delete [] CM_RAcc_SoundSpeed;
+      delete [] CM_RAcc_GasDens;
+      delete [] CM_RAcc_RelativeVel;
+      delete [] CM_RAcc_ColdGasMass;
+      delete [] CM_RAcc_GasMass;
+      delete [] CM_RAcc_ParMass;
+      delete [] CM_Bondi_SinkMass;
+      delete [] CM_Bondi_SinkMomX;
+      delete [] CM_Bondi_SinkMomY;
+      delete [] CM_Bondi_SinkMomZ;
+      delete [] CM_Bondi_SinkMomXAbs;
+      delete [] CM_Bondi_SinkMomYAbs;
+      delete [] CM_Bondi_SinkMomZAbs;
+      delete [] CM_Bondi_SinkE;
+      delete [] CM_Bondi_SinkEk;
+      delete [] CM_Bondi_SinkEt;
+      delete [] CM_Bondi_SinkNCell;
 
-   delete [] ColorFieldsIdx;
+      if ( JetDirection_case == 2 )
+      {
+         delete [] CM_Jet_Theta_table;
+         delete [] CM_Jet_Phi_table;
+         delete [] JetDirection;
+      }
 
-   if ( AGN_feedback  &&  JetDirection_case == 2 )
-   {
-      delete [] CM_Jet_Theta_table;
-      delete [] CM_Jet_Phi_table;
-      delete [] JetDirection;
-   }
+      delete [] Jet_WaveK;
+      delete [] V_cyl;
+      delete [] M_inj;
+      delete [] P_inj;
+      delete [] E_inj;
+      delete [] normalize_const;
 
-   delete [] Jet_WaveK;
-   delete [] V_cyl;
-   delete [] M_inj;
-   delete [] P_inj;
-   delete [] E_inj;
-   delete [] normalize_const;
+      delete [] E_inj_exp;
+      delete [] M_inj_exp;
 
-   delete [] E_inj_exp;
-   delete [] M_inj_exp;
-
+   } // if ( AGN_feedback )
+   
 } // FUNCTION : End_ClusterMerger
 
 
@@ -917,6 +951,7 @@ void Init_TestProb_Hydro_ClusterMerger()
    Init_Function_BField_User_Ptr = SetBFieldIC;
 #  endif
 #  ifdef SUPPORT_HDF5
+   if ( AGN_feedback ) 
    Output_HDF5_UserPara_Ptr       = Output_HDF5_User_ClusterMerger;
    Output_HDF5_InputTest_Ptr      = LoadInputTestProb;
 #  endif
@@ -1108,7 +1143,7 @@ void AddNewParticleAttribute_ClusterMerger()
 void Init_User_ClusterMerger()
 {
 
-   if ( OPT__INIT != INIT_BY_RESTART )   return;
+   if ( !AGN_feedback || OPT__INIT != INIT_BY_RESTART )   return;
 
    if ( OPT__RESTART_RESET )
       Aux_Error( ERROR_INFO, "OPT__RESTART_RESET should be disabled !!\n" );
