@@ -252,7 +252,6 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
 // ********************************************************************************************************************************
 // LOAD_PARA( load_mode, "KEY_IN_THE_FILE",         &VARIABLE,                 DEFAULT,            MIN,           MAX            );
 // ********************************************************************************************************************************
-   LOAD_PARA( load_mode, "AGN_feedback",            &AGN_feedback,             false,              Useless_bool,  Useless_bool   );
    LOAD_PARA( load_mode, "Merger_Coll_NumHalos",    &Merger_Coll_NumHalos,     2,                  1,             3              );
    for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    {
@@ -344,8 +343,9 @@ void SetParameter()
    const char FileName[] = "Input__TestProb";
    ReadPara_t *ReadPara  = new ReadPara_t;
 
-// (1-1-1) get the number of halo first
+// (1-1-1) get the number of halos and the AGN feedback flag first
    ReadPara->Add( "Merger_Coll_NumHalos", &Merger_Coll_NumHalos, 2, 1, 3 );
+   ReadPara->Add( "AGN_feedback", &AGN_feedback, false, Useless_bool, Useless_bool );
    ReadPara->Read( FileName );
    delete ReadPara;
 
