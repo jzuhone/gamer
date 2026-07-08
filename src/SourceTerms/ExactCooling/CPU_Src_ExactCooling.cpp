@@ -563,9 +563,7 @@ void Src_Init_ExactCooling()
    h_SrcEC_TEF_alpha  = new double [SrcTerms.EC_TEF_N];
    h_SrcEC_TEFc       = new double [SrcTerms.EC_TEF_N];
 
-#  ifdef GPU
-   Src_PassData2GPU_ExactCooling();
-#  else
+#  ifndef GPU
    SrcTerms.EC_TEF_lambda_DevPtr = h_SrcEC_TEF_lambda;
    SrcTerms.EC_TEF_alpha_DevPtr  = h_SrcEC_TEF_alpha;
    SrcTerms.EC_TEFc_DevPtr       = h_SrcEC_TEFc;
