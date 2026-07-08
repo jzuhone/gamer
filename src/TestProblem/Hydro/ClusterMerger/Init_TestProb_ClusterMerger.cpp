@@ -253,6 +253,7 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
 // LOAD_PARA( load_mode, "KEY_IN_THE_FILE",         &VARIABLE,                 DEFAULT,            MIN,           MAX            );
 // ********************************************************************************************************************************
    LOAD_PARA( load_mode, "Merger_Coll_NumHalos",    &Merger_Coll_NumHalos,     2,                  1,             3              );
+   LOAD_PARA( load_mode, "AGN_feedback",            &AGN_feedback,             false,              Useless_bool,  Useless_bool   );
    for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    {
       char Merger_File_Prof_name [MAX_STRING];
@@ -299,7 +300,6 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       LOAD_PARA( load_mode, "Merger_Coll_LabelCenter", &Merger_Coll_LabelCenter,  true,               Useless_bool,  Useless_bool   );
       LOAD_PARA( load_mode, "R_acc",                   &R_acc,                   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, "R_dep",                   &R_dep,                   -1.0,                NoMin_double,  NoMax_double   );
-      LOAD_PARA( load_mode, "AGN_feedback",            &AGN_feedback,             false,              Useless_bool,  Useless_bool   );
       LOAD_PARA( load_mode, "Accretion_Mode",          &Accretion_Mode,           1,                  1,             3              );
       LOAD_PARA( load_mode, "eta",                     &eta,                     -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, "eps_f",                   &eps_f,                   -1.0,                NoMin_double,  NoMax_double   );
@@ -477,7 +477,7 @@ void SetParameter()
          MPI_Bcast( Table_M[c], Merger_NBin[c], MPI_DOUBLE, 0, MPI_COMM_WORLD );
       } // for (int c=0; c<Merger_Coll_NumHalos; c++)
 
-//    (2-2) initialize the BH/Halo position and velocity
+//    (2-2) initialize the halo position and velocity
       if ( AGN_feedback && fixBH )
       {
          Merger_Coll_Pos[0][0] = amr->BoxCenter[0];
@@ -499,6 +499,16 @@ void SetParameter()
 
 //       allocate BH-related arrays
          AllocateBHVarArray();
+
+// 	 set initial BH position and velocity
+	 for ( int c=0; c<Merger_Coll_NumBHs; c++ )
+	 for (int d=0; d<3; d++)
+	 {
+	    CM_ClusterCen[c][d] = Merger_Coll_Pos[c][d];
+            CM_BH_Pos    [c][d] = CM_ClusterCen  [c][d];
+            CM_BH_Vel    [c][d] = Merger_Coll_Vel[c][d];
+         }
+
       }
       
 //    (3) determine particle number
