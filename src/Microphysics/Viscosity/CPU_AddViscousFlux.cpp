@@ -60,7 +60,7 @@ real get_vel_op( const real ConVar[][ CUBE(FLU_NXT) ],
 //-----------------------------------------------------------------------------------------
 // Function    : Hydro_AddViscousFlux
 //
-// Description : Compute the viscousity fluxes
+// Description : Compute the viscosity fluxes
 //
 // Note        : 1. Must enable VISCOSITY
 //               2. Must enable MHD for anisotropic (Braginskii) viscosity
