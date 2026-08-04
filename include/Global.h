@@ -425,6 +425,7 @@ extern double VISCOSITY_SPITZER_FRAC;
 extern double VISCOSITY_COULOMB_LOG;
 extern double VISCOSITY_MAX_DIFFUSIVITY;
 extern double VISCOSITY_MUI;
+extern bool   OPT__OUTPUT_MU;
 extern bool   OPT__OUTPUT_DELTAP;
 #endif
 

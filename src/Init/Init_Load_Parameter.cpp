@@ -589,6 +589,7 @@ void Init_Load_Parameter()
    ReadPara->Add( "OPT__OUTPUT_DIVMAG",         &OPT__OUTPUT_DIVMAG,              false,           Useless_bool,  Useless_bool   );
 #  endif
 #  ifdef VISCOSITY
+   ReadPara->Add( "OPT__OUTPUT_MU",             &OPT__OUTPUT_MU,                  false,           Useless_bool,  Useless_bool   );
    ReadPara->Add( "OPT__OUTPUT_DELTAP",         &OPT__OUTPUT_DELTAP,              false,           Useless_bool,  Useless_bool   );
 #  endif
 #  ifdef CONDUCTION

@@ -1690,6 +1690,7 @@ void Aux_TakeNote()
       fprintf( Note, "OPT__OUTPUT_DIVMAG             % d\n",      OPT__OUTPUT_DIVMAG          );
 #     endif
 #     ifdef VISCOSITY
+      fprintf( Note, "OPT__OUTPUT_MU                 % d\n",      OPT__OUTPUT_MU              );
       fprintf( Note, "OPT__OUTPUT_DELTAP             % d\n",      OPT__OUTPUT_DELTAP          );
 #     endif
 #     ifdef CONDUCTION

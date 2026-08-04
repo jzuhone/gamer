@@ -2459,6 +2459,7 @@ void Check_InputPara( const char *FileName, const int FormatVersion )
    LoadField( "Opt__Output_DivMag",          &RS.Opt__Output_DivMag,          SID, TID, NonFatal, &RT.Opt__Output_DivMag,          1, NonFatal );
 #  endif
 #  ifdef VISCOSITY
+   LoadField( "Opt__Output_Mu",              &RS.Opt__Output_Mu,              SID, TID, NonFatal, &RT.Opt__Output_Mu,              1, NonFatal );
    LoadField( "Opt__Output_DeltaP",          &RS.Opt__Output_DeltaP,          SID, TID, NonFatal, &RT.Opt__Output_DeltaP,          1, NonFatal );
 #  endif
 #  ifdef CONDUCTION

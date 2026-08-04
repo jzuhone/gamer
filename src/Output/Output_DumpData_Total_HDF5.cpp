@@ -398,6 +398,10 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 #  endif
 
 #  ifdef VISCOSITY
+   const int MuDumpIdx = ( OPT__OUTPUT_MU ) ? NFieldStored++ : NoDump;
+   if ( MuDumpIdx >= NFIELD_STORED_MAX )
+      Aux_Error( ERROR_INFO, "exceed NFIELD_STORED_MAX (%d) !!\n", NFIELD_STORED_MAX );
+   if ( OPT__OUTPUT_MU )  sprintf( FieldLabelOut[MuDumpIdx], "%s", "Mu" );
    const int DeltaPDumpIdx = ( OPT__OUTPUT_DELTAP ) ? NFieldStored++ : NoDump;
    if ( DeltaPDumpIdx >= NFIELD_STORED_MAX )
       Aux_Error( ERROR_INFO, "exceed NFIELD_STORED_MAX (%d) !!\n", NFIELD_STORED_MAX );
@@ -1130,6 +1134,45 @@ void Output_DumpData_Total_HDF5( const char *FileName )
 
 #              ifdef MHD
 #              ifdef VISCOSITY
+               else if ( v == MuDumpIdx )
+               {
+
+                  for (int PID0=0; PID0<amr->NPatchComma[lv][1]; PID0+=8)
+                  {
+//                   prepare the input fields
+//                   --> must prepare all NCOMP_TOTAL and NCOMP_MAG fields
+                     Prepare_PatchData( lv, Time[lv], Der_FluIn[0][0], Der_MagFC[0][0], DER_GHOST_SIZE, 1, &PID0,
+                                        _TOTAL, _MAG, OPT__FLU_INT_SCHEME, OPT__MAG_INT_SCHEME, UNIT_PATCH, NSIDE_26,
+                                        IntPhase_No, OPT__BC_FLU, BC_POT_NONE, MinDens_No, MinPres_No, MinTemp_No, MinEntr_No,
+                                        DE_Consistency_No );
+
+                     for (int LocalID=0; LocalID<8; LocalID++)
+                     {
+
+//                      convert B field from face-centered to cell-centered
+                        for (int k=0; k<DER_NXT; k++)
+                        for (int j=0; j<DER_NXT; j++)
+                        for (int i=0; i<DER_NXT; i++)
+                        {
+                           const int IdxCC = IDX321( i, j, k, DER_NXT, DER_NXT );
+                           real B_CC[NCOMP_MAG];
+
+                           MHD_GetCellCenteredBField( B_CC, Der_MagFC[LocalID][MAGX], Der_MagFC[LocalID][MAGY],
+                                                      Der_MagFC[LocalID][MAGZ], DER_NXT, DER_NXT, DER_NXT, i, j, k );
+
+                           Der_MagCC[MAGX][IdxCC] = B_CC[MAGX];
+                           Der_MagCC[MAGY][IdxCC] = B_CC[MAGY];
+                           Der_MagCC[MAGZ][IdxCC] = B_CC[MAGZ];
+                        }
+
+//                      compute and store the target derived field
+                        const int PID  = PID0 + LocalID;
+                        const int NDer = 1;
+                        Flu_DerivedField_Mu( FieldData[PID][0][0], Der_FluIn[LocalID][0], Der_MagCC[0],
+                                             NDer, DER_NXT, DER_NXT, DER_NXT, DER_GHOST_SIZE, amr->dh[lv] );
+                     } // for (int LocalID=0; LocalID<8; LocalID++)
+                  } // for (int PID0=0; PID0<amr->NPatchComma[lv][1]; PID0+=8)
+               } // if ( v == MuDumpIdx )
                else if ( v == DeltaPDumpIdx )
                {
          
@@ -4232,6 +4275,7 @@ void GetCompound_InputPara( hid_t &H5_TypeID, const int NFieldStored )
    H5Tinsert( H5_TypeID, "Opt__Output_DivMag",          HOFFSET(InputPara_t,Opt__Output_DivMag         ), H5T_NATIVE_INT              );
 #  endif
 #  ifdef VISCOSITY
+   H5Tinsert( H5_TypeID, "Opt__Output_Mu",              HOFFSET(InputPara_t,Opt__Output_Mu             ), H5T_NATIVE_INT              );
    H5Tinsert( H5_TypeID, "Opt__Output_DeltaP",          HOFFSET(InputPara_t,Opt__Output_DeltaP         ), H5T_NATIVE_INT              );
 #  endif
 #  ifdef CONDUCTION

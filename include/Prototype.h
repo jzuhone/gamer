@@ -213,6 +213,9 @@ void Flu_DerivedField_Mach( real Out[], const real FluIn[], const real MagIn[], 
                             const int NCellInX, const int NCellInY, const int NCellInZ,
                             const int NGhost, const double dh );
 #ifdef VISCOSITY
+void Flu_DerivedField_Mu( real Out[], const real FluIn[], const real MagIn[], const int NFieldOut,
+                          const int NCellInX, const int NCellInY, const int NCellInZ,
+                          const int NGhost, const double dh );
 void Flu_DerivedField_DeltaP( real Out[], const real FluIn[], const real MagIn[], const int NFieldOut,
                               const int NCellInX, const int NCellInY, const int NCellInZ,
                               const int NGhost, const double dh );

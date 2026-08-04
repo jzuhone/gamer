@@ -882,6 +882,7 @@ struct InputPara_t
    int    Opt__Output_DivMag;
 #  endif
 #  ifdef VISCOSITY
+   int    Opt__Output_Mu;
    int    Opt__Output_DeltaP;
 #  endif
 #  ifdef CONDUCTION
