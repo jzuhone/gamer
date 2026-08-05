@@ -258,13 +258,15 @@ int Flu_ResetByUser_Func_ClusterMerger( real fluid[], const double Emag, const d
          const real P_new     = SQRT( (real)2.0*fluid[DENS]*(EngySin + Ekin_old) );
          const real JetSign   = SIGN( Vec_c2m[0]*CM_Jet_Vec[c][0] + Vec_c2m[1]*CM_Jet_Vec[c][1] + Vec_c2m[2]*CM_Jet_Vec[c][2] );
 
-         real P_old_perp[3], P_old_para, P_new_para;
-         P_old_para    = fluid[MOMX] * CM_Jet_Vec[c][0] + fluid[MOMY] * CM_Jet_Vec[c][1] + fluid[MOMZ] * CM_Jet_Vec[c][2];
-         P_old_perp[0] = fluid[MOMX] - P_old_para * CM_Jet_Vec[c][0];
-         P_old_perp[1] = fluid[MOMY] - P_old_para * CM_Jet_Vec[c][1];
-         P_old_perp[2] = fluid[MOMZ] - P_old_para * CM_Jet_Vec[c][2];
-         P_new_para    = SQRT( SQR(P_new) - SQR(P_old_perp[0]) - SQR(P_old_perp[1]) - SQR(P_old_perp[2]) );
-         P_new_para   *= JetSign;
+         real P_old_perp[3], P_old_para, P_new_para, P_new_para_sqr;
+         P_old_para     = fluid[MOMX] * CM_Jet_Vec[c][0] + fluid[MOMY] * CM_Jet_Vec[c][1] + fluid[MOMZ] * CM_Jet_Vec[c][2];
+         P_old_perp[0]  = fluid[MOMX] - P_old_para * CM_Jet_Vec[c][0];
+         P_old_perp[1]  = fluid[MOMY] - P_old_para * CM_Jet_Vec[c][1];
+         P_old_perp[2]  = fluid[MOMZ] - P_old_para * CM_Jet_Vec[c][2];
+         P_new_para_sqr = SQR(P_new) - SQR(P_old_perp[0]) - SQR(P_old_perp[1]) - SQR(P_old_perp[2]);
+         P_new_para_sqr = FMAX( P_new_para_sqr, (real)0.0 );   // avoid negative squared values caused by rounding errors
+         P_new_para     = SQRT( P_new_para_sqr );
+         P_new_para    *= JetSign;
 
          fluid[MOMX] = P_new_para * CM_Jet_Vec[c][0] + P_old_perp[0];
          fluid[MOMY] = P_new_para * CM_Jet_Vec[c][1] + P_old_perp[1];
@@ -1090,8 +1092,8 @@ void SetJetDirection( const double TimeNew, const int lv, const int FluSg )
          }
          break;
       case 2: // import from table
-	 {
-	     const double Time_period      = CM_Jet_Time_table[JetDirection_NBin-1];
+         {
+             const double Time_period      = CM_Jet_Time_table[JetDirection_NBin-1];
              const double Time_interpolate = fmod( TimeNew, Time_period );
              for (int c=0; c<Merger_Coll_NumBHs; c++)
              {
@@ -1102,14 +1104,14 @@ void SetJetDirection( const double TimeNew, const int lv, const int FluSg )
                 CM_Jet_Vec[c][1] = sin(theta)*cos(phi);
                 CM_Jet_Vec[c][2] = sin(theta)*sin(phi);
              }
-	 }
+         }
          break;
       case 3: // align with angular momentum
-	 {
-	    // angular momentum inside the accretion radius, per rank and total
+         {
+            // angular momentum inside the accretion radius, per rank and total
             double ang_mom[Merger_Coll_NumBHs][3];
             double ang_mom_sum[Merger_Coll_NumBHs][3];
-	    const double dh = amr->dh[lv];
+            const double dh = amr->dh[lv];
             const double dv = CUBE(dh);
 
             for (int c=0; c<Merger_Coll_NumBHs; c++)
@@ -1147,7 +1149,7 @@ void SetJetDirection( const double TimeNew, const int lv, const int FluSg )
 
                for (int d=0; d<3; d++)   CM_Jet_Vec[c][d] = ang_mom_sum[c][d] / ang_mom_norm;
             } // for (int c=0; c<Merger_Coll_NumBHs; c++)
-	 }
+         }
          break;
       default:
          Aux_Error( ERROR_INFO, "Unsupported JetDirection_case %d [1/2/3] !!\n", JetDirection_case );
