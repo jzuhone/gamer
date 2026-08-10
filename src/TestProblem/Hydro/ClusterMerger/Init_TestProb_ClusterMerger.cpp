@@ -518,18 +518,6 @@ void SetParameter()
 //       allocate BH-related arrays
          AllocateBHVarArray();
 
-<<<<<<< HEAD
-// 	 set initial BH position and velocity
-	 for ( int c=0; c<Merger_Coll_NumBHs; c++ )
-	 for (int d=0; d<3; d++)
-	 {
-	    CM_ClusterCen[c][d] = Merger_Coll_Pos[c][d];
-            CM_BH_Pos    [c][d] = CM_ClusterCen  [c][d];
-            CM_BH_Vel    [c][d] = Merger_Coll_Vel[c][d];
-         }
-
-||||||| b843527d8
-=======
 //       initialize cluster centers and BH attributes
          for (int c=0; c<Merger_Coll_NumBHs; c++)
          for (int d=0; d<3; d++)
@@ -538,7 +526,6 @@ void SetParameter()
             CM_BH_Pos    [c][d] = Merger_Coll_Pos[c][d];
             CM_BH_Vel    [c][d] = Merger_Coll_Vel[c][d];
          }
->>>>>>> cool-core-public
       }
 
 //    (3) determine particle number
