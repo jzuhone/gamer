@@ -277,8 +277,10 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       char Merger_Coll_IsGas_name[MAX_STRING];
       char Merger_Coll_PosX_name [MAX_STRING];
       char Merger_Coll_PosY_name [MAX_STRING];
+      char Merger_Coll_PosZ_name [MAX_STRING];
       char Merger_Coll_VelX_name [MAX_STRING];
       char Merger_Coll_VelY_name [MAX_STRING];
+      char Merger_Coll_VelZ_name [MAX_STRING];
       char CM_BH_Mass_name       [MAX_STRING];
       char Jet_HalfHeight_name   [MAX_STRING];
       char Jet_Radius_name       [MAX_STRING];
@@ -288,8 +290,10 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       sprintf( Merger_Coll_IsGas_name, "Merger_Coll_IsGas%d", c+1 );
       sprintf( Merger_Coll_PosX_name,  "Merger_Coll_PosX%d",  c+1 );
       sprintf( Merger_Coll_PosY_name,  "Merger_Coll_PosY%d",  c+1 );
+      sprintf( Merger_Coll_PosZ_name,  "Merger_Coll_PosZ%d",  c+1 );
       sprintf( Merger_Coll_VelX_name,  "Merger_Coll_VelX%d",  c+1 );
       sprintf( Merger_Coll_VelY_name,  "Merger_Coll_VelY%d",  c+1 );
+      sprintf( Merger_Coll_VelZ_name,  "Merger_Coll_VelZ%d",  c+1 );
       if ( AGN_feedback )
       {
          sprintf( CM_BH_Mass_name,        "Bondi_MassBH%d",      c+1 );
@@ -301,15 +305,17 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       LOAD_PARA( load_mode, Merger_Coll_IsGas_name, &Merger_Coll_IsGas[c],     true,               Useless_bool,  Useless_bool   );
       LOAD_PARA( load_mode, Merger_Coll_PosX_name,  &Merger_Coll_Pos[c][0],   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, Merger_Coll_PosY_name,  &Merger_Coll_Pos[c][1],   -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, Merger_Coll_PosZ_name,  &Merger_Coll_Pos[c][2],   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, Merger_Coll_VelX_name,  &Merger_Coll_Vel[c][0],   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, Merger_Coll_VelY_name,  &Merger_Coll_Vel[c][1],   -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, Merger_Coll_VelZ_name,  &Merger_Coll_Vel[c][2],   -1.0,                NoMin_double,  NoMax_double   );
       if ( AGN_feedback )
       {
          LOAD_PARA( load_mode, CM_BH_Mass_name,        &CM_BH_Mass[c],           -1.0,                Eps_double,    NoMax_double   );
          LOAD_PARA( load_mode, Jet_HalfHeight_name,    &Jet_HalfHeight[c],       -1.0,                Eps_double,    NoMax_double   );
          LOAD_PARA( load_mode, Jet_Radius_name,        &Jet_Radius[c],           -1.0,                Eps_double,    NoMax_double   );
       }
-   }
+   } // for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    LOAD_PARA( load_mode, "Merger_Coll_UseMetals",       &Merger_Coll_UseMetals,      true,       Useless_bool,     Useless_bool   );
    LOAD_PARA( load_mode, "Merger_Coll_BkgDensity",      &Merger_Coll_BkgDensity,     5.0e-30,             0.0,     NoMax_double   );
    LOAD_PARA( load_mode, "Merger_Coll_BkgTemperature",  &Merger_Coll_BkgTemperature,   6.0e6,             0.0,     NoMax_double   );
@@ -413,7 +419,7 @@ void SetParameter()
 
    }
    Merger_Coll_BkgDensity /= UNIT_D;
-   Merger_Coll_BkgTemperature *= Const_kB * UNIT_E/UNIT_M / ( MOLECULAR_WEIGHT * MU_NORM );
+   Merger_Coll_BkgTemperature *= Const_kB * UNIT_M / ( UNIT_E * MOLECULAR_WEIGHT * MU_NORM );
    Merger_Coll_BkgPressure = Merger_Coll_BkgDensity * Merger_Coll_BkgTemperature;
 
 // setup color fields
@@ -762,7 +768,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
          else              fluid[ColorFieldsIdx[c]] = 0.0;
       }
    } // for (int c=0; c<Merger_Coll_NumHalos; c++)
-
+   
    Dens = MAX( Dens, Merger_Coll_BkgDensity );
    Pres = MAX( Pres, Merger_Coll_BkgPressure );
 
