@@ -12,6 +12,7 @@ static char   (*Merger_File_Prof)[ MAX_STRING ] = NULL; // profile table of clus
 static bool    *Merger_Coll_IsGas = NULL;               // (true/false) --> does cluster have gas
        double (*Merger_Coll_Pos)[3] = NULL;             // initial position of clusters
        double (*Merger_Coll_Vel)[3] = NULL;             // initial velocity of clusters
+       double   Merger_Coll_BkgDensity;                 // background gas density
        double  *CM_BH_Mass = NULL;                      // initial black hole mass of clusters
        double  *Jet_HalfHeight = NULL;                  // half height of the cylinder-shape jet source of clusters
        double  *Jet_Radius = NULL;                      // radius of the cylinder-shape jet source of clusters
@@ -315,6 +316,7 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
    }
    LOAD_PARA( load_mode, "Merger_Coll_RefineScalar", &Merger_Coll_RefineScalar,  2,                1,             3              );
    LOAD_PARA( load_mode, "Merger_Coll_UseMetals",    &Merger_Coll_UseMetals,     true,               Useless_bool,  Useless_bool   );
+   LOAD_PARA( load_mode, "Merger_Coll_BkgDensity",  &Merger_Coll_BkgDensity,     5.0e-30,             0.0,     NoMax_double   );
    if ( AGN_feedback )
    {
       LOAD_PARA( load_mode, "Merger_Coll_LabelCenter", &Merger_Coll_LabelCenter,  true,               Useless_bool,  Useless_bool   );
@@ -400,11 +402,21 @@ void SetParameter()
 // convert to code units
    for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    {
-      Merger_Coll_Pos[c][0] *= Const_kpc / UNIT_L;
-      Merger_Coll_Pos[c][1] *= Const_kpc / UNIT_L;
-      Merger_Coll_Vel[c][0] *= (Const_km/Const_s) / UNIT_V;
-      Merger_Coll_Vel[c][1] *= (Const_km/Const_s) / UNIT_V;
+
+      for ( int i = 0; i < 3; i++ )
+      {
+         Merger_Coll_Pos[c][i] *= Const_kpc / UNIT_L;
+         Merger_Coll_Vel[c][i] *= (Const_km/Const_s) / UNIT_V;
+      }
+      // Negative values for the z-axis position indicate a merger in x-y plane
+      if ( Merger_Coll_Pos[c][2] < 0.0 )
+      {
+         Merger_Coll_Pos[c][2] = amr->BoxCenter[2];
+         Merger_Coll_Vel[c][2] = 0.0;
+      }
+
    }
+   Merger_Coll_BkgDensity /= UNIT_D;
 
 // setup color fields
    ColorFieldsIdx = new FieldIdx_t [ Merger_Coll_NumHalos ];
@@ -508,13 +520,10 @@ void SetParameter()
       {
          Merger_Coll_Pos[0][0] = amr->BoxCenter[0];
          Merger_Coll_Pos[0][1] = amr->BoxCenter[1];
+         Merger_Coll_Pos[0][2] = amr->BoxCenter[2];
          Merger_Coll_Vel[0][0] = 0.0;
          Merger_Coll_Vel[0][1] = 0.0;
-      }
-      for (int c=0; c<Merger_Coll_NumHalos; c++)
-      {
-         Merger_Coll_Pos[c][2] = amr->BoxCenter[2];
-         Merger_Coll_Vel[c][2] = 0.0;
+         Merger_Coll_Vel[0][2] = 0.0;
       }
 
       if ( AGN_feedback )
@@ -631,15 +640,17 @@ void SetParameter()
       Aux_Message( stdout, "  cluster %d w/ gas          = %s\n",          c+1, (Merger_Coll_IsGas[c])? "yes":"no" );
       Aux_Message( stdout, "  cluster %d x-position      = %g\n",          c+1,  Merger_Coll_Pos[c][0] );
       Aux_Message( stdout, "  cluster %d y-position      = %g\n",          c+1,  Merger_Coll_Pos[c][1] );
+      Aux_Message( stdout, "  cluster %d z-position      = %g\n",          c+1,  Merger_Coll_Pos[c][2] );
       Aux_Message( stdout, "  cluster %d x-velocity      = %g\n",          c+1,  Merger_Coll_Vel[c][0] );
       Aux_Message( stdout, "  cluster %d y-velocity      = %g\n",          c+1,  Merger_Coll_Vel[c][1] );
+      Aux_Message( stdout, "  cluster %d z-velocity      = %g\n",          c+1,  Merger_Coll_Vel[c][2] );
       if ( AGN_feedback ) {
       Aux_Message( stdout, "  cluster %d BH mass         = %g\n",          c+1,  CM_BH_Mass[c]     );
       Aux_Message( stdout, "  cluster %d jet half-height = %g\n",          c+1,  Jet_HalfHeight[c] );
       Aux_Message( stdout, "  cluster %d jet radius      = %g\n",          c+1,  Jet_Radius[c]     ); }
       } // for (int c=0; c<Merger_Coll_NumHalos; c++)
-
       Aux_Message( stdout, "  use metals                = %s\n",          (Merger_Coll_UseMetals)? "yes":"no" );
+      Aux_Message( stdout, "  background gas density    = %g\n",           Merger_Coll_BkgDensity );
       if ( AGN_feedback ) {
       Aux_Message( stdout, "  label cluster centers     = %s\n",          (Merger_Coll_LabelCenter)? "yes":"no" );
       Aux_Message( stdout, "  BH fixed                  = %s\n",          (fixBH)? "yes":"no" );
@@ -657,7 +668,6 @@ void SetParameter()
       Aux_Message( stdout, "  adjust BH velocity        = %s\n",          (AdjustBHVel)? "yes":"no" );
       Aux_Message( stdout, "  adjust period             = %g\n",          AdjustPeriod        );
       } // if ( AGN_feedback )
-
       Aux_Message( stdout, "=============================================================================\n" );
 
 //    check if the accretion region is larger than the jet cylinder
@@ -741,11 +751,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
       Dens += dens;
       Pres += pres;
 
-      if ( r <= rmax )
-      {
-         MomX += Merger_Coll_Vel[c][0]*dens;
-         MomY += Merger_Coll_Vel[c][1]*dens;
-      }
+      MomX += Merger_Coll_Vel[c][0]*dens;
+      MomY += Merger_Coll_Vel[c][1]*dens;
+      MomZ += Merger_Coll_Vel[c][2]*dens;
 
       Metl += metl*dens;
 
@@ -756,6 +764,8 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
       }
    } // for (int c=0; c<Merger_Coll_NumHalos; c++)
 
+   Dens = MAX( Dens, Merger_Coll_BkgDensity );
+
 // compute the total gas energy
    Eint = EoS_DensPres2Eint_CPUPtr( Dens, Pres, NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table ); // assuming EoS requires no passive scalars
    Etot = Hydro_ConEint2Etot( Dens, MomX, MomY, MomZ, Eint, 0.0 ); // do NOT include magnetic energy here
@@ -765,7 +775,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    fluid[MOMY] = MomY;
    fluid[MOMZ] = MomZ;
    fluid[ENGY] = Etot;
-   if ( Merger_Coll_UseMetals )   fluid[Idx_Metal] = Metl;
+
+   if ( Merger_Coll_UseMetals )
+      fluid[Idx_Metal] = MAX( Metl, 0.3*Merger_Coll_BkgDensity );
 
 } // FUNCTION : SetGridIC
 #endif // #if ( MODEL == HYDRO  &&  defined MASSIVE_PARTICLES )
