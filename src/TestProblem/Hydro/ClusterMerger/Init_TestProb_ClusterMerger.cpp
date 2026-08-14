@@ -792,8 +792,9 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    fluid[MOMZ     ] = MomZ;
    fluid[ENGY     ] = Etot;
 
+   real Z_sol = 0.0165; // approximate value of solar metallicity as mass fraction
    if ( Merger_Coll_UseMetals )
-   fluid[Idx_Metal] = MAX( Metl, 0.3*Merger_Coll_BkgDensity );
+   fluid[Idx_Metal] = MAX( Metl, 0.3*Z_sol*Merger_Coll_BkgDensity );
 
 } // FUNCTION : SetGridIC
 #endif // #if ( MODEL == HYDRO  &&  defined MASSIVE_PARTICLES )
