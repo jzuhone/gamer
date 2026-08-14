@@ -13,6 +13,7 @@ static bool    *Merger_Coll_IsGas = NULL;               // (true/false) --> does
        double (*Merger_Coll_Pos)[3] = NULL;             // initial position of clusters
        double (*Merger_Coll_Vel)[3] = NULL;             // initial velocity of clusters
        double   Merger_Coll_BkgDensity;                 // background gas density
+       double   Merger_Coll_BkgTemperature;             // background gas temperature
        double  *CM_BH_Mass = NULL;                      // initial black hole mass of clusters
        double  *Jet_HalfHeight = NULL;                  // half height of the cylinder-shape jet source of clusters
        double  *Jet_Radius = NULL;                      // radius of the cylinder-shape jet source of clusters
@@ -93,6 +94,7 @@ static double  *JetDirection = NULL;       // jet direction[time/theta_1/phi_1/t
 
        double  *E_inj_exp = NULL;         // the expected amount of injected energy
        double  *M_inj_exp = NULL;         // the expected amount of injected gas mass
+       double   Merger_Coll_BkgPressure;  // background gas pressure
 
        double  *Jet_WaveK = NULL;         // jet wavenumber used in the sin() function to have smooth bidirectional jets
        double  *V_cyl = NULL;             // the volume of jet source
@@ -308,8 +310,9 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
          LOAD_PARA( load_mode, Jet_Radius_name,        &Jet_Radius[c],           -1.0,                Eps_double,    NoMax_double   );
       }
    }
-   LOAD_PARA( load_mode, "Merger_Coll_UseMetals",   &Merger_Coll_UseMetals,         true,    Useless_bool,     Useless_bool   );
-   LOAD_PARA( load_mode, "Merger_Coll_BkgDensity",  &Merger_Coll_BkgDensity,     5.0e-30,             0.0,     NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_UseMetals",       &Merger_Coll_UseMetals,      true,       Useless_bool,     Useless_bool   );
+   LOAD_PARA( load_mode, "Merger_Coll_BkgDensity",      &Merger_Coll_BkgDensity,     5.0e-30,             0.0,     NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_BkgTemperature",  &Merger_Coll_BkgTemperature,   6.0e6,             0.0,     NoMax_double   );
    if ( AGN_feedback )
    {
       LOAD_PARA( load_mode, "Merger_Coll_LabelCenter", &Merger_Coll_LabelCenter,  true,               Useless_bool,  Useless_bool   );
@@ -410,6 +413,8 @@ void SetParameter()
 
    }
    Merger_Coll_BkgDensity /= UNIT_D;
+   Merger_Coll_BkgTemperature *= Const_kB * UNIT_E/UNIT_M / ( MOLECULAR_WEIGHT * MU_NORM );
+   Merger_Coll_BkgPressure = Merger_Coll_BkgDensity * Merger_Coll_BkgTemperature;
 
 // setup color fields
    ColorFieldsIdx = new FieldIdx_t [ Merger_Coll_NumHalos ];
@@ -642,8 +647,9 @@ void SetParameter()
       Aux_Message( stdout, "  cluster %d jet half-height = %g\n",          c+1,  Jet_HalfHeight[c] );
       Aux_Message( stdout, "  cluster %d jet radius      = %g\n",          c+1,  Jet_Radius[c]     ); }
       } // for (int c=0; c<Merger_Coll_NumHalos; c++)
-      Aux_Message( stdout, "  use metals                = %s\n",          (Merger_Coll_UseMetals)? "yes":"no" );
-      Aux_Message( stdout, "  background gas density    = %g\n",           Merger_Coll_BkgDensity );
+      Aux_Message( stdout, "  use metals                 = %s\n",          (Merger_Coll_UseMetals)? "yes":"no" );
+      Aux_Message( stdout, "  background gas density     = %g\n",           Merger_Coll_BkgDensity );
+      Aux_Message( stdout, "  background gas temperature = %g\n",           Merger_Coll_BkgTemperature );
       if ( AGN_feedback ) {
       Aux_Message( stdout, "  label cluster centers     = %s\n",          (Merger_Coll_LabelCenter)? "yes":"no" );
       Aux_Message( stdout, "  BH fixed                  = %s\n",          (fixBH)? "yes":"no" );
@@ -758,6 +764,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    } // for (int c=0; c<Merger_Coll_NumHalos; c++)
 
    Dens = MAX( Dens, Merger_Coll_BkgDensity );
+   Pres = MAX( Pres, Merger_Coll_BkgPressure );
 
 // compute the total gas energy
    Eint = EoS_DensPres2Eint_CPUPtr( Dens, Pres, NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table ); // assuming EoS requires no passive scalars
