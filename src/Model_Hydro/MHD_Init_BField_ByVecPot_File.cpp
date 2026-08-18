@@ -25,15 +25,23 @@ struct GridMeta
 // (HDF5 group "patch_00", "patch_01", ...). Optional: files with no such groups
 // (old files, or ones written without refinement_regions) behave exactly as before --
 // see NumBPatches below.
+//
+// "children" holds any further-refined patches nested inside this one (HDF5
+// groups "child_00", "child_01", ... -- cluster_generator's refinement_regions
+// "num_levels" > 1), read/applied recursively by VecPot_ReadPatchGroup/
+// VecPot_ApplyPatch; it is NULL (num_children == 0) for a patch with no nested
+// children, which is also how old (single-level) patch files behave.
 struct BFieldPatch
 {
-   int     nx, ny, nz;
-   double  dx, dy, dz;
-   double  xmin, ymin, zmin;
-   double  frac_low;
-   double *xcoord, *ycoord, *zcoord;
-   double *Ax, *Ay, *Az;
-   double *window;
+   int         nx, ny, nz;
+   double      dx, dy, dz;
+   double      xmin, ymin, zmin;
+   double      frac_low;
+   double     *xcoord, *ycoord, *zcoord;
+   double     *Ax, *Ay, *Az;
+   double     *window;
+   int         num_children;
+   BFieldPatch *children;
 };
 
 static int         NumBPatches = 0;
@@ -44,13 +52,17 @@ double VecPot_Interp( const double field[], const double xx, const double yy,
                       const double zz, const int fdims[], const int fbegin[],
                       const GridMeta &grid );
 bool   VecPot_PointInPatch( const BFieldPatch &patch, const double xx, const double yy, const double zz );
+void   VecPot_ApplyPatch( double &pot, const BFieldPatch &patch, const double xx, const double yy,
+                          const double zz, const int comp );
 double VecPot_EvalComponent( const double coarse_field[], const int fdims[], const int fbegin[],
                              const double xx, const double yy, const double zz, const int comp );
+void   VecPot_FreePatch( BFieldPatch &patch );
 #ifdef SUPPORT_HDF5
 void VecPot_ReadField( hid_t mag_file_id, const int ibegin, const int jbegin,
                        const int kbegin, const int iend, const int jend,
                        const int kend, double Ax[], double Ay[], double Az[] );
 void VecPot_ReadPatches( hid_t mag_file_id );
+void VecPot_ReadPatchGroup( hid_t group_id, BFieldPatch &patch );
 #endif
 
 //-------------------------------------------------------------------------------------------------------
@@ -334,15 +346,8 @@ void MHD_Init_BField_ByVecPot_File( const int B_lv )
 // every level, so it's only freed after the last level has been initialized.
    if ( B_lv == TOP_LEVEL ) {
 
-      for (int p=0; p<NumBPatches; p++) {
-         delete [] BPatches[p].xcoord;
-         delete [] BPatches[p].ycoord;
-         delete [] BPatches[p].zcoord;
-         delete [] BPatches[p].Ax;
-         delete [] BPatches[p].Ay;
-         delete [] BPatches[p].Az;
-         delete [] BPatches[p].window;
-      }
+      for (int p=0; p<NumBPatches; p++)  VecPot_FreePatch( BPatches[p] );
+
       delete [] BPatches;
       BPatches    = NULL;
       NumBPatches = 0;
@@ -470,23 +475,10 @@ double VecPot_EvalComponent( const double coarse_field[], const int fdims[], con
 
    for (int p=0; p<NumBPatches; p++) {
 
-      const BFieldPatch &patch = BPatches[p];
+      if ( VecPot_PointInPatch( BPatches[p], xx, yy, zz ) ) {
 
-      if ( VecPot_PointInPatch( patch, xx, yy, zz ) ) {
-
-         const int      pfdims[3]  = { patch.nx, patch.ny, patch.nz };
-         const int      pfbegin[3] = { 0, 0, 0 };
-         const GridMeta patch_grid = { patch.xcoord, patch.ycoord, patch.zcoord,
-                                        patch.dx, patch.dy, patch.dz,
-                                        patch.xmin, patch.ymin, patch.zmin };
-
-         const double  w          = VecPot_Interp( patch.window, xx, yy, zz, pfdims, pfbegin, patch_grid );
-         const double  correction = 1.0 - ( 1.0 - sqrt(patch.frac_low) )*w;
-         const double *comp_field = ( comp == 0 ) ? patch.Ax : ( comp == 1 ) ? patch.Ay : patch.Az;
-         const double  pot_patch  = VecPot_Interp( comp_field, xx, yy, zz, pfdims, pfbegin, patch_grid );
-
-         pot = pot*correction + pot_patch;
-         break;   // patches are assumed non-overlapping
+         VecPot_ApplyPatch( pot, BPatches[p], xx, yy, zz, comp );
+         break;   // top-level patches are assumed non-overlapping
 
       }
 
@@ -495,6 +487,84 @@ double VecPot_EvalComponent( const double coarse_field[], const int fdims[], con
    return pot;
 
 } // FUNCTION : VecPot_EvalComponent
+
+//-------------------------------------------------------------------------------------------------------
+// Function    :  VecPot_ApplyPatch
+// Description :  Blend a single refinement patch into "pot" -- the vector potential
+//                component already evaluated at (xx,yy,zz) from "patch"'s parent (the
+//                coarse grid, or an enclosing, coarser patch) -- then recurse into
+//                "patch.children" to blend in any further refinement nested inside it
+//                (cluster_generator's refinement_regions "num_levels" > 1). Mirrors
+//                cluster_generator's ClusterField._apply_patch exactly, one telescoping
+//                chain of patches per cluster (see RandomClusterField.refinement_regions).
+//
+// Parameter   :  pot   : Vector potential component evaluated at (xx,yy,zz) so far;
+//                        updated in place
+//                patch : The refinement patch to blend in -- must already be known to
+//                        contain (xx,yy,zz) (see VecPot_PointInPatch); not re-checked
+//                        here
+//                xx    : coordinate along the x-axis
+//                yy    : coordinate along the y-axis
+//                zz    : coordinate along the z-axis
+//                comp  : which component: 0=x, 1=y, 2=z
+//
+// Return      :  "pot", updated in place
+//-------------------------------------------------------------------------------------------------------
+void VecPot_ApplyPatch( double &pot, const BFieldPatch &patch, const double xx, const double yy,
+                        const double zz, const int comp )
+{
+
+   const int      pfdims[3]  = { patch.nx, patch.ny, patch.nz };
+   const int      pfbegin[3] = { 0, 0, 0 };
+   const GridMeta patch_grid = { patch.xcoord, patch.ycoord, patch.zcoord,
+                                  patch.dx, patch.dy, patch.dz,
+                                  patch.xmin, patch.ymin, patch.zmin };
+
+   const double  w          = VecPot_Interp( patch.window, xx, yy, zz, pfdims, pfbegin, patch_grid );
+   const double  correction = 1.0 - ( 1.0 - sqrt(patch.frac_low) )*w;
+   const double *comp_field = ( comp == 0 ) ? patch.Ax : ( comp == 1 ) ? patch.Ay : patch.Az;
+   const double  pot_patch  = VecPot_Interp( comp_field, xx, yy, zz, pfdims, pfbegin, patch_grid );
+
+   pot = pot*correction + pot_patch;
+
+   for (int c=0; c<patch.num_children; c++) {
+
+      if ( VecPot_PointInPatch( patch.children[c], xx, yy, zz ) ) {
+
+         VecPot_ApplyPatch( pot, patch.children[c], xx, yy, zz, comp );
+         break;   // siblings (children of the same parent) are assumed non-overlapping
+
+      }
+
+   }
+
+} // FUNCTION : VecPot_ApplyPatch
+
+//-------------------------------------------------------------------------------------------------------
+// Function    :  VecPot_FreePatch
+// Description :  Recursively free a BFieldPatch's own arrays and every patch nested
+//                inside it (patch.children), as populated by VecPot_ReadPatchGroup.
+//
+// Parameter   :  patch : The patch (and its whole nested chain) to free
+//
+// Return      :  none
+//-------------------------------------------------------------------------------------------------------
+void VecPot_FreePatch( BFieldPatch &patch )
+{
+
+   delete [] patch.xcoord;
+   delete [] patch.ycoord;
+   delete [] patch.zcoord;
+   delete [] patch.Ax;
+   delete [] patch.Ay;
+   delete [] patch.Az;
+   delete [] patch.window;
+
+   for (int c=0; c<patch.num_children; c++)  VecPot_FreePatch( patch.children[c] );
+
+   delete [] patch.children;
+
+} // FUNCTION : VecPot_FreePatch
 
 //-------------------------------------------------------------------------------------------------------
 // Function    :  TSC_Weight
@@ -614,6 +684,9 @@ void VecPot_ReadField( hid_t mag_file_id, const int ibegin, const int jbegin,
 //                   unlike the coarse grid -- are read whole into every MPI rank.
 //                3. Called once (guarded by B_lv==0 at the call site); the data is
 //                   reused across all levels and freed only when B_lv==TOP_LEVEL.
+//                4. Each top-level patch's own "child_00", "child_01", ... subgroups
+//                   (cluster_generator's refinement_regions "num_levels" > 1) are read
+//                   recursively by VecPot_ReadPatchGroup.
 //
 // Parameter   :  mag_file_id : Open HDF5 file identifier for the B-field input file
 //
@@ -643,102 +716,16 @@ void VecPot_ReadPatches( hid_t mag_file_id )
 
    BPatches = new BFieldPatch [ NumBPatches ];
 
-   hid_t   dataset, dataspace, group_id;
-   hsize_t dims[3], maxdims[3];
-   char    group_name[32];
+   char group_name[32];
 
    for (int p=0; p<NumBPatches; p++) {
 
       snprintf( group_name, sizeof(group_name), "patch_%02d", p );
 
-      group_id = H5Gopen( mag_file_id, group_name, H5P_DEFAULT );
+      hid_t group_id = H5Gopen( mag_file_id, group_name, H5P_DEFAULT );
       if ( group_id < 0 ) Aux_Error( ERROR_INFO, "Failed to open group \"%s\" !!\n", group_name );
 
-      BFieldPatch &patch = BPatches[p];
-
-//    Dimensions, from the x/y/z coordinate datasets
-      dataset   = H5Dopen( group_id, "x", H5P_DEFAULT );
-      dataspace = H5Dget_space( dataset );
-      H5Sget_simple_extent_dims( dataspace, dims, maxdims );
-      patch.nx  = (int)dims[0];
-      H5Sclose( dataspace );
-      H5Dclose( dataset );
-
-      dataset   = H5Dopen( group_id, "y", H5P_DEFAULT );
-      dataspace = H5Dget_space( dataset );
-      H5Sget_simple_extent_dims( dataspace, dims, maxdims );
-      patch.ny  = (int)dims[0];
-      H5Sclose( dataspace );
-      H5Dclose( dataset );
-
-      dataset   = H5Dopen( group_id, "z", H5P_DEFAULT );
-      dataspace = H5Dget_space( dataset );
-      H5Sget_simple_extent_dims( dataspace, dims, maxdims );
-      patch.nz  = (int)dims[0];
-      H5Sclose( dataspace );
-      H5Dclose( dataset );
-
-//    Coordinate arrays
-      patch.xcoord = new double [ patch.nx ];
-      patch.ycoord = new double [ patch.ny ];
-      patch.zcoord = new double [ patch.nz ];
-
-      dataset = H5Dopen( group_id, "x", H5P_DEFAULT );
-      status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.xcoord );
-      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/x\" !!\n", group_name );
-      H5Dclose( dataset );
-
-      dataset = H5Dopen( group_id, "y", H5P_DEFAULT );
-      status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.ycoord );
-      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/y\" !!\n", group_name );
-      H5Dclose( dataset );
-
-      dataset = H5Dopen( group_id, "z", H5P_DEFAULT );
-      status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.zcoord );
-      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/z\" !!\n", group_name );
-      H5Dclose( dataset );
-
-      patch.dx = patch.xcoord[1] - patch.xcoord[0];
-      patch.dy = patch.ycoord[1] - patch.ycoord[0];
-      patch.dz = patch.zcoord[1] - patch.zcoord[0];
-
-      patch.xmin = patch.xcoord[0] - 0.5*patch.dx;
-      patch.ymin = patch.ycoord[0] - 0.5*patch.dy;
-      patch.zmin = patch.zcoord[0] - 0.5*patch.dz;
-
-//    Vector potential components and taper window, read whole (see Note 2 above)
-      const int npts = patch.nx*patch.ny*patch.nz;
-
-      patch.Ax     = new double [ npts ];
-      patch.Ay     = new double [ npts ];
-      patch.Az     = new double [ npts ];
-      patch.window = new double [ npts ];
-
-      dataset = H5Dopen( group_id, "magnetic_vector_potential_x", H5P_DEFAULT );
-      status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.Ax );
-      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/magnetic_vector_potential_x\" !!\n", group_name );
-      H5Dclose( dataset );
-
-      dataset = H5Dopen( group_id, "magnetic_vector_potential_y", H5P_DEFAULT );
-      status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.Ay );
-      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/magnetic_vector_potential_y\" !!\n", group_name );
-      H5Dclose( dataset );
-
-      dataset = H5Dopen( group_id, "magnetic_vector_potential_z", H5P_DEFAULT );
-      status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.Az );
-      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/magnetic_vector_potential_z\" !!\n", group_name );
-      H5Dclose( dataset );
-
-      dataset = H5Dopen( group_id, "window", H5P_DEFAULT );
-      status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.window );
-      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/window\" !!\n", group_name );
-      H5Dclose( dataset );
-
-//    frac_low attribute
-      hid_t attr = H5Aopen( group_id, "frac_low", H5P_DEFAULT );
-      status = H5Aread( attr, H5T_NATIVE_DOUBLE, &patch.frac_low );
-      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/frac_low\" !!\n", group_name );
-      H5Aclose( attr );
+      VecPot_ReadPatchGroup( group_id, BPatches[p] );
 
       H5Gclose( group_id );
 
@@ -747,5 +734,154 @@ void VecPot_ReadPatches( hid_t mag_file_id )
    return;
 
 } // FUNCTION : VecPot_ReadPatches
+
+//-------------------------------------------------------------------------------------------------------
+// Function    :  VecPot_ReadPatchGroup
+// Description :  Read a single vector-potential patch group's own data (coordinates,
+//                Ax/Ay/Az, taper window, frac_low) into "patch", then recurse into any
+//                "child_00", "child_01", ... subgroups nested inside it
+//                (cluster_generator's refinement_regions "num_levels" > 1), populating
+//                "patch.children"/"patch.num_children". Used both for each top-level
+//                "patch_NN" group (from VecPot_ReadPatches) and, recursively, for every
+//                "child_NN" group nested inside one.
+//
+// Note        :  An absent (or zero) "num_children" attribute -- an old (single-level)
+//                patch file, or the finest level of this region's chain -- leaves this
+//                patch with no children, exactly as before this feature existed.
+//
+// Parameter   :  group_id : Open HDF5 group identifier for this patch (or child)
+//                patch    : Filled in place
+//
+// Return      :  "patch", filled in place
+//-------------------------------------------------------------------------------------------------------
+void VecPot_ReadPatchGroup( hid_t group_id, BFieldPatch &patch )
+{
+
+   hid_t   dataset, dataspace;
+   hsize_t dims[3], maxdims[3];
+   herr_t  status;
+
+   char group_name[256];
+   H5Iget_name( group_id, group_name, sizeof(group_name) );
+
+// Dimensions, from the x/y/z coordinate datasets
+   dataset   = H5Dopen( group_id, "x", H5P_DEFAULT );
+   dataspace = H5Dget_space( dataset );
+   H5Sget_simple_extent_dims( dataspace, dims, maxdims );
+   patch.nx  = (int)dims[0];
+   H5Sclose( dataspace );
+   H5Dclose( dataset );
+
+   dataset   = H5Dopen( group_id, "y", H5P_DEFAULT );
+   dataspace = H5Dget_space( dataset );
+   H5Sget_simple_extent_dims( dataspace, dims, maxdims );
+   patch.ny  = (int)dims[0];
+   H5Sclose( dataspace );
+   H5Dclose( dataset );
+
+   dataset   = H5Dopen( group_id, "z", H5P_DEFAULT );
+   dataspace = H5Dget_space( dataset );
+   H5Sget_simple_extent_dims( dataspace, dims, maxdims );
+   patch.nz  = (int)dims[0];
+   H5Sclose( dataspace );
+   H5Dclose( dataset );
+
+// Coordinate arrays
+   patch.xcoord = new double [ patch.nx ];
+   patch.ycoord = new double [ patch.ny ];
+   patch.zcoord = new double [ patch.nz ];
+
+   dataset = H5Dopen( group_id, "x", H5P_DEFAULT );
+   status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.xcoord );
+   if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/x\" !!\n", group_name );
+   H5Dclose( dataset );
+
+   dataset = H5Dopen( group_id, "y", H5P_DEFAULT );
+   status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.ycoord );
+   if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/y\" !!\n", group_name );
+   H5Dclose( dataset );
+
+   dataset = H5Dopen( group_id, "z", H5P_DEFAULT );
+   status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.zcoord );
+   if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/z\" !!\n", group_name );
+   H5Dclose( dataset );
+
+   patch.dx = patch.xcoord[1] - patch.xcoord[0];
+   patch.dy = patch.ycoord[1] - patch.ycoord[0];
+   patch.dz = patch.zcoord[1] - patch.zcoord[0];
+
+   patch.xmin = patch.xcoord[0] - 0.5*patch.dx;
+   patch.ymin = patch.ycoord[0] - 0.5*patch.dy;
+   patch.zmin = patch.zcoord[0] - 0.5*patch.dz;
+
+// Vector potential components and taper window, read whole (see Note 2 on VecPot_ReadPatches)
+   const int npts = patch.nx*patch.ny*patch.nz;
+
+   patch.Ax     = new double [ npts ];
+   patch.Ay     = new double [ npts ];
+   patch.Az     = new double [ npts ];
+   patch.window = new double [ npts ];
+
+   dataset = H5Dopen( group_id, "magnetic_vector_potential_x", H5P_DEFAULT );
+   status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.Ax );
+   if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/magnetic_vector_potential_x\" !!\n", group_name );
+   H5Dclose( dataset );
+
+   dataset = H5Dopen( group_id, "magnetic_vector_potential_y", H5P_DEFAULT );
+   status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.Ay );
+   if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/magnetic_vector_potential_y\" !!\n", group_name );
+   H5Dclose( dataset );
+
+   dataset = H5Dopen( group_id, "magnetic_vector_potential_z", H5P_DEFAULT );
+   status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.Az );
+   if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/magnetic_vector_potential_z\" !!\n", group_name );
+   H5Dclose( dataset );
+
+   dataset = H5Dopen( group_id, "window", H5P_DEFAULT );
+   status  = H5Dread( dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, patch.window );
+   if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/window\" !!\n", group_name );
+   H5Dclose( dataset );
+
+// frac_low attribute
+   hid_t attr = H5Aopen( group_id, "frac_low", H5P_DEFAULT );
+   status = H5Aread( attr, H5T_NATIVE_DOUBLE, &patch.frac_low );
+   if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/frac_low\" !!\n", group_name );
+   H5Aclose( attr );
+
+// Recurse into any further-refined children (see Note above)
+   patch.num_children = 0;
+   patch.children     = NULL;
+
+   if ( H5Aexists( group_id, "num_children" ) > 0 ) {
+
+      hid_t  nc_attr = H5Aopen( group_id, "num_children", H5P_DEFAULT );
+      status = H5Aread( nc_attr, H5T_NATIVE_INT, &patch.num_children );
+      H5Aclose( nc_attr );
+      if ( status < 0 ) Aux_Error( ERROR_INFO, "Failed to load \"%s/num_children\" !!\n", group_name );
+
+   }
+
+   if ( patch.num_children > 0 ) {
+
+      patch.children = new BFieldPatch [ patch.num_children ];
+
+      char child_name[32];
+
+      for (int c=0; c<patch.num_children; c++) {
+
+         snprintf( child_name, sizeof(child_name), "child_%02d", c );
+
+         hid_t child_group = H5Gopen( group_id, child_name, H5P_DEFAULT );
+         if ( child_group < 0 ) Aux_Error( ERROR_INFO, "Failed to open group \"%s/%s\" !!\n", group_name, child_name );
+
+         VecPot_ReadPatchGroup( child_group, patch.children[c] );
+
+         H5Gclose( child_group );
+
+      }
+
+   }
+
+} // FUNCTION : VecPot_ReadPatchGroup
 
 #endif // #ifdef SUPPORT_HDF5
