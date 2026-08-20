@@ -315,9 +315,7 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       LOAD_PARA( load_mode, Merger_Coll_PosX_name,     &Merger_Coll_Pos[c][0],   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, Merger_Coll_PosY_name,     &Merger_Coll_Pos[c][1],   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, Merger_Coll_PosZ_name,     &Merger_Coll_Pos[c][2],   -1.0,                NoMin_double,  NoMax_double   );
-      LOAD_PARA( load_mode, Merger_Coll_VelX_name,     &Merger_Coll_Vel[c][0],   -1.0,                NoMin_double,  NoMax_double   );
-      LOAD_PARA( load_mode, Merger_Coll_VelY_name,     &Merger_Coll_Vel[c][1],   -1.0,                NoMin_double,  NoMax_double   );
-      LOAD_PARA( load_mode, Merger_Coll_VelZ_name,     &Merger_Coll_Vel[c][2],   -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, Merger_Coll_VelZ_name,     &Merger_Coll_Vel[c][2],    0.0,                NoMin_double,  NoMax_double   );
       if ( AGN_feedback ) {
       LOAD_PARA( load_mode, CM_BH_Mass_name,           &CM_BH_Mass[c],           -1.0,                Eps_double,    NoMax_double   );
       LOAD_PARA( load_mode, Jet_HalfHeight_name,       &Jet_HalfHeight[c],       -1.0,                Eps_double,    NoMax_double   );
