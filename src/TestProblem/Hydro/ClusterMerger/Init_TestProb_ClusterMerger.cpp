@@ -94,7 +94,6 @@ static double  *JetDirection = NULL;       // jet direction[time/theta_1/phi_1/t
 
        double  *E_inj_exp = NULL;         // the expected amount of injected energy
        double  *M_inj_exp = NULL;         // the expected amount of injected gas mass
-       double   Merger_Coll_BkgPressure;  // background gas pressure
 
        double  *Jet_WaveK = NULL;         // jet wavenumber used in the sin() function to have smooth bidirectional jets
        double  *V_cyl = NULL;             // the volume of jet source
@@ -426,7 +425,6 @@ void SetParameter()
    }
    Merger_Coll_BkgDensity /= UNIT_D;
    Merger_Coll_BkgTemperature *= Const_kB * UNIT_M / ( UNIT_E * MOLECULAR_WEIGHT * MU_NORM );
-   Merger_Coll_BkgPressure = Merger_Coll_BkgDensity * Merger_Coll_BkgTemperature;
 
 // setup color fields
    ColorFieldsIdx = new FieldIdx_t [ Merger_Coll_NumHalos ];
@@ -778,7 +776,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
    } // for (int c=0; c<Merger_Coll_NumHalos; c++)
    
    Dens = MAX( Dens, Merger_Coll_BkgDensity );
-   Pres = MAX( Pres, Merger_Coll_BkgPressure );
+   Pres = MAX( Pres, Dens*Merger_Coll_BkgTemperature );
 
 // compute the total gas energy
    Eint = EoS_DensPres2Eint_CPUPtr( Dens, Pres, NULL, EoS_AuxArray_Flt, EoS_AuxArray_Int, h_EoS_Table ); // assuming EoS requires no passive scalars
@@ -792,7 +790,7 @@ void SetGridIC( real fluid[], const double x, const double y, const double z, co
 
    real Z_sol = 0.0165; // approximate value of solar metallicity as mass fraction
    if ( Merger_Coll_UseMetals )
-   fluid[Idx_Metal] = MAX( Metl, 0.3*Z_sol*Merger_Coll_BkgDensity );
+   fluid[Idx_Metal] = MAX( Metl, 0.3*Z_sol*Dens );
 
 } // FUNCTION : SetGridIC
 #endif // #if ( MODEL == HYDRO  &&  defined MASSIVE_PARTICLES )
