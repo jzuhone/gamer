@@ -279,18 +279,26 @@ void Hydro_AddConductiveFlux( const real g_ConVar[][ CUBE(FLU_NXT) ],
          }
          else if ( MicroPhy->CondSaturation )
          {
-            T1_slope = (
-               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar + didx_cvar[TDir1],
+            T1_slope = 0.25 * (
+               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar    + didx_cvar[TDir1],
+                                    MinTemp, PassiveFloor, EoS ) +
+               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar_dd + didx_cvar[TDir1],
                                     MinTemp, PassiveFloor, EoS ) -
-               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar,
+               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar    - didx_cvar[TDir1],
+                                    MinTemp, PassiveFloor, EoS ) -
+               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar_dd - didx_cvar[TDir1],
                                     MinTemp, PassiveFloor, EoS )
             ) * _dh;
-            T2_slope = (
-               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar + didx_cvar[TDir2],
+            T2_slope = 0.25 * (
+               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar    + didx_cvar[TDir2],
+                                    MinTemp, PassiveFloor, EoS ) +
+               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar_dd + didx_cvar[TDir2],
                                     MinTemp, PassiveFloor, EoS ) -
-               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar,
+               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar    - didx_cvar[TDir2],
+                                    MinTemp, PassiveFloor, EoS ) -
+               compute_temperature( g_ConVar, g_PriVar, g_FC_B, idx_cvar_dd - didx_cvar[TDir2],
                                     MinTemp, PassiveFloor, EoS )
-            ) * _dh;
+             ) * _dh;
          } // if ( MicroPhy->CondFluxType == ANISOTROPIC_CONDUCTION ) ... else if ...
 
 //       3. compute conductive flux
@@ -311,8 +319,8 @@ void Hydro_AddConductiveFlux( const real g_ConVar[][ CUBE(FLU_NXT) ],
          real dens_L, dens_R, temp_L, temp_R;
          if ( g_PriVar == NULL )
          {
-            dens_L  = g_ConVar[DENS][ idx_cvar    ];
-            dens_R  = g_ConVar[DENS][ idx_cvar_dd ];
+            dens_L = g_ConVar[DENS][ idx_cvar    ];
+            dens_R = g_ConVar[DENS][ idx_cvar_dd ];
          }
          else
          {
@@ -328,7 +336,7 @@ void Hydro_AddConductiveFlux( const real g_ConVar[][ CUBE(FLU_NXT) ],
          {
             real gradT;
             if ( MicroPhy->CondFluxType == ANISOTROPIC_CONDUCTION )
-               gradT = ABS(gradient);
+               gradT = ABS( gradient/B_N_mean );
             else // ISOTROPIC_CONDUCTION
                gradT = SQRT( SQR(N_slope) + SQR(T1_slope) + SQR(T2_slope) );
             real Thalf      = 0.5 * ( temp_L + temp_R );
