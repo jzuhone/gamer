@@ -12,8 +12,8 @@ static char   (*Merger_File_Prof)[ MAX_STRING ] = NULL; // profile table of clus
 static bool    *Merger_Coll_IsGas = NULL;               // (true/false) --> does cluster have gas
        double (*Merger_Coll_Pos)[3] = NULL;             // initial position of clusters
        double (*Merger_Coll_Vel)[3] = NULL;             // initial velocity of clusters
-       double   Merger_Coll_BkgDensity;                 // background gas density
-       double   Merger_Coll_BkgTemperature;             // background gas temperature
+       double   Merger_Coll_BkgDensity;                 // background gas density in g/cm**3
+       double   Merger_Coll_BkgTemperature;             // background gas temperature in K
        double  *CM_BH_Mass = NULL;                      // initial black hole mass of clusters
        double  *Jet_HalfHeight = NULL;                  // half height of the cylinder-shape jet source of clusters
        double  *Jet_Radius = NULL;                      // radius of the cylinder-shape jet source of clusters
@@ -326,7 +326,7 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
    } // for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    LOAD_PARA( load_mode, "Merger_Coll_UseMetals",       &Merger_Coll_UseMetals,      true,       Useless_bool,     Useless_bool   );
    LOAD_PARA( load_mode, "Merger_Coll_BkgDensity",      &Merger_Coll_BkgDensity,     5.0e-30,             0.0,     NoMax_double   );
-   LOAD_PARA( load_mode, "Merger_Coll_BkgTemperature",  &Merger_Coll_BkgTemperature,   6.0e6,             0.0,     NoMax_double   );
+   LOAD_PARA( load_mode, "Merger_Coll_BkgTemperature",  &Merger_Coll_BkgTemperature,   1.0e6,             0.0,     NoMax_double   );
    if ( AGN_feedback )
    {
       LOAD_PARA( load_mode, "Merger_Coll_LabelCenter", &Merger_Coll_LabelCenter,  true,               Useless_bool,  Useless_bool   );

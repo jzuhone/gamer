@@ -66,5 +66,5 @@ AdjustBHPos                1                        # (true/false) --> Adjust th
 AdjustBHVel                0                        # (true/false) --> Adjust the BH velocity
 AdjustPeriod               10.0                     # the time interval of adjustment (in Myr)
 fixBH                      0                        # fix the BH at the simulation box center and set its velocity to be zero (1 cluster only)
-Merger_Coll_BkgDensity	   5.0e-30		    # Density floor for 
-Merger_Coll_BkgTemperature 6.0e6		    # Temperature floor for 
+Merger_Coll_BkgDensity	   5.0e-30		            # Density floor for background in g/cm**3, roughly baryon overdensity of ~10 in the IGM
+Merger_Coll_BkgTemperature 1.0e6		            # Temperature floor for background in K, roughly corresponding to hot IGM
