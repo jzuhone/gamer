@@ -1,4 +1,5 @@
 #include "GAMER.h"
+#include "BlackHole.h"
 
 
 
@@ -6,7 +7,6 @@
 // =======================================================================================
 extern int      Merger_Coll_NumBHs;
 extern double   R_acc;
-extern double (*CM_ClusterCen)[3];
 // =======================================================================================
 
 
@@ -42,7 +42,7 @@ bool Flag_ClusterMerger( const int i, const int j, const int k, const int lv, co
 
    for (int c=0; c<Merger_Coll_NumBHs; c++)
    {
-      if (  DIST_SQR_3D( Pos, CM_ClusterCen[c] ) <= SQR( FlagRFac*R_acc )  &&  R_acc/dh <= FlagNCell  )
+      if (  DIST_SQR_3D( Pos, CM_BH[c].Pos ) <= SQR( FlagRFac*R_acc )  &&  R_acc/dh <= FlagNCell  )
       {
          Flag = true;
          return Flag;

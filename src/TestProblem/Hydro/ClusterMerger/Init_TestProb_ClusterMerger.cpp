@@ -1,4 +1,5 @@
 #include "GAMER.h"
+#include "BlackHole.h"
 #include <string>
 
 
@@ -14,9 +15,6 @@ static bool    *Merger_Coll_IsGas = NULL;               // (true/false) --> does
        double (*Merger_Coll_Vel)[3] = NULL;             // initial velocity of clusters
        double   Merger_Coll_BkgDensity;                 // background gas density in g/cm**3
        double   Merger_Coll_BkgTemperature;             // background gas temperature in K
-       double  *CM_BH_Mass = NULL;                      // initial black hole mass of clusters
-       double  *Jet_HalfHeight = NULL;                  // half height of the cylinder-shape jet source of clusters
-       double  *Jet_Radius = NULL;                      // radius of the cylinder-shape jet source of clusters
 
        bool     AGN_feedback;             // turn on/off (1/0) AGN feedback
        int      Accretion_Mode;           // 1: hot mode; 2: cold mode; 3: combine (hot + cold)
@@ -56,51 +54,11 @@ static double  *JetDirection = NULL;       // jet direction[time/theta_1/phi_1/t
        double **CM_Jet_Theta_table = NULL; // the theta table of jet direction for clusters
        double **CM_Jet_Phi_table = NULL;   // the phi   table of jet direction for clusters
 // ---------------------------------------------------------------------------------------
-// (3) variables to record
-       double (*CM_ClusterCen)[3] = NULL;     // variable to store the center of each cluster (potential minimum)
-                                              // in the current implementation, this will always be equal to CM_BH_Pos
-       double (*CM_BH_Pos)[3] = NULL;         // current BH position of each cluster
-       double (*CM_BH_Vel)[3] = NULL;         // current BH velocity of each cluster
-       double  *CM_BH_Mdot_tot = NULL;        // the total accretion rate of BHs
-       double  *CM_BH_Mdot_hot = NULL;        // the hot   accretion rate of BHs
-       double  *CM_BH_Mdot_cold = NULL;       // the cold  accretion rate of BHs
-       double  *CM_Jet_Mdot = NULL;           // the feedback injection rate of mass
-       double  *CM_Jet_Pdot = NULL;           // the feedback injection rate of momentum
-       double  *CM_Jet_Edot = NULL;           // the feedback injection rate of total energy
-       double (*CM_Jet_Vec)[3] = NULL;        // jet direction
-       double (*CM_RAcc_GasVel)[3] = NULL;    // average gas velocity inside the accretion radius
-       double  *CM_RAcc_SoundSpeed = NULL;    // average sound speed  inside the accretion radius
-       double  *CM_RAcc_GasDens = NULL;       // average gas density  inside the accretion radius
-       double  *CM_RAcc_RelativeVel = NULL;   // relative velocity between BH and gas for each cluster inside the accretion radius
-       double  *CM_RAcc_ColdGasMass = NULL;   // cold gas mass  inside the accretion radius
-       double  *CM_RAcc_GasMass = NULL;       // total gas mass inside the accretion radius
-       double  *CM_RAcc_ParMass = NULL;       // total DM mass  inside the accretion radius
-       int     *CM_Cluster_NPar_close = NULL; // total number of particles inside the 10 times the accrection radius of each cluster
-       double  *CM_Bondi_SinkMass = NULL;     // total mass change             in the feedback region in one global time-step
-       double  *CM_Bondi_SinkMomX = NULL;     // total x-momentum change       ...
-       double  *CM_Bondi_SinkMomY = NULL;     // total y-momentum change       ...
-       double  *CM_Bondi_SinkMomZ = NULL;     // total z-momentum change       ...
-       double  *CM_Bondi_SinkMomXAbs = NULL;  // total |x-momentum| change     ...
-       double  *CM_Bondi_SinkMomYAbs = NULL;  // total |y-momentum| change     ...
-       double  *CM_Bondi_SinkMomZAbs = NULL;  // total |z-momentum| change     ...
-       double  *CM_Bondi_SinkE = NULL;        // total injected energy         ...
-       double  *CM_Bondi_SinkEk = NULL;       // total injected kinetic energy ...
-       double  *CM_Bondi_SinkEt = NULL;       // total injected thermal energy ...
-       int     *CM_Bondi_SinkNCell = NULL;    // total number of finest cells within the feedback region
+// (3) black hole state -- see BlackHole_t (BlackHole.h) and the global vector CM_BH
 // ---------------------------------------------------------------------------------------
 // (4) other variables
        int      AdjustCount = 0;          // count the number of adjustments
        int      Merger_Coll_NumBHs;       // number of BHs in the simulation
-
-       double  *E_inj_exp = NULL;         // the expected amount of injected energy
-       double  *M_inj_exp = NULL;         // the expected amount of injected gas mass
-
-       double  *Jet_WaveK = NULL;         // jet wavenumber used in the sin() function to have smooth bidirectional jets
-       double  *V_cyl = NULL;             // the volume of jet source
-       double  *M_inj = NULL;             // the injected density
-       double  *P_inj = NULL;             // the injected momentum (currently not used)
-       double  *E_inj = NULL;             // the injected energy
-       double  *normalize_const = NULL;   // the exact normalization constant
 
 #ifdef MASSIVE_PARTICLES
        long_par *CM_ClusterIdx_Cur = NULL; // the current cluster index for the BHs
@@ -143,8 +101,6 @@ void Flu_ResetByUser_API_ClusterMerger( const int lv, const int FluSg, const int
 extern void (*Flu_ResetByUser_API_Ptr)( const int lv, const int FluSg, const int MagSg, const double TimeNew, const double dt );
 // ---------------------------------------------------------------------------------------
 // (2) internal functions
-static void   AllocateBHVarArray();
-
 #ifdef SUPPORT_HDF5
 static int    Read_Num_Points_ClusterMerger( std::string filename );
 static void   Read_Profile_ClusterMerger( std::string filename, std::string fieldname, double field[] );
@@ -290,7 +246,7 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       char Merger_Coll_VelX_name [MAX_STRING];
       char Merger_Coll_VelY_name [MAX_STRING];
       char Merger_Coll_VelZ_name [MAX_STRING];
-      char CM_BH_Mass_name       [MAX_STRING];
+      char BH_Mass_name          [MAX_STRING];
       char Jet_HalfHeight_name   [MAX_STRING];
       char Jet_Radius_name       [MAX_STRING];
 
@@ -304,7 +260,7 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       sprintf( Merger_Coll_VelY_name,  "Merger_Coll_VelY%d",  c+1 );
       sprintf( Merger_Coll_VelZ_name,  "Merger_Coll_VelZ%d",  c+1 );
       if ( AGN_feedback ) {
-      sprintf( CM_BH_Mass_name,        "Bondi_MassBH%d",      c+1 );
+      sprintf( BH_Mass_name,           "Bondi_MassBH%d",      c+1 );
       sprintf( Jet_HalfHeight_name,    "Jet_HalfHeight%d",    c+1 );
       sprintf( Jet_Radius_name,        "Jet_Radius%d",        c+1 );
       }
@@ -319,9 +275,9 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       LOAD_PARA( load_mode, Merger_Coll_VelY_name,     &Merger_Coll_Vel[c][1],    2.0*NoMax_double,   NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, Merger_Coll_VelZ_name,     &Merger_Coll_Vel[c][2],    0.0,                NoMin_double,  NoMax_double   );
       if ( AGN_feedback ) {
-      LOAD_PARA( load_mode, CM_BH_Mass_name,           &CM_BH_Mass[c],           -1.0,                Eps_double,    NoMax_double   );
-      LOAD_PARA( load_mode, Jet_HalfHeight_name,       &Jet_HalfHeight[c],       -1.0,                Eps_double,    NoMax_double   );
-      LOAD_PARA( load_mode, Jet_Radius_name,           &Jet_Radius[c],           -1.0,                Eps_double,    NoMax_double   );
+      LOAD_PARA( load_mode, BH_Mass_name,              &CM_BH[c].Mass,           -1.0,                Eps_double,    NoMax_double   );
+      LOAD_PARA( load_mode, Jet_HalfHeight_name,       &CM_BH[c].Jet_HalfHeight, -1.0,                Eps_double,    NoMax_double   );
+      LOAD_PARA( load_mode, Jet_Radius_name,           &CM_BH[c].Jet_Radius,     -1.0,                Eps_double,    NoMax_double   );
       }
    } // for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    LOAD_PARA( load_mode, "Merger_Coll_UseMetals",       &Merger_Coll_UseMetals,      true,       Useless_bool,     Useless_bool   );
@@ -389,9 +345,9 @@ void SetParameter()
    Merger_Coll_Pos   = new double [ Merger_Coll_NumHalos ][ 3 ];
    Merger_Coll_Vel   = new double [ Merger_Coll_NumHalos ][ 3 ];
    if ( AGN_feedback ) {
-   Jet_HalfHeight    = new double [ Merger_Coll_NumHalos ];
-   Jet_Radius        = new double [ Merger_Coll_NumHalos ];
-   CM_BH_Mass        = new double [ Merger_Coll_NumHalos ];
+// CM_BH is sized to Merger_Coll_NumHalos and never resized afterward; a merger only decrements
+// Merger_Coll_NumBHs and leaves the merged-away slot stale, exactly like the arrays this replaces
+   CM_BH.assign( Merger_Coll_NumHalos, BlackHole_t() );
    }
 
 // (1-1-3) load the rest of the cluster parameters
@@ -458,9 +414,9 @@ void SetParameter()
       AdjustPeriod *= Const_Myr / UNIT_T;
       for (int c=0; c<Merger_Coll_NumHalos; c++)
       {
-         CM_BH_Mass    [c] *= Const_Msun / UNIT_M;
-         Jet_HalfHeight[c] *= Const_kpc  / UNIT_L;
-         Jet_Radius    [c] *= Const_kpc  / UNIT_L;
+         CM_BH[c].Mass          *= Const_Msun / UNIT_M;
+         CM_BH[c].Jet_HalfHeight *= Const_kpc  / UNIT_L;
+         CM_BH[c].Jet_Radius     *= Const_kpc  / UNIT_L;
       }
 
 //    Assign each BH the index of the halo it belongs to. This index will
@@ -543,16 +499,12 @@ void SetParameter()
 //       the number of black holes will decrease if they merge
          Merger_Coll_NumBHs = Merger_Coll_NumHalos;
 
-//       allocate BH-related arrays
-         AllocateBHVarArray();
-
-//       initialize cluster centers and BH attributes
+//       initialize black hole positions and velocities (CM_BH was already sized/zeroed above)
          for (int c=0; c<Merger_Coll_NumBHs; c++)
          for (int d=0; d<3; d++)
          {
-            CM_ClusterCen[c][d] = Merger_Coll_Pos[c][d];
-            CM_BH_Pos    [c][d] = Merger_Coll_Pos[c][d];
-            CM_BH_Vel    [c][d] = Merger_Coll_Vel[c][d];
+            CM_BH[c].Pos[d] = Merger_Coll_Pos[c][d];
+            CM_BH[c].Vel[d] = Merger_Coll_Vel[c][d];
          }
       }
 
@@ -658,9 +610,9 @@ void SetParameter()
       Aux_Message( stdout, "  cluster %d y-velocity      = %g\n",         c+1,  Merger_Coll_Vel[c][1] );
       Aux_Message( stdout, "  cluster %d z-velocity      = %g\n",         c+1,  Merger_Coll_Vel[c][2] );
       if ( AGN_feedback ) {
-      Aux_Message( stdout, "  cluster %d BH mass         = %g\n",         c+1,  CM_BH_Mass[c] );
-      Aux_Message( stdout, "  cluster %d jet half-height = %g\n",         c+1,  Jet_HalfHeight[c] );
-      Aux_Message( stdout, "  cluster %d jet radius      = %g\n",         c+1,  Jet_Radius[c] ); }
+      Aux_Message( stdout, "  cluster %d BH mass         = %g\n",         c+1,  CM_BH[c].Mass );
+      Aux_Message( stdout, "  cluster %d jet half-height = %g\n",         c+1,  CM_BH[c].Jet_HalfHeight );
+      Aux_Message( stdout, "  cluster %d jet radius      = %g\n",         c+1,  CM_BH[c].Jet_Radius ); }
       } // for (int c=0; c<Merger_Coll_NumHalos; c++)
       Aux_Message( stdout, "  use metals                 = %s\n",          (Merger_Coll_UseMetals)? "yes":"no" );
       Aux_Message( stdout, "  background gas density     = %g\n",           Merger_Coll_BkgDensity );
@@ -689,8 +641,8 @@ void SetParameter()
       {
          for (int c=0; c<Merger_Coll_NumHalos; c++)
          {
-            if ( R_acc < Jet_HalfHeight[c] )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_HalfHeight%d (%14.8e) !!\n", R_acc, c+1, Jet_HalfHeight[c] );
-            if ( R_acc < Jet_Radius    [c] )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_Radius%d (%14.8e) !!\n",     R_acc, c+1, Jet_Radius[c] );
+            if ( R_acc < CM_BH[c].Jet_HalfHeight )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_HalfHeight%d (%14.8e) !!\n", R_acc, c+1, CM_BH[c].Jet_HalfHeight );
+            if ( R_acc < CM_BH[c].Jet_Radius )        Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_Radius%d (%14.8e) !!\n",     R_acc, c+1, CM_BH[c].Jet_Radius );
          }
       }
    } // if ( MPI_Rank == 0 )
@@ -832,9 +784,9 @@ void Output_HDF5_User_ClusterMerger( HDF5_Output_t *HDF5_OutUser )
          sprintf( BH_Pos_name,     "BH_Pos_%d_%d",     c, d );
          sprintf( ClusterCen_name, "ClusterCen_%d_%d", c, d );
          sprintf( BH_Vel_name,     "BH_Vel_%d_%d",     c, d );
-         HDF5_OutUser->Add( BH_Pos_name,     &CM_BH_Pos    [c][d] );
-         HDF5_OutUser->Add( ClusterCen_name, &CM_ClusterCen[c][d] );
-         HDF5_OutUser->Add( BH_Vel_name,     &CM_BH_Vel    [c][d] );
+         HDF5_OutUser->Add( BH_Pos_name,     &CM_BH[c].Pos[d] );
+         HDF5_OutUser->Add( ClusterCen_name, &CM_BH[c].Pos[d] );
+         HDF5_OutUser->Add( BH_Vel_name,     &CM_BH[c].Vel[d] );
       }
 
       char BH_Mass_name[50], BH_Mdot_tot_name[50], BH_Mdot_hot_name[50], BH_Mdot_cold_name[50];
@@ -842,10 +794,10 @@ void Output_HDF5_User_ClusterMerger( HDF5_Output_t *HDF5_OutUser )
       sprintf( BH_Mdot_tot_name,  "BH_Mdot_tot_%d",  c );
       sprintf( BH_Mdot_hot_name,  "BH_Mdot_hot_%d",  c );
       sprintf( BH_Mdot_cold_name, "BH_Mdot_cold_%d", c );
-      HDF5_OutUser->Add( BH_Mass_name,      &CM_BH_Mass     [c] );
-      HDF5_OutUser->Add( BH_Mdot_tot_name,  &CM_BH_Mdot_tot [c] );
-      HDF5_OutUser->Add( BH_Mdot_hot_name,  &CM_BH_Mdot_hot [c] );
-      HDF5_OutUser->Add( BH_Mdot_cold_name, &CM_BH_Mdot_cold[c] );
+      HDF5_OutUser->Add( BH_Mass_name,      &CM_BH[c].Mass );
+      HDF5_OutUser->Add( BH_Mdot_tot_name,  &CM_BH[c].Mdot_tot );
+      HDF5_OutUser->Add( BH_Mdot_hot_name,  &CM_BH[c].Mdot_hot );
+      HDF5_OutUser->Add( BH_Mdot_cold_name, &CM_BH[c].Mdot_cold );
    }
 
    HDF5_OutUser->Add( "AdjustCount", &AdjustCount );
@@ -906,42 +858,9 @@ void End_ClusterMerger()
 
    if ( AGN_feedback )
    {
-      delete [] Jet_HalfHeight;
-      delete [] Jet_Radius;
-
 #     ifdef MASSIVE_PARTICLES
       delete [] CM_ClusterIdx_Cur;
 #     endif
-      delete [] CM_Cluster_NPar_close;
-      delete [] CM_ClusterCen;
-      delete [] CM_BH_Pos;
-      delete [] CM_BH_Vel;
-      delete [] CM_BH_Mass;
-      delete [] CM_BH_Mdot_tot;
-      delete [] CM_BH_Mdot_hot;
-      delete [] CM_BH_Mdot_cold;
-      delete [] CM_Jet_Mdot;
-      delete [] CM_Jet_Pdot;
-      delete [] CM_Jet_Edot;
-      delete [] CM_Jet_Vec;
-      delete [] CM_RAcc_GasVel;
-      delete [] CM_RAcc_SoundSpeed;
-      delete [] CM_RAcc_GasDens;
-      delete [] CM_RAcc_RelativeVel;
-      delete [] CM_RAcc_ColdGasMass;
-      delete [] CM_RAcc_GasMass;
-      delete [] CM_RAcc_ParMass;
-      delete [] CM_Bondi_SinkMass;
-      delete [] CM_Bondi_SinkMomX;
-      delete [] CM_Bondi_SinkMomY;
-      delete [] CM_Bondi_SinkMomZ;
-      delete [] CM_Bondi_SinkMomXAbs;
-      delete [] CM_Bondi_SinkMomYAbs;
-      delete [] CM_Bondi_SinkMomZAbs;
-      delete [] CM_Bondi_SinkE;
-      delete [] CM_Bondi_SinkEk;
-      delete [] CM_Bondi_SinkEt;
-      delete [] CM_Bondi_SinkNCell;
 
       if ( JetDirection_case == 2 ) {
       delete [] CM_Jet_Theta_table;
@@ -949,15 +868,7 @@ void End_ClusterMerger()
       delete [] JetDirection;
       }
 
-      delete [] Jet_WaveK;
-      delete [] V_cyl;
-      delete [] M_inj;
-      delete [] P_inj;
-      delete [] E_inj;
-      delete [] normalize_const;
-
-      delete [] E_inj_exp;
-      delete [] M_inj_exp;
+//    CM_BH (std::vector<BlackHole_t>) frees its own memory
    } // if ( AGN_feedback )
 
 } // FUNCTION : End_ClusterMerger
@@ -1239,9 +1150,7 @@ void Init_User_ClusterMerger()
 
    LoadField( "Merger_Coll_NumBHs", &Merger_Coll_NumBHs, H5_SetID_UserPara, H5_TypeID_UserPara );
 
-// allocate BH related memories
-   AllocateBHVarArray();
-
+// CM_BH was already sized to Merger_Coll_NumHalos (>= Merger_Coll_NumBHs) in SetParameter()
    for (int c=0; c<Merger_Coll_NumBHs; c++)
    {
       for (int d=0; d<3; d++)
@@ -1250,9 +1159,9 @@ void Init_User_ClusterMerger()
          sprintf( BH_Pos_name,     "BH_Pos_%d_%d",     c, d );
          sprintf( ClusterCen_name, "ClusterCen_%d_%d", c, d );
          sprintf( BH_Vel_name,     "BH_Vel_%d_%d",     c, d );
-         LoadField( BH_Pos_name,     &CM_BH_Pos    [c][d], H5_SetID_UserPara, H5_TypeID_UserPara );
-         LoadField( ClusterCen_name, &CM_ClusterCen[c][d], H5_SetID_UserPara, H5_TypeID_UserPara );
-         LoadField( BH_Vel_name,     &CM_BH_Vel    [c][d], H5_SetID_UserPara, H5_TypeID_UserPara );
+         LoadField( BH_Pos_name,     &CM_BH[c].Pos[d], H5_SetID_UserPara, H5_TypeID_UserPara );
+         LoadField( ClusterCen_name, &CM_BH[c].Pos[d], H5_SetID_UserPara, H5_TypeID_UserPara );
+         LoadField( BH_Vel_name,     &CM_BH[c].Vel[d], H5_SetID_UserPara, H5_TypeID_UserPara );
       }
 
       char BH_Mass_name[50], BH_Mdot_tot_name[50], BH_Mdot_hot_name[50], BH_Mdot_cold_name[50];
@@ -1260,10 +1169,10 @@ void Init_User_ClusterMerger()
       sprintf( BH_Mdot_tot_name,  "BH_Mdot_tot_%d",  c );
       sprintf( BH_Mdot_hot_name,  "BH_Mdot_hot_%d",  c );
       sprintf( BH_Mdot_cold_name, "BH_Mdot_cold_%d", c );
-      LoadField( BH_Mass_name,      &CM_BH_Mass     [c], H5_SetID_UserPara, H5_TypeID_UserPara );
-      LoadField( BH_Mdot_tot_name,  &CM_BH_Mdot_tot [c], H5_SetID_UserPara, H5_TypeID_UserPara );
-      LoadField( BH_Mdot_hot_name,  &CM_BH_Mdot_hot [c], H5_SetID_UserPara, H5_TypeID_UserPara );
-      LoadField( BH_Mdot_cold_name, &CM_BH_Mdot_cold[c], H5_SetID_UserPara, H5_TypeID_UserPara );
+      LoadField( BH_Mass_name,      &CM_BH[c].Mass,      H5_SetID_UserPara, H5_TypeID_UserPara );
+      LoadField( BH_Mdot_tot_name,  &CM_BH[c].Mdot_tot,  H5_SetID_UserPara, H5_TypeID_UserPara );
+      LoadField( BH_Mdot_hot_name,  &CM_BH[c].Mdot_hot,  H5_SetID_UserPara, H5_TypeID_UserPara );
+      LoadField( BH_Mdot_cold_name, &CM_BH[c].Mdot_cold, H5_SetID_UserPara, H5_TypeID_UserPara );
    }
 
    LoadField( "AdjustCount", &AdjustCount, H5_SetID_UserPara, H5_TypeID_UserPara );
@@ -1284,102 +1193,6 @@ void Init_User_ClusterMerger()
 
 
 
-//-------------------------------------------------------------------------------------------------------
-// Function    :  AllocateBHVarArray
-// Description :  Allocate the array of BH variables
-//
-// Note        :  1. Merger_Coll_NumBHs must be assigned before calling this function
-//                2. Memories are freed in End_ClusterMerger()
-//-------------------------------------------------------------------------------------------------------
-void AllocateBHVarArray()
-{
-
-   if ( Merger_Coll_NumBHs < 1 )   Aux_Error( ERROR_INFO, "Merger_Coll_NumBHs (%d) < 1 !!\n", Merger_Coll_NumBHs );
-
-   CM_Cluster_NPar_close = new int    [ Merger_Coll_NumBHs ];
-   CM_ClusterCen         = new double [ Merger_Coll_NumBHs ][ 3 ];
-   CM_BH_Pos             = new double [ Merger_Coll_NumBHs ][ 3 ];
-   CM_BH_Vel             = new double [ Merger_Coll_NumBHs ][ 3 ];
-   CM_BH_Mdot_tot        = new double [ Merger_Coll_NumBHs ];
-   CM_BH_Mdot_hot        = new double [ Merger_Coll_NumBHs ];
-   CM_BH_Mdot_cold       = new double [ Merger_Coll_NumBHs ];
-   CM_Jet_Mdot           = new double [ Merger_Coll_NumBHs ];
-   CM_Jet_Pdot           = new double [ Merger_Coll_NumBHs ];
-   CM_Jet_Edot           = new double [ Merger_Coll_NumBHs ];
-   CM_Jet_Vec            = new double [ Merger_Coll_NumBHs ][ 3 ];
-   CM_RAcc_GasVel        = new double [ Merger_Coll_NumBHs ][ 3 ];
-   CM_RAcc_SoundSpeed    = new double [ Merger_Coll_NumBHs ];
-   CM_RAcc_GasDens       = new double [ Merger_Coll_NumBHs ];
-   CM_RAcc_RelativeVel   = new double [ Merger_Coll_NumBHs ];
-   CM_RAcc_ColdGasMass   = new double [ Merger_Coll_NumBHs ];
-   CM_RAcc_GasMass       = new double [ Merger_Coll_NumBHs ];
-   CM_RAcc_ParMass       = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkMass     = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkMomX     = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkMomY     = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkMomZ     = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkMomXAbs  = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkMomYAbs  = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkMomZAbs  = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkE        = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkEk       = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkEt       = new double [ Merger_Coll_NumBHs ];
-   CM_Bondi_SinkNCell    = new int    [ Merger_Coll_NumBHs ];
-
-   Jet_WaveK             = new double [ Merger_Coll_NumBHs ];
-   V_cyl                 = new double [ Merger_Coll_NumBHs ];
-   M_inj                 = new double [ Merger_Coll_NumBHs ];
-   P_inj                 = new double [ Merger_Coll_NumBHs ];
-   E_inj                 = new double [ Merger_Coll_NumBHs ];
-   normalize_const       = new double [ Merger_Coll_NumBHs ];
-
-   E_inj_exp             = new double [ Merger_Coll_NumBHs ];
-   M_inj_exp             = new double [ Merger_Coll_NumBHs ];
-
-   for (int c=0; c<Merger_Coll_NumBHs; c++)
-   {
-      CM_Cluster_NPar_close[c] = 0;
-      for (int d=0; d<3; d++)   CM_ClusterCen [c][d] = 0.0;
-      for (int d=0; d<3; d++)   CM_BH_Pos     [c][d] = 0.0;
-      for (int d=0; d<3; d++)   CM_BH_Vel     [c][d] = 0.0;
-      CM_BH_Mdot_tot       [c] = 0.0;
-      CM_BH_Mdot_hot       [c] = 0.0;
-      CM_BH_Mdot_cold      [c] = 0.0;
-      CM_Jet_Mdot          [c] = 0.0;
-      CM_Jet_Pdot          [c] = 0.0;
-      CM_Jet_Edot          [c] = 0.0;
-      for (int d=0; d<3; d++)   CM_Jet_Vec    [c][d] = 0.0;
-      for (int d=0; d<3; d++)   CM_RAcc_GasVel[c][d] = 0.0;
-      CM_RAcc_SoundSpeed   [c] = 0.0;
-      CM_RAcc_GasDens      [c] = 0.0;
-      CM_RAcc_RelativeVel  [c] = 0.0;
-      CM_RAcc_ColdGasMass  [c] = 0.0;
-      CM_RAcc_GasMass      [c] = 0.0;
-      CM_RAcc_ParMass      [c] = 0.0;
-      CM_Bondi_SinkMass    [c] = 0.0;
-      CM_Bondi_SinkMomX    [c] = 0.0;
-      CM_Bondi_SinkMomY    [c] = 0.0;
-      CM_Bondi_SinkMomZ    [c] = 0.0;
-      CM_Bondi_SinkMomXAbs [c] = 0.0;
-      CM_Bondi_SinkMomYAbs [c] = 0.0;
-      CM_Bondi_SinkMomZAbs [c] = 0.0;
-      CM_Bondi_SinkE       [c] = 0.0;
-      CM_Bondi_SinkEk      [c] = 0.0;
-      CM_Bondi_SinkEt      [c] = 0.0;
-      CM_Bondi_SinkNCell   [c] = 0;
-
-      Jet_WaveK            [c] = 0.0;
-      V_cyl                [c] = 0.0;
-      M_inj                [c] = 0.0;
-      P_inj                [c] = 0.0;
-      E_inj                [c] = 0.0;
-      normalize_const      [c] = 0.0;
-
-      E_inj_exp            [c] = 0.0;
-      M_inj_exp            [c] = 0.0;
-   }
-
-} // FUNCTION : AllocateBHVarArray
 #endif // #ifdef MASSIVE_PARTICLES
 
 
