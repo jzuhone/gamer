@@ -12,6 +12,7 @@ extern int        Merger_Coll_NumHalos;
 extern bool       AGN_feedback;
 extern int        Accretion_Mode, JetDirection_case;
 extern double     eta, eps_f, eps_m, R_acc, R_dep;
+extern double     Jet_HalfHeight, Jet_Radius;
 extern bool       fixBH, AdjustBHPos, AdjustBHVel;
 extern double     AdjustPeriod;
 // ---------------------------------------------------------------------------------------
@@ -145,7 +146,7 @@ int Flu_ResetByUser_Func_ClusterMerger( real fluid[], const double Emag, const d
       Jet_dh = fabs( CM_BH[c].Jet_Vec[0]*Vec_c2m[0] + CM_BH[c].Jet_Vec[1]*Vec_c2m[1] + CM_BH[c].Jet_Vec[2]*Vec_c2m[2] );
       Jet_dr = sqrt( SQR(Dis_c2m) - SQR(Jet_dh) );
 
-      if ( Jet_dh <= CM_BH[c].Jet_HalfHeight  &&  Jet_dr <= CM_BH[c].Jet_Radius )
+      if ( Jet_dh <= Jet_HalfHeight  &&  Jet_dr <= Jet_Radius )
       {
          which_cluster += c+1;
 
@@ -197,7 +198,7 @@ int Flu_ResetByUser_Func_ClusterMerger( real fluid[], const double Emag, const d
 
          fluid[ENGY]  = (real)0.5*( SQR(fluid[MOMX]) + SQR(fluid[MOMY]) + SQR(fluid[MOMZ]) ) / fluid[DENS] +
                         eint_old + Emag;
-      } // if ( Jet_dh <= CM_BH[c].Jet_HalfHeight  &&  Jet_dr <= CM_BH[c].Jet_Radius )
+      } // if ( Jet_dh <= Jet_HalfHeight  &&  Jet_dr <= Jet_Radius )
    } // for (int c=status_overlap; c<(n_jet+status_overlap); c++)
 
    if ( which_cluster >= 3 )   Aux_Error( ERROR_INFO, "which_cluster (%d) >= 3!\n", which_cluster );
@@ -305,7 +306,7 @@ void Flu_ResetByUser_API_ClusterMerger( const int lv, const int FluSg, const int
 
 //    (4) calculate the accretion and feedback
 //    reset to 0 since we only want to record the number of void cells **for one sub-step**
-      for (int c=0; c<Merger_Coll_NumBHs; c++)   CM_BH[c].ResetSubstepCounters();
+      for (int c=0; c<Merger_Coll_NumBHs; c++)   CM_BH[c].ResetSubstepCounters( Jet_HalfHeight );
 
 //    variables for each rank
       int    num_hot    [Merger_Coll_NumBHs];     // the number of hot gas cells inside the accretion radius
@@ -409,12 +410,12 @@ void Flu_ResetByUser_API_ClusterMerger( const int lv, const int FluSg, const int
                   Jet_dh = fabs( CM_BH[c].Jet_Vec[0]*Vec_c2m[0] + CM_BH[c].Jet_Vec[1]*Vec_c2m[1] + CM_BH[c].Jet_Vec[2]*Vec_c2m[2] );
                   Jet_dr = sqrt( SQR(Dis_c2m) - SQR(Jet_dh) );
 
-                  if ( Jet_dh <= CM_BH[c].Jet_HalfHeight  &&  Jet_dr <= CM_BH[c].Jet_Radius )
+                  if ( Jet_dh <= Jet_HalfHeight  &&  Jet_dr <= Jet_Radius )
                   {
                      V_cyl_exact[c] += dv;
                      normalize[c]   += sin( CM_BH[c].Jet_WaveK*Jet_dh )*dv;
                      status_overlap ++;
-                  } // if ( Jet_dh <= CM_BH[c].Jet_HalfHeight  &&  Jet_dr <= CM_BH[c].Jet_Radius )
+                  } // if ( Jet_dh <= Jet_HalfHeight  &&  Jet_dr <= Jet_Radius )
                } // if ( CurrentMaxLv )
             } // for (int c=0; c<Merger_Coll_NumBHs; c++)
 
@@ -508,7 +509,7 @@ void Flu_ResetByUser_API_ClusterMerger( const int lv, const int FluSg, const int
          CM_BH[c].Jet_Mdot = eta * CM_BH[c].Mdot_tot;
          CM_BH[c].Jet_Pdot = sqrt( 2.0*eta*eps_f*(1.0-eps_m) ) * CM_BH[c].Mdot_tot * (Const_c/UNIT_V);
          CM_BH[c].Jet_Edot = eps_f * CM_BH[c].Mdot_tot * SQR( Const_c/UNIT_V );
-         CM_BH[c].V_cyl    = M_PI * SQR(CM_BH[c].Jet_Radius) * 2.0 * CM_BH[c].Jet_HalfHeight;
+         CM_BH[c].V_cyl    = M_PI * SQR(Jet_Radius) * 2.0 * Jet_HalfHeight;
 
 //       calculate the density that needs to be injected
          if ( CurrentMaxLv  &&  V_cyl_exact_sum[c] != 0.0 )

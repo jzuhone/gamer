@@ -29,8 +29,9 @@ struct BlackHole_t
 // accretion rates
    double Mdot_tot = 0.0, Mdot_hot = 0.0, Mdot_cold = 0.0;
 
-// jet geometry (static config loaded from Input__TestProb) and direction/feedback rates
-   double Jet_HalfHeight = 0.0, Jet_Radius = 0.0;
+// jet direction/feedback rates
+// --> jet geometry (half-height, radius) is a single run-wide config value, not per-BH; see Jet_HalfHeight/Jet_Radius
+//     in Init_TestProb_ClusterMerger.cpp
    double Jet_Vec[3] = { 0.0, 0.0, 0.0 };
    double Jet_Mdot = 0.0, Jet_Pdot = 0.0, Jet_Edot = 0.0;
 
@@ -54,7 +55,7 @@ struct BlackHole_t
 
 
    void UpdateAccretionRate( const int Mode, const double r_acc );
-   void ResetSubstepCounters();
+   void ResetSubstepCounters( const double Jet_HalfHeight );
    void ResetRecordDiagnostics();
    void MergeFrom( BlackHole_t &Other );
 

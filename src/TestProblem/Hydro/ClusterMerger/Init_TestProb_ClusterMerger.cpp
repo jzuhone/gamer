@@ -24,6 +24,8 @@ static bool    *Merger_Coll_IsGas = NULL;               // (true/false) --> does
        double   R_acc;                    // accretion radius: compute the accretion rate, and determine if two black holes
                                           // should be merged
        double   R_dep;                    // radius to deplete the accreted gas
+       double   Jet_HalfHeight;           // half height of the cylinder-shape jet source
+       double   Jet_Radius;               // radius of the cylinder-shape jet source
        int      JetDirection_case;        // methods for choosing the jet direction
                                           //    1: fixed at x-axis;
                                           //    2: import from table (generate JetDirection.txt)
@@ -247,8 +249,6 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       char Merger_Coll_VelY_name [MAX_STRING];
       char Merger_Coll_VelZ_name [MAX_STRING];
       char BH_Mass_name          [MAX_STRING];
-      char Jet_HalfHeight_name   [MAX_STRING];
-      char Jet_Radius_name       [MAX_STRING];
 
       sprintf( Merger_File_Prof_name,  "Merger_File_Prof%d",  c+1 );
       sprintf( Merger_File_Par_name,   "Merger_File_Par%d",   c+1 );
@@ -261,8 +261,6 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       sprintf( Merger_Coll_VelZ_name,  "Merger_Coll_VelZ%d",  c+1 );
       if ( AGN_feedback ) {
       sprintf( BH_Mass_name,           "Bondi_MassBH%d",      c+1 );
-      sprintf( Jet_HalfHeight_name,    "Jet_HalfHeight%d",    c+1 );
-      sprintf( Jet_Radius_name,        "Jet_Radius%d",        c+1 );
       }
 
       LOAD_PARA( load_mode, Merger_File_Prof_name,      Merger_File_Prof[c],      NoDef_str,          Useless_str,   Useless_str    );
@@ -276,8 +274,6 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       LOAD_PARA( load_mode, Merger_Coll_VelZ_name,     &Merger_Coll_Vel[c][2],    0.0,                NoMin_double,  NoMax_double   );
       if ( AGN_feedback ) {
       LOAD_PARA( load_mode, BH_Mass_name,              &CM_BH[c].Mass,           -1.0,                Eps_double,    NoMax_double   );
-      LOAD_PARA( load_mode, Jet_HalfHeight_name,       &CM_BH[c].Jet_HalfHeight, -1.0,                Eps_double,    NoMax_double   );
-      LOAD_PARA( load_mode, Jet_Radius_name,           &CM_BH[c].Jet_Radius,     -1.0,                Eps_double,    NoMax_double   );
       }
    } // for ( int c=0; c<Merger_Coll_NumHalos; c++ )
    LOAD_PARA( load_mode, "Merger_Coll_UseMetals",       &Merger_Coll_UseMetals,      true,       Useless_bool,     Useless_bool   );
@@ -288,6 +284,8 @@ void LoadInputTestProb( const LoadParaMode_t load_mode, ReadPara_t *ReadPara, HD
       LOAD_PARA( load_mode, "Merger_Coll_LabelCenter", &Merger_Coll_LabelCenter,  true,               Useless_bool,  Useless_bool   );
       LOAD_PARA( load_mode, "R_acc",                   &R_acc,                   -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, "R_dep",                   &R_dep,                   -1.0,                NoMin_double,  NoMax_double   );
+      LOAD_PARA( load_mode, "Jet_HalfHeight",          &Jet_HalfHeight,          -1.0,                Eps_double,    NoMax_double   );
+      LOAD_PARA( load_mode, "Jet_Radius",              &Jet_Radius,              -1.0,                Eps_double,    NoMax_double   );
       LOAD_PARA( load_mode, "Accretion_Mode",          &Accretion_Mode,           1,                  1,             3              );
       LOAD_PARA( load_mode, "eta",                     &eta,                     -1.0,                NoMin_double,  NoMax_double   );
       LOAD_PARA( load_mode, "eps_f",                   &eps_f,                   -1.0,                NoMin_double,  NoMax_double   );
@@ -409,15 +407,12 @@ void SetParameter()
       }
 
 //    convert to code units
-      R_acc        *= Const_kpc / UNIT_L;
-      R_dep        *= Const_kpc / UNIT_L;
-      AdjustPeriod *= Const_Myr / UNIT_T;
-      for (int c=0; c<Merger_Coll_NumHalos; c++)
-      {
-         CM_BH[c].Mass          *= Const_Msun / UNIT_M;
-         CM_BH[c].Jet_HalfHeight *= Const_kpc  / UNIT_L;
-         CM_BH[c].Jet_Radius     *= Const_kpc  / UNIT_L;
-      }
+      R_acc          *= Const_kpc / UNIT_L;
+      R_dep          *= Const_kpc / UNIT_L;
+      Jet_HalfHeight *= Const_kpc / UNIT_L;
+      Jet_Radius     *= Const_kpc / UNIT_L;
+      AdjustPeriod   *= Const_Myr / UNIT_T;
+      for (int c=0; c<Merger_Coll_NumHalos; c++)   CM_BH[c].Mass *= Const_Msun / UNIT_M;
 
 //    Assign each BH the index of the halo it belongs to. This index will
 //    change if the BHs merge
@@ -610,9 +605,7 @@ void SetParameter()
       Aux_Message( stdout, "  cluster %d y-velocity      = %g\n",         c+1,  Merger_Coll_Vel[c][1] );
       Aux_Message( stdout, "  cluster %d z-velocity      = %g\n",         c+1,  Merger_Coll_Vel[c][2] );
       if ( AGN_feedback ) {
-      Aux_Message( stdout, "  cluster %d BH mass         = %g\n",         c+1,  CM_BH[c].Mass );
-      Aux_Message( stdout, "  cluster %d jet half-height = %g\n",         c+1,  CM_BH[c].Jet_HalfHeight );
-      Aux_Message( stdout, "  cluster %d jet radius      = %g\n",         c+1,  CM_BH[c].Jet_Radius ); }
+      Aux_Message( stdout, "  cluster %d BH mass         = %g\n",         c+1,  CM_BH[c].Mass ); }
       } // for (int c=0; c<Merger_Coll_NumHalos; c++)
       Aux_Message( stdout, "  use metals                 = %s\n",          (Merger_Coll_UseMetals)? "yes":"no" );
       Aux_Message( stdout, "  background gas density     = %g\n",           Merger_Coll_BkgDensity );
@@ -626,6 +619,8 @@ void SetParameter()
       Aux_Message( stdout, "  eps_m                     = %g\n",          eps_m );
       Aux_Message( stdout, "  accretion radius          = %g\n",          R_acc );
       Aux_Message( stdout, "  depletion radius          = %g\n",          R_dep );
+      Aux_Message( stdout, "  jet half-height           = %g\n",          Jet_HalfHeight );
+      Aux_Message( stdout, "  jet radius                = %g\n",          Jet_Radius );
       Aux_Message( stdout, "  jet direction case        = %d\n",          JetDirection_case );
       if ( JetDirection_case == 2 ) {
       Aux_Message( stdout, "  jet direction file        = %s\n",          JetDirection_file );
@@ -639,11 +634,8 @@ void SetParameter()
 //    check if the accretion region is larger than the jet cylinder
       if ( AGN_feedback )
       {
-         for (int c=0; c<Merger_Coll_NumHalos; c++)
-         {
-            if ( R_acc < CM_BH[c].Jet_HalfHeight )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_HalfHeight%d (%14.8e) !!\n", R_acc, c+1, CM_BH[c].Jet_HalfHeight );
-            if ( R_acc < CM_BH[c].Jet_Radius )        Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_Radius%d (%14.8e) !!\n",     R_acc, c+1, CM_BH[c].Jet_Radius );
-         }
+         if ( R_acc < Jet_HalfHeight )   Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_HalfHeight (%14.8e) !!\n", R_acc, Jet_HalfHeight );
+         if ( R_acc < Jet_Radius )       Aux_Message( stderr, "WARNING : R_acc (%14.8e) is less than Jet_Radius (%14.8e) !!\n",     R_acc, Jet_Radius );
       }
    } // if ( MPI_Rank == 0 )
 

@@ -53,7 +53,7 @@ void BlackHole_t::UpdateAccretionRate( const int Mode, const double r_acc )
 // Description :  Reset the per-substep counters/quantities recomputed every call to
 //                Flu_ResetByUser_API_ClusterMerger()
 //-------------------------------------------------------------------------------------------------------
-void BlackHole_t::ResetSubstepCounters()
+void BlackHole_t::ResetSubstepCounters( const double Jet_HalfHeight )
 {
 
    Bondi_SinkNCell = 0;

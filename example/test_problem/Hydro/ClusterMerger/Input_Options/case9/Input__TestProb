@@ -10,8 +10,6 @@ Merger_Coll_VelX1       109.090909091            # X-velocity of cluster 1 in km
 Merger_Coll_VelY1       0.0                      # Y-velocity of cluster 1 in km/s
 Merger_Coll_IsGas1      1                        # If cluster 1 should have gas and not have DM only
 Bondi_MassBH1           7.11601760524e10         # black hole mass (in Msun)
-Jet_HalfHeight1         2.0                      # jet 1: half height of the cylinder-shape jet source (in kpc)
-Jet_Radius1             2.5                      # jet 1: radius of the cylinder-shape jet source (in kpc)
 
 # parameters for cluster 2
 Merger_File_Prof2       profile_CCD_C3.h5        # profile table of cluster 2
@@ -22,8 +20,6 @@ Merger_Coll_VelX2       -1090.90909091           # X-velocity of cluster 2 in km
 Merger_Coll_VelY2       0.0                      # Y-velocity of cluster 2 in km/s
 Merger_Coll_IsGas2      1                        # If cluster 2 should have gas and not have DM only
 Bondi_MassBH2           3.07247016901e9          # black hole mass (in Msun)
-Jet_HalfHeight2         2.0                      # jet 2: half height of the cylinder-shape jet source (in kpc)
-Jet_Radius2             2.5                      # jet 2: radius of the cylinder-shape jet source (in kpc)
 
 # parameters for cluster 3 (disabled for this example)
 Merger_File_Prof3       none                     # profile table of cluster 3
@@ -34,8 +30,6 @@ Merger_Coll_VelX3       0.0                      # X-velocity of cluster 3 in km
 Merger_Coll_VelY3       0.0                      # Y-velocity of cluster 3 in km/s
 Merger_Coll_IsGas3      0                        # If cluster 3 should have gas and not have DM only
 Bondi_MassBH3           3.4e8                    # black hole mass (in Msun)
-Jet_HalfHeight3         0.70                     # jet 3: half height of the cylinder-shape jet source (in kpc)
-Jet_Radius3             0.35                     # jet 3: radius of the cylinder-shape jet source (in kpc)
 
 # parameters of AGN jet feedback
 AGN_feedback            1                        # turn on/off (1/0) AGN feedback
@@ -47,6 +41,8 @@ eps_m                   0.0                      # the fraction of total energy 
 R_acc                   4.0                      # accretion radius: compute the accretion rate (in kpc)
                                                  # also determines if two black holes should be merged
 R_dep                   4.0                      # radius to deplete the accreted gas (in kpc)
+Jet_HalfHeight          2.0                      # half height of the cylinder-shape jet source (in kpc)
+Jet_Radius              2.5                      # radius of the cylinder-shape jet source (in kpc)
 JetDirection_case       3                        # Methods for choosing the jet direction:
                                                  #    1: Fixed at x-axis
                                                  #    2: Import from table (generate JetDirection_file)
