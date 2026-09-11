@@ -772,12 +772,10 @@ void Output_HDF5_User_ClusterMerger( HDF5_Output_t *HDF5_OutUser )
    {
       for (int d=0; d<3; d++)
       {
-         char BH_Pos_name[50], ClusterCen_name[50], BH_Vel_name[50];
+         char BH_Pos_name[50], BH_Vel_name[50];
          sprintf( BH_Pos_name,     "BH_Pos_%d_%d",     c, d );
-         sprintf( ClusterCen_name, "ClusterCen_%d_%d", c, d );
          sprintf( BH_Vel_name,     "BH_Vel_%d_%d",     c, d );
          HDF5_OutUser->Add( BH_Pos_name,     &CM_BH[c].Pos[d] );
-         HDF5_OutUser->Add( ClusterCen_name, &CM_BH[c].Pos[d] );
          HDF5_OutUser->Add( BH_Vel_name,     &CM_BH[c].Vel[d] );
       }
 
@@ -1147,12 +1145,10 @@ void Init_User_ClusterMerger()
    {
       for (int d=0; d<3; d++)
       {
-         char BH_Pos_name[50], ClusterCen_name[50], BH_Vel_name[50];
+         char BH_Pos_name[50], BH_Vel_name[50];
          sprintf( BH_Pos_name,     "BH_Pos_%d_%d",     c, d );
-         sprintf( ClusterCen_name, "ClusterCen_%d_%d", c, d );
          sprintf( BH_Vel_name,     "BH_Vel_%d_%d",     c, d );
          LoadField( BH_Pos_name,     &CM_BH[c].Pos[d], H5_SetID_UserPara, H5_TypeID_UserPara );
-         LoadField( ClusterCen_name, &CM_BH[c].Pos[d], H5_SetID_UserPara, H5_TypeID_UserPara );
          LoadField( BH_Vel_name,     &CM_BH[c].Vel[d], H5_SetID_UserPara, H5_TypeID_UserPara );
       }
 
