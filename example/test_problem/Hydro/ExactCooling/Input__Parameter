@@ -15,9 +15,9 @@
 
 # simulation scale
 BOX_SIZE                      3e21        # box size along the longest side (in Mpc/h if COMOVING is adopted)
-NX0_TOT_X                     64          # number of base-level cells along x
-NX0_TOT_Y                     64          # number of base-level cells along y
-NX0_TOT_Z                     64          # number of base-level cells along z
+NX0_TOT_X                     16          # number of base-level cells along x
+NX0_TOT_Y                     16          # number of base-level cells along y
+NX0_TOT_Z                     16          # number of base-level cells along z
 OMP_NTHREAD                  -1           # number of OpenMP threads (<=0=auto -> omp_get_max_threads) [-1] ##OPENMP ONLY##
 END_T                        -1.0         # end physical time (<0=auto -> must be set by test problems or restart) [-1.0]
 END_STEP                     -1           # end step (<0=auto -> must be set by test problems or restart) [-1]
@@ -160,10 +160,9 @@ OPT__MINIMIZE_MPI_BARRIER     1           # minimize MPI barriers to improve loa
 
 # source terms
 SRC_DELEPTONIZATION           0           # deleptonization (for simulations of stellar core collapse) [0] ##HYDRO ONLY##
-SRC_EXACTCOOLING              1           # exact cooling scheme from Gaspari (2009) [0] ##HYDRO ONLY##
-SRC_EC_TEF_N                  1501        # number of points for lambda(T) sampling in LOG
-SRC_EC_SUBCYCLING             1           # perform subcycling when the cooling time step is small [0=off, 1=on]
-SRC_EC_DTCOEF                 0.5         # the coefficient of the cooling time step
+SRC_EXACTCOOLING              1           # exact cooling scheme from Townsend (2009) [0] ##HYDRO and EXACT_COOLING ONLY##
+SRC_EC_TEF_N                  1501        # exact-cooling: number of points for lambda(T) sampling in LOG [1501]
+SRC_EC_DTCOEF                -1.0         # exact-cooling: safety factor of the cooling time-step (<0=off) [-1.0]
 SRC_USER                      0           # user-defined source terms -> edit "Src_User.cpp" [0]
 SRC_GPU_NPGROUP              -1           # number of patch groups sent into the CPU/GPU source-term solver (<=0=auto) [-1]
 
@@ -184,17 +183,6 @@ GRACKLE_THREE_BODY_RATE       4           # used Glover+08 rate
 GRACKLE_CIE_COOLING           1           # 0: off; 1:on
 GRACKLE_H2_OPA_APPROX         1           # H2 opacity from Ripamonti+04; 0:off, 1:Ripomonti+04
 CHE_GPU_NPGROUP              -1           # number of patch groups sent into the CPU/GPU Grackle solver (<=0=auto) [-1]
-
-
-# star formation (STAR_FORMATION only)
-SF_CREATE_STAR_SCHEME         0           # star formation schemes (0=off, 1=AGORA) [0]
-SF_CREATE_STAR_RSEED          123         # random seed [123]
-SF_CREATE_STAR_DET_RANDOM    -1           # make random numbers deterministic (i.e., independent of OpenMP and MPI, <0=auto) [-1]
-SF_CREATE_STAR_MIN_LEVEL      0           # minimum AMR level allowed to form stars (<0=auto -> MAX_LEVEL) [0]
-SF_CREATE_STAR_MIN_GAS_DENS   1.0e1       # minimum gas density allowed to form stars (in HI count/cm^3) [1.0e1]
-SF_CREATE_STAR_MASS_EFF       1.0e-2      # Gas-to-star mass conversion efficiency [1.0e-2]
-SF_CREATE_STAR_MIN_STAR_MASS  0.0         # minimum star particle mass for the stochastical star formation (in Msun) [0.0]
-SF_CREATE_STAR_MAX_STAR_MFRAC 0.5         # maximum gas mass fraction allowed to convert to stars per substep [0.5]
 
 
 # fluid solver in HYDRO (MODEL==HYDRO only)
@@ -319,8 +307,8 @@ INT_OPP_SIGN_0TH_ORDER        1           # switch to 0th-order interpolation if
 
 
 # data dump
-OPT__OUTPUT_TOTAL             1           # output the simulation snapshot: (0=off, 1=HDF5, 2=C-binary) [1]
-OPT__OUTPUT_PART              1           # output a single line or slice: (0=off, 1=xy, 2=yz, 3=xz, 4=x, 5=y, 6=z, 7=diag) [0]
+OPT__OUTPUT_TOTAL             0           # output the simulation snapshot: (0=off, 1=HDF5, 2=C-binary) [1]
+OPT__OUTPUT_PART              7           # output a single line or slice: (0=off, 1=xy, 2=yz, 3=xz, 4=x, 5=y, 6=z, 7=diag) [0]
 OPT__OUTPUT_USER              1           # output the user-specified data -> edit "Output_User.cpp" [0]
 OPT__OUTPUT_PAR_MODE          0           # output the particle data: (0=off, 1=text-file, 2=C-binary) [0] ##PARTICLE ONLY##
 OPT__OUTPUT_BASEPS            0           # output the base-level power spectrum [0]
@@ -328,6 +316,7 @@ OPT__OUTPUT_BASE              0           # only output the base-level data [0] 
 OPT__OUTPUT_POT               0           # output gravitational potential [0] ##OPT__OUTPUT_TOTAL ONLY##
 OPT__OUTPUT_PAR_DENS          1           # output the particle or total mass density on grids:
                                           # (0=off, 1=particle mass density, 2=total mass density) [1] ##OPT__OUTPUT_TOTAL ONLY##
+OPT__OUTPUT_PAR_POT           0           # output the gravitational potential interpolated onto each particle [0] ##PARTICLE & GRAVITY & STORE_PAR_POT ONLY##
 OPT__OUTPUT_CC_MAG            1           # output **cell-centered** magnetic field (necessary for yt analysis) [1] ##MHD ONLY##
 OPT__OUTPUT_PRES              0           # output gas pressure [0] ##HYDRO ONLY##
 OPT__OUTPUT_TEMP              0           # output gas temperature [0] ##HYDRO ONLY##

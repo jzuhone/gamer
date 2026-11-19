@@ -300,6 +300,12 @@ void Aux_TakeNote()
       fprintf( Note, "STORE_PAR_ACC                   OFF\n" );
 #     endif
 
+#     ifdef STORE_PAR_POT
+      fprintf( Note, "STORE_PAR_POT                   ON\n" );
+#     else
+      fprintf( Note, "STORE_PAR_POT                   OFF\n" );
+#     endif
+
 #     ifdef STAR_FORMATION
       fprintf( Note, "STAR_FORMATION                  ON\n" );
 #     else
@@ -629,6 +635,12 @@ void Aux_TakeNote()
       fprintf( Note, "MHM_CHECK_PREDICT               OFF\n" );
 #     endif
 
+#     ifdef DUAL_ENERGY_PREDICT
+      fprintf( Note, "DUAL_ENERGY_PREDICT             ON\n" );
+#     else
+      fprintf( Note, "DUAL_ENERGY_PREDICT             OFF\n" );
+#     endif
+
 #     elif ( MODEL == ELBDM )
 
 #     if ( WAVE_SCHEME == WAVE_GRAMFE )
@@ -712,7 +724,17 @@ void Aux_TakeNote()
       fprintf( Note, "***********************************************************************************\n" );
       fprintf( Note, "#define VERSION                 %s\n",      VERSION               );
       fprintf( Note, "#define NCOMP_FLUID            % d\n",      NCOMP_FLUID           );
+      {
+      fprintf( Note, "   Field names                 "                                  );
+      for (int v=0; v<NCOMP_FLUID; v++)
+      fprintf( Note, " %s",                                       FieldLabel[v]         );
+      fprintf( Note, "\n" ); }
       fprintf( Note, "#define NCOMP_PASSIVE          % d\n",      NCOMP_PASSIVE         );
+      {
+      fprintf( Note, "   Field names                 "                                  );
+      for (int v=NCOMP_FLUID; v<NCOMP_FLUID+NCOMP_PASSIVE; v++)
+      fprintf( Note, " %s",                                       FieldLabel[v]         );
+      fprintf( Note, "\n" ); }
       fprintf( Note, "#define FLU_NIN                % d\n",      FLU_NIN               );
       fprintf( Note, "#define FLU_NOUT               % d\n",      FLU_NOUT              );
       fprintf( Note, "#define FLU_NIN_T              % d\n",      FLU_NIN_T             );
@@ -850,6 +872,7 @@ void Aux_TakeNote()
       fprintf( Note, "MPI_NRank_X[1]                 % d\n",      MPI_NRank_X[1]   );
       fprintf( Note, "MPI_NRank_X[2]                 % d\n",      MPI_NRank_X[2]   );
       fprintf( Note, "OMP_NTHREAD                    % d\n",      OMP_NTHREAD      );
+      fprintf( Note, "INIT_T                         % 21.14e\n", INIT_T           );
       fprintf( Note, "END_T                          % 21.14e\n", END_T            );
       fprintf( Note, "END_STEP                       % ld\n",     END_STEP         );
       fprintf( Note, "***********************************************************************************\n" );
@@ -1149,7 +1172,6 @@ void Aux_TakeNote()
 #     ifdef EXACT_COOLING
       if ( SrcTerms.ExactCooling ) {
       fprintf( Note, "SRC_EC_TEF_N                   % d\n",      SrcTerms.EC_TEF_N         );
-      fprintf( Note, "SRC_EC_SUBCYCLING              % d\n",      SrcTerms.EC_subcycling    );
       fprintf( Note, "SRC_EC_DTCOEF                  % 14.7e\n",  SrcTerms.EC_dtCoef        ); }
 #     endif
       fprintf( Note, "SRC_USER                       % d\n",      SrcTerms.User             );
@@ -1195,17 +1217,32 @@ void Aux_TakeNote()
 #     ifdef STAR_FORMATION
       fprintf( Note, "Parameters of Star Formation\n" );
       fprintf( Note, "***********************************************************************************\n" );
-      fprintf( Note, "SF_CREATE_STAR_SCHEME          % d\n",           SF_CREATE_STAR_SCHEME                          );
+      fprintf( Note, "SF_CREATE_STAR_SCHEME          % d\n",               SF_CREATE_STAR_SCHEME                          );
       if ( SF_CREATE_STAR_SCHEME != SF_CREATE_STAR_SCHEME_NONE ) {
-      fprintf( Note, "SF_CREATE_STAR_RSEED           % d\n",           SF_CREATE_STAR_RSEED                           );
-      fprintf( Note, "SF_CREATE_STAR_DET_RANDOM      % d\n",           SF_CREATE_STAR_DET_RANDOM                      );
-      fprintf( Note, "SF_CREATE_STAR_MIN_LEVEL       % d\n",           SF_CREATE_STAR_MIN_LEVEL                       );
-      fprintf( Note, "SF_CREATE_STAR_MIN_GAS_DENS    % 14.7e\n",       SF_CREATE_STAR_MIN_GAS_DENS                    );
-      fprintf( Note, "                              =% 14.7e cm^-3\n", SF_CREATE_STAR_MIN_GAS_DENS*UNIT_D/Const_mH    );
-      fprintf( Note, "SF_CREATE_STAR_MASS_EFF        % 14.7e\n",       SF_CREATE_STAR_MASS_EFF                        );
-      fprintf( Note, "SF_CREATE_STAR_MIN_STAR_MASS   % 14.7e\n",       SF_CREATE_STAR_MIN_STAR_MASS                   );
-      fprintf( Note, "                              =% 14.7e Msun\n",  SF_CREATE_STAR_MIN_STAR_MASS*UNIT_M/Const_Msun );
-      fprintf( Note, "SF_CREATE_STAR_MAX_STAR_MFRAC  % 14.7e\n",       SF_CREATE_STAR_MAX_STAR_MFRAC                  ); }
+      fprintf( Note, "SF_CREATE_STAR_CRITERIA        % ld\n",              SF_CREATE_STAR_CRITERIA                        );
+      fprintf( Note, "SF_CREATE_STAR_MASS_RATE       % d\n",               SF_CREATE_STAR_MASS_RATE                       );
+      fprintf( Note, "SF_CREATE_STAR_PAR_SPAWN       % d\n",               SF_CREATE_STAR_PAR_SPAWN                       );
+      fprintf( Note, "SF_CREATE_STAR_RSEED           % d\n",               SF_CREATE_STAR_RSEED                           );
+      fprintf( Note, "SF_CREATE_STAR_DET_RANDOM      % d\n",               SF_CREATE_STAR_DET_RANDOM                      );
+      fprintf( Note, "SF_CREATE_STAR_MIN_LEVEL       % d\n",               SF_CREATE_STAR_MIN_LEVEL                       );
+      if ( SF_CREATE_STAR_CRITERIA & SF_CREATE_STAR_CRITERIA_HIGH_GAS_DENSITY ) {
+      fprintf( Note, "SF_CREATE_STAR_MIN_GAS_DENS    % 14.7e\n",           SF_CREATE_STAR_MIN_GAS_DENS                    );
+      fprintf( Note, "                              =% 14.7e m_H cm^-3\n", SF_CREATE_STAR_MIN_GAS_DENS*UNIT_D/Const_mH    );
+      }
+      if ( SF_CREATE_STAR_CRITERIA & SF_CREATE_STAR_CRITERIA_LOW_GAS_TEMPERATURE ) {
+      fprintf( Note, "SF_CREATE_STAR_MAX_GAS_TEMP    % 14.7e\n",           SF_CREATE_STAR_MAX_GAS_TEMP                    );
+      }
+      if ( SF_CREATE_STAR_CRITERIA & SF_CREATE_STAR_CRITERIA_UNRESOLVED_JEANS_LENGTH ) {
+      fprintf( Note, "SF_CREATE_STAR_MAX_GAS_JEANSL  % 14.7e\n",           SF_CREATE_STAR_MAX_GAS_JEANSL                  );
+      }
+      if ( SF_CREATE_STAR_MASS_RATE == SF_CREATE_STAR_MASS_RATE_CONST_EFF_PER_TFF ) {
+      fprintf( Note, "SF_CREATE_STAR_MASS_EFF        % 14.7e\n",           SF_CREATE_STAR_MASS_EFF                        );
+      }
+      if ( SF_CREATE_STAR_PAR_SPAWN == SF_CREATE_STAR_PAR_SPAWN_STOCHASTIC_MIN_MASS ) {
+      fprintf( Note, "SF_CREATE_STAR_MIN_STAR_MASS   % 14.7e\n",           SF_CREATE_STAR_MIN_STAR_MASS                   );
+      fprintf( Note, "                              =% 14.7e Msun\n",      SF_CREATE_STAR_MIN_STAR_MASS*UNIT_M/Const_Msun );
+      }
+      fprintf( Note, "SF_CREATE_STAR_MAX_STAR_MFRAC  % 14.7e\n",           SF_CREATE_STAR_MAX_STAR_MFRAC                  ); }
       fprintf( Note, "***********************************************************************************\n" );
       fprintf( Note, "\n\n" );
 #     endif // #ifdef STAR_FORMATION
@@ -1658,6 +1695,9 @@ void Aux_TakeNote()
 #     endif
 #     ifdef PARTICLE
       fprintf( Note, "OPT__OUTPUT_PAR_DENS           % d\n",      OPT__OUTPUT_PAR_DENS        );
+#     ifdef GRAVITY
+      fprintf( Note, "OPT__OUTPUT_PAR_POT            % d\n",      OPT__OUTPUT_PAR_POT         );
+#     endif
 #     endif
 #     ifdef MHD
       fprintf( Note, "OPT__OUTPUT_CC_MAG             % d\n",      OPT__OUTPUT_CC_MAG          );
@@ -1683,7 +1723,15 @@ void Aux_TakeNote()
       fprintf( Note, "OPT__OUTPUT_GRACKLE_MU         % d\n",      OPT__OUTPUT_GRACKLE_MU      );
       fprintf( Note, "OPT__OUTPUT_GRACKLE_TCOOL      % d\n",      OPT__OUTPUT_GRACKLE_TCOOL   );
 #     endif
+#     ifdef DUAL_ENERGY
+      fprintf( Note, "OPT__OUTPUT_DUAL_STATUS        % d\n",      OPT__OUTPUT_DUAL_STATUS     );
+#     endif
 #     endif // #if ( MODEL == HYDRO )
+#     if ( MODEL == ELBDM )
+      fprintf( Note, "OPT__OUTPUT_ELBDM_VEL          % d\n",      OPT__OUTPUT_ELBDM_VEL       );
+      fprintf( Note, "OPT__OUTPUT_ELBDM_Q_POT        % d\n",      OPT__OUTPUT_ELBDM_Q_POT     );
+      fprintf( Note, "OPT__OUTPUT_ELBDM_Q_STRESS     % d\n",      OPT__OUTPUT_ELBDM_Q_STRESS  );
+#     endif
 
 //    user-defined derived fields
       if ( OPT__OUTPUT_USER_FIELD ) {
