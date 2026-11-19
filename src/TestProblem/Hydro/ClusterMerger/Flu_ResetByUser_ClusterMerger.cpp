@@ -687,35 +687,23 @@ void GetClusterCenter( const int lv, const bool AdjustPos, const bool AdjustVel,
          for (int c=0; c<Merger_Coll_NumBHs; c++)
             for (int d=0; d<3; d++)  Cen_new_pre[c][d] = pos_min[c][d];
 
-         int N_max[Merger_Coll_NumBHs]; // maximum particle numbers (to allocate the array size)
-         for (int c=0; c<Merger_Coll_NumBHs; c++)   N_max[c] = 10000;
-
-         real_par **ParX = (real_par**)malloc( Merger_Coll_NumBHs*sizeof(real_par*) );
-         real_par **ParY = (real_par**)malloc( Merger_Coll_NumBHs*sizeof(real_par*) );
-         real_par **ParZ = (real_par**)malloc( Merger_Coll_NumBHs*sizeof(real_par*) );
-         real_par **ParM = (real_par**)malloc( Merger_Coll_NumBHs*sizeof(real_par*) );
-         real_par **VelX = (real_par**)malloc( Merger_Coll_NumBHs*sizeof(real_par*) );
-         real_par **VelY = (real_par**)malloc( Merger_Coll_NumBHs*sizeof(real_par*) );
-         real_par **VelZ = (real_par**)malloc( Merger_Coll_NumBHs*sizeof(real_par*) );
-
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-         {
-            ParX[c] = (real_par*)malloc( N_max[c]*sizeof(real_par) );
-            ParY[c] = (real_par*)malloc( N_max[c]*sizeof(real_par) );
-            ParZ[c] = (real_par*)malloc( N_max[c]*sizeof(real_par) );
-            ParM[c] = (real_par*)malloc( N_max[c]*sizeof(real_par) );
-            VelX[c] = (real_par*)malloc( N_max[c]*sizeof(real_par) );
-            VelY[c] = (real_par*)malloc( N_max[c]*sizeof(real_par) );
-            VelZ[c] = (real_par*)malloc( N_max[c]*sizeof(real_par) );
-         }
-
-//       find the particles within "search_factor" times the accretion radius
+//       find the particles within "search_factor" times the accretion radius and, on the fly,
+//       track each BH's local minimum potential (and the position where it occurs) and the
+//       local mass-weighted velocity sums --> no need to gather individual particle data across
+//       ranks since amr->Par->Pot[] already holds the true (grid-interpolated) potential
          const double search_factor = 10.0;
-         int num_par[Merger_Coll_NumBHs];   // (each rank) number of particles inside the target region of each cluster
+         int    num_par[Merger_Coll_NumBHs];         // (each rank) number of particles inside the target region of each cluster
+         double Pot_local_min[Merger_Coll_NumBHs];   // (each rank) local minimum potential found so far
+         double Pos_at_min[Merger_Coll_NumBHs][3];   // (each rank) position of the particle at Pot_local_min
+         double MassSum_local[Merger_Coll_NumBHs];   // (each rank) local sum of particle mass (for the velocity average)
+         double VelSum_local[Merger_Coll_NumBHs][3]; // (each rank) local sum of mass*velocity
 
          for (int c=0; c<Merger_Coll_NumBHs; c++)
          {
-            num_par[c] = 0;
+            num_par      [c]    = 0;
+            Pot_local_min[c]    = __DBL_MAX__;
+            MassSum_local[c]    = 0.0;
+            for (int d=0; d<3; d++) { Pos_at_min[c][d] = 0.0;   VelSum_local[c][d] = 0.0; }
 
             for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
             {
@@ -743,28 +731,32 @@ void GetClusterCenter( const int lv, const bool AdjustPos, const bool AdjustVel,
                   if ( CM_ClusterIdx_Cur[amr->Par->AttributeInt[Idx_ParHalo][ParID]] != (long_par)c )    continue;
                   if (  DIST_SQR_3D( ParPos_tmp, Cen_new_pre[c] ) > SQR( search_factor*R_acc )  )        continue;
 
-//                record the mass, position and velocity of this particle
-                  ParX[c][ num_par[c] ] = ParX_tmp;
-                  ParY[c][ num_par[c] ] = ParY_tmp;
-                  ParZ[c][ num_par[c] ] = ParZ_tmp;
-                  ParM[c][ num_par[c] ] = ParM_tmp;
-                  VelX[c][ num_par[c] ] = VelX_tmp;
-                  VelY[c][ num_par[c] ] = VelY_tmp;
-                  VelZ[c][ num_par[c] ] = VelZ_tmp;
                   num_par[c] += 1;
 
-                  if ( num_par[c] >= N_max[c] )
+                  if ( AdjustPos )
                   {
-//                   increase the new maximum size if needed
-                     N_max[c] = (int)ceil( PARLIST_GROWTH_FACTOR*(num_par[c]+1) );
-                     ParX[c]  = (real_par*)realloc( ParX[c], N_max[c]*sizeof(real_par) );
-                     ParY[c]  = (real_par*)realloc( ParY[c], N_max[c]*sizeof(real_par) );
-                     ParZ[c]  = (real_par*)realloc( ParZ[c], N_max[c]*sizeof(real_par) );
-                     ParM[c]  = (real_par*)realloc( ParM[c], N_max[c]*sizeof(real_par) );
-                     VelX[c]  = (real_par*)realloc( VelX[c], N_max[c]*sizeof(real_par) );
-                     VelY[c]  = (real_par*)realloc( VelY[c], N_max[c]*sizeof(real_par) );
-                     VelZ[c]  = (real_par*)realloc( VelZ[c], N_max[c]*sizeof(real_par) );
-                  }
+#                    ifdef STORE_PAR_POT
+                     const double Pot_tmp = (double)amr->Par->Pot[ParID];
+
+                     if ( Pot_tmp < Pot_local_min[c] )
+                     {
+                        Pot_local_min[c] = Pot_tmp;
+                        Pos_at_min[c][0] = (double)ParX_tmp;
+                        Pos_at_min[c][1] = (double)ParY_tmp;
+                        Pos_at_min[c][2] = (double)ParZ_tmp;
+                     }
+#                    else
+                     Aux_Error( ERROR_INFO, "STORE_PAR_POT must be enabled !!\n" );
+#                    endif
+                  } // if ( AdjustPos )
+
+                  if ( AdjustVel )
+                  {
+                     MassSum_local[c]    += (double)ParM_tmp;
+                     VelSum_local [c][0] += (double)ParM_tmp*(double)VelX_tmp;
+                     VelSum_local [c][1] += (double)ParM_tmp*(double)VelY_tmp;
+                     VelSum_local [c][2] += (double)ParM_tmp*(double)VelZ_tmp;
+                  } // if ( AdjustVel )
                } // for (int p=0; p<amr->patch[0][lv][PID]->NPar; p++)
             } // for (int PID=0; PID<amr->NPatchComma[lv][1]; PID++)
          } // for (int c=0; c<Merger_Coll_NumBHs; c++)
@@ -772,128 +764,46 @@ void GetClusterCenter( const int lv, const bool AdjustPos, const bool AdjustVel,
 //       collect the number of target particles from each rank
          MPI_Allreduce( num_par, NParClose, Merger_Coll_NumBHs, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
 
-         int num_par_eachRank[Merger_Coll_NumBHs][MPI_NRank];
-         int displs[Merger_Coll_NumBHs][MPI_NRank];
-         int NParClose_max = 0;
-
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-         {
-            MPI_Allgather( &num_par[c], 1, MPI_INT, num_par_eachRank[c], 1, MPI_INT, MPI_COMM_WORLD );
-            displs[c][0] = 0;
-            for (int i=1; i<MPI_NRank; i++)  displs[c][i] = displs[c][i-1] + num_par_eachRank[c][i-1];
-            NParClose_max = MAX( NParClose_max, NParClose[c] );
-         }
-
-//       collect the mass, position and velocity of target particles to all ranks
-         real_par **ParX_sum = new real_par* [Merger_Coll_NumBHs];
-         real_par **ParY_sum = new real_par* [Merger_Coll_NumBHs];
-         real_par **ParZ_sum = new real_par* [Merger_Coll_NumBHs];
-         real_par **ParM_sum = new real_par* [Merger_Coll_NumBHs];
-         real_par **VelX_sum = new real_par* [Merger_Coll_NumBHs];
-         real_par **VelY_sum = new real_par* [Merger_Coll_NumBHs];
-         real_par **VelZ_sum = new real_par* [Merger_Coll_NumBHs];
-
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-         {
-            ParX_sum[c] = new real_par [ NParClose[c] ];
-            ParY_sum[c] = new real_par [ NParClose[c] ];
-            ParZ_sum[c] = new real_par [ NParClose[c] ];
-            ParM_sum[c] = new real_par [ NParClose[c] ];
-            VelX_sum[c] = new real_par [ NParClose[c] ];
-            VelY_sum[c] = new real_par [ NParClose[c] ];
-            VelZ_sum[c] = new real_par [ NParClose[c] ];
-         }
-
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-         {
-            MPI_Allgatherv( ParX[c], num_par[c], MPI_GAMER_REAL_PAR, ParX_sum[c], num_par_eachRank[c],
-                            displs[c], MPI_GAMER_REAL_PAR, MPI_COMM_WORLD );
-            MPI_Allgatherv( ParY[c], num_par[c], MPI_GAMER_REAL_PAR, ParY_sum[c], num_par_eachRank[c],
-                            displs[c], MPI_GAMER_REAL_PAR, MPI_COMM_WORLD );
-            MPI_Allgatherv( ParZ[c], num_par[c], MPI_GAMER_REAL_PAR, ParZ_sum[c], num_par_eachRank[c],
-                            displs[c], MPI_GAMER_REAL_PAR, MPI_COMM_WORLD );
-            MPI_Allgatherv( ParM[c], num_par[c], MPI_GAMER_REAL_PAR, ParM_sum[c], num_par_eachRank[c],
-                            displs[c], MPI_GAMER_REAL_PAR, MPI_COMM_WORLD );
-            MPI_Allgatherv( VelX[c], num_par[c], MPI_GAMER_REAL_PAR, VelX_sum[c], num_par_eachRank[c],
-                            displs[c], MPI_GAMER_REAL_PAR, MPI_COMM_WORLD );
-            MPI_Allgatherv( VelY[c], num_par[c], MPI_GAMER_REAL_PAR, VelY_sum[c], num_par_eachRank[c],
-                            displs[c], MPI_GAMER_REAL_PAR, MPI_COMM_WORLD );
-            MPI_Allgatherv( VelZ[c], num_par[c], MPI_GAMER_REAL_PAR, VelZ_sum[c], num_par_eachRank[c],
-                            displs[c], MPI_GAMER_REAL_PAR, MPI_COMM_WORLD );
-         }
-
-//       compute potential and find the minimum position, and calculate the average DM velocity
+//       find the global potential minimum (and its position) across all ranks
          if ( AdjustPos )
          {
-            double  soften        = amr->dh[MAX_LEVEL];
-            double *pote_AllRank  = new double [NParClose_max];
-            double *pote_ThisRank = new double [NParClose_max];
+            struct { double val; int rank; } local_minloc[Merger_Coll_NumBHs], global_minloc[Merger_Coll_NumBHs];
 
             for (int c=0; c<Merger_Coll_NumBHs; c++)
             {
-//             distribute MPI jobs
-               int par_per_rank = NParClose[c] / MPI_NRank;
-               int remainder    = NParClose[c] % MPI_NRank;
-               int start        = MPI_Rank*par_per_rank + MIN( MPI_Rank, remainder );
-               int end          = start + par_per_rank + (MPI_Rank < remainder ? 1 : 0);
+               local_minloc[c].val  = Pot_local_min[c];
+               local_minloc[c].rank = MPI_Rank;
+            }
 
-#              pragma omp parallel for schedule( static )
-               for (int i=start; i<end; i++)
-               {
-                  pote_ThisRank[i-start] = 0.0;
+            MPI_Allreduce( local_minloc, global_minloc, Merger_Coll_NumBHs, MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD );
 
-                  for (int j=0; j<NParClose[c]; j++)
-                  {
-                     if ( i != j ) {
-                        const double rel_pos = sqrt( SQR(ParX_sum[c][i]-ParX_sum[c][j]) +
-                                                     SQR(ParY_sum[c][i]-ParY_sum[c][j]) +
-                                                     SQR(ParZ_sum[c][i]-ParZ_sum[c][j]) );
-                        if ( rel_pos > soften )    pote_ThisRank[i-start] += ParM_sum[c][j] / rel_pos;
-                        else                       pote_ThisRank[i-start] += ParM_sum[c][j] / soften;
-                     }
-                  }
-                  pote_ThisRank[i-start] *= -NEWTON_G;
-               }
-
-               int N_recv[MPI_NRank], N_disp[MPI_NRank];
-               for (int i=0; i<MPI_NRank; i++)  N_recv[i] = ( (i < remainder) ? par_per_rank+1 : par_per_rank);
-               N_disp[0] = 0;
-               for (int i=1; i<MPI_NRank; i++)  N_disp[i] = N_disp[i-1] + N_recv[i-1];
-               MPI_Allgatherv( pote_ThisRank, end-start, MPI_DOUBLE, pote_AllRank, N_recv, N_disp, MPI_DOUBLE, MPI_COMM_WORLD );
-
-               double Pote_min = 0.0;
-               for (int i=0; i<NParClose[c]; i++)
-               {
-                  if ( pote_AllRank[i] < Pote_min ) {
-                     Pote_min      = pote_AllRank[i];
-                     pos_min[c][0] = ParX_sum [c][i];
-                     pos_min[c][1] = ParY_sum [c][i];
-                     pos_min[c][2] = ParZ_sum [c][i];
-                  }
-               }
-            } // for (int c=0; c<Merger_Coll_NumBHs; c++)
-
-            delete[] pote_AllRank;
-            delete[] pote_ThisRank;
+            for (int c=0; c<Merger_Coll_NumBHs; c++)
+            {
+               MPI_Bcast( Pos_at_min[c], 3, MPI_DOUBLE, global_minloc[c].rank, MPI_COMM_WORLD );
+               for (int d=0; d<3; d++)   pos_min[c][d] = Pos_at_min[c][d];
+            }
          } // if ( AdjustPos )
 
 //       calculate the average DM velocity
+//       --> use flat 1D buffers (rather than double[Merger_Coll_NumBHs][4]) since the serial-mode
+//           MPI_Allreduce substitute (include/Serial.h) just does a flat element-wise copy indexed
+//           by Count, which requires SBuf/RBuf to be 1D arrays of that length
          if ( AdjustVel )
          {
+            double send[4*Merger_Coll_NumBHs], recv[4*Merger_Coll_NumBHs];
+
             for (int c=0; c<Merger_Coll_NumBHs; c++)
             {
-               for (int d=0; d<3; d++)   DM_Vel[c][d] = 0.0;
-               double ParM_Tot = 0.0;
+               send[4*c] = MassSum_local[c];
+               for (int d=0; d<3; d++)   send[4*c+1+d] = VelSum_local[c][d];
+            }
 
-               for (int i=0; i<NParClose[c]; i++)
-               {
-                  DM_Vel[c][0] += VelX_sum[c][i]*ParM_sum[c][i];
-                  DM_Vel[c][1] += VelY_sum[c][i]*ParM_sum[c][i];
-                  DM_Vel[c][2] += VelZ_sum[c][i]*ParM_sum[c][i];
-                  ParM_Tot     += ParM_sum[c][i];
-               }
+            MPI_Allreduce( send, recv, 4*Merger_Coll_NumBHs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
 
-               for (int d=0; d<3; d++)   DM_Vel[c][d] /= ParM_Tot;
+            for (int c=0; c<Merger_Coll_NumBHs; c++)
+            {
+               const double ParM_Tot = recv[4*c];
+               for (int d=0; d<3; d++)   DM_Vel[c][d] = recv[4*c+1+d] / ParM_Tot;
             }
          } // if ( AdjustVel )
 
@@ -913,42 +823,6 @@ void GetClusterCenter( const int lv, const bool AdjustPos, const bool AdjustVel,
             for (int c=0; c<Merger_Coll_NumBHs; c++)
                if ( sqrt(dis[c]) >= dis_exp )   converged = false;
          }
-
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-         {
-            delete [] ParX_sum[c];
-            delete [] ParY_sum[c];
-            delete [] ParZ_sum[c];
-            delete [] ParM_sum[c];
-            delete [] VelX_sum[c];
-            delete [] VelY_sum[c];
-            delete [] VelZ_sum[c];
-         }
-         delete [] ParX_sum;
-         delete [] ParY_sum;
-         delete [] ParZ_sum;
-         delete [] ParM_sum;
-         delete [] VelX_sum;
-         delete [] VelY_sum;
-         delete [] VelZ_sum;
-
-         for (int c=0; c<Merger_Coll_NumBHs; c++)
-         {
-            free( ParX[c] );
-            free( ParY[c] );
-            free( ParZ[c] );
-            free( ParM[c] );
-            free( VelX[c] );
-            free( VelY[c] );
-            free( VelZ[c] );
-         }
-         free( ParX );
-         free( ParY );
-         free( ParZ );
-         free( ParM );
-         free( VelX );
-         free( VelY );
-         free( VelZ );
 
          for (int c=0; c<Merger_Coll_NumBHs; c++)   BH[c].Cluster_NPar_close = NParClose[c];
       } // while ( converged == false  &&  counter <= max_counter )

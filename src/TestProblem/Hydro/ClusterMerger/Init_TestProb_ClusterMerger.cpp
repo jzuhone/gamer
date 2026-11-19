@@ -147,6 +147,10 @@ void Validate()
    Aux_Error( ERROR_INFO, "MASSIVE_PARTICLES must be enabled !!\n" );
 #  endif
 
+#  ifndef STORE_PAR_POT
+   Aux_Error( ERROR_INFO, "STORE_PAR_POT must be enabled for this test problem (required by GetClusterCenter) !!\n" );
+#  endif
+
 #  ifndef SUPPORT_HDF5
    Aux_Error( ERROR_INFO, "SUPPORT_HDF5 must be enabled !!\n" );
 #  endif
