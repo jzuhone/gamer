@@ -665,6 +665,39 @@ divergence-free magnetic field automatically.
 
 **Example: `tool/inits/gen_vec_pot.py`.**
 
+`B_IC` may optionally also provide one or more locally-refined vector-potential
+patches layered on top of the root-level uniform mesh, for resolving small
+regions (e.g., around individual halos in a cosmological IC) at higher
+resolution than the rest of the domain would otherwise require. To do so:
+
+* Add an integer attribute `num_patches` (> 0) to the file root, giving the
+total number of patches.
+* Add one HDF5 group per patch, named `patch_0000`, `patch_0001`, ...,
+`patch_<num_patches-1>` (zero-padded to 4 digits). Each group must contain:
+    * 1-D coordinate datasets `x`, `y`, `z` (uniformly spaced, as for the
+    root-level grid).
+    * 3-D vector-potential datasets `magnetic_vector_potential_x`,
+    `magnetic_vector_potential_y`, `magnetic_vector_potential_z`, dimensioned
+    `[nx][ny][nz]` to match the coordinate arrays (column-major, i.e.,
+    `Ax[nx][ny][nz]`, as for the root-level grid).
+    * An integer attribute `level`: this patch's own refinement depth, where
+    `1` means the patch directly refines the root-level grid, `2` means it
+    refines a `level`=1 patch, and so on.
+* Patches are independent, flat entries — a `level`=2 patch is not nested
+inside, or associated with, any particular `level`=1 patch in the file
+itself; GAMER determines coverage purely from each patch's own coordinates.
+Patches at the same `level` must not overlap.
+* Each patch's vector-potential data must already be the final values to use
+within that patch's domain (not a correction to be blended with the coarser
+data); at every point, GAMER uses the data from the highest-`level` patch
+that contains it, falling back to the next coarser patch (or ultimately the
+root-level grid) only outside all finer patches. No blending is performed
+across patch boundaries, so IC-generation tools providing patches should
+ensure their own data is smooth/consistent there.
+
+If the `num_patches` attribute is absent, `B_IC` is treated as a plain
+single-level uniform-mesh file, as above.
+
 
 <a name="IC-File-Particles"></a>
 ### Particles
